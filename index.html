@@ -192,6 +192,7 @@ const BACKEND_URL = 'https://script.google.com/macros/s/AKfycbyLa6dr_bfxG8UKJoTb
 
 const $ = id => document.getElementById(id);
 let session = null;
+let dashboardTimer = null;
 
 function escapeHtml(v){
   return String(v ?? '').replace(/[&<>"']/g, c => ({
@@ -268,6 +269,13 @@ async function cargarDashboard(){
   }
 }
 
+function iniciarActualizacionAutomatica(){
+  if(dashboardTimer) clearInterval(dashboardTimer);
+  dashboardTimer=setInterval(()=>{
+    if(session && !$('dashboardScreen').classList.contains('hidden')) cargarDashboard();
+  },15000);
+}
+
 function renderVehicle(a,v){
   if(!a){
     $('vehicleName').textContent='Sin asignación activa';
@@ -322,6 +330,8 @@ function formatearHora(v){
 
 
 function cerrarSesion(){
+  if(dashboardTimer) clearInterval(dashboardTimer);
+  dashboardTimer=null;
   sessionStorage.removeItem('diaVerdeChofer');
   session=null;
   $('topUser').classList.add('hidden');
@@ -395,7 +405,14 @@ async function finalizarInspeccion(){
     return;
   }
   if(info.criticos.length){
-    a.textContent='La unidad presenta un estado CRÍTICO. No puede quedar lista para salir. Revisá el vehículo y comunicate con administración.';
+    try{
+      const obs=['Resultado de inspección: '+JSON.stringify(info.resultado),info.observaciones?'Observaciones: '+info.observaciones:''].filter(Boolean).join(' | ');
+      const res=await postJson({accion:'registrarInspeccion',idServicio:servicioEnInspeccion.idServicio,idChofer:session.idChofer,idUnidad:servicioEnInspeccion.idUnidad||'',observaciones:obs});
+      if(!res?.ok) throw new Error(res?.error||'No se pudieron registrar las alertas.');
+      a.textContent='⚠️ Inspección registrada. Hay elementos CRÍTICOS. El servicio queda bloqueado hasta que administración intervenga.';
+    }catch(err){
+      a.textContent='⚠️ Hay elementos CRÍTICOS. No se pudo sincronizar la alerta con el Panel: '+(err.message||'error');
+    }
     a.style.display='block';
     $('inspectionStatus').textContent='🔴 VEHÍCULO BLOQUEADO';
     return;
@@ -510,6 +527,7 @@ $('loginForm').addEventListener('submit',async e=>{
     $('dashboardScreen').classList.remove('hidden');
 
     await cargarDashboard();
+    iniciarActualizacionAutomatica();
   }catch(err){
     showError(err.message||'No se pudo iniciar sesión.');
   }finally{
@@ -531,6 +549,7 @@ $('loginForm').addEventListener('submit',async e=>{
     $('loginScreen').classList.add('hidden');
     $('dashboardScreen').classList.remove('hidden');
     cargarDashboard();
+    iniciarActualizacionAutomatica();
   }catch(e){}
 })();
 </script>
