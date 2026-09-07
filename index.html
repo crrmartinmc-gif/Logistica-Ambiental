@@ -105,7 +105,7 @@ button{cursor:pointer}
 @media(max-width:760px){
   .topbar{height:64px;padding:0 14px}.logo{width:38px;height:38px}.userbar{font-size:0}.screen{padding:22px 13px 35px}
   .grid{grid-template-columns:1fr}.welcome{align-items:flex-start}.welcome h1{font-size:25px}
-  .card{padding:17px}.service-meta{grid-template-columns:1fr 1fr}.brand span{font-size:14px}
+  .card{padding:17px}.service-meta{grid-template-columns:1fr 1fr}.brand span{font-size:14px}.vehicle-icon{height:220px}
 .logout-btn{border:1px solid rgba(255,255,255,.28);background:transparent;color:#fff;border-radius:9px;padding:7px 11px;font-weight:800;font-size:11px;cursor:pointer}
 .logout-btn:hover{background:rgba(255,255,255,.10)}
 }
@@ -165,12 +165,10 @@ button{cursor:pointer}
       </div>
       <div id="vehicleBox" class="vehicle">
         <div class="vehicle-icon" id="vehiclePhoto"><span class="vehicle-placeholder">🚛</span></div>
-        <div>
-          <h3 id="vehicleName">Consultando…</h3>
-          <span class="plate" id="vehiclePlate">—</span>
-        </div>
+        <span class="plate" id="vehiclePlate">—</span>
+        <h3 id="vehicleName">Consultando…</h3>
+        <div class="vehicle-km"><span>KM actual</span><strong id="vehicleKm">—</strong></div>
       </div>
-      <div class="info-list" id="vehicleInfo"></div>
     </div>
 
     <div class="card">
@@ -228,15 +226,17 @@ function initials(name){
 async function cargarDashboard(){
   const idChofer=session.idChofer;
   try{
-    const [aRes,vRes,sRes] = await Promise.all([
+    const [aRes,vRes,sRes,eRes] = await Promise.all([
       getJson('asignacionActiva',{idChofer}),
       getJson('listarVehiculos'),
-      getJson('listarServicios')
+      getJson('listarServicios'),
+      getJson('listarEstadoFlota')
     ]);
 
     const asignacion=aRes.asignacion || null;
     const vehiculos=Array.isArray(vRes.vehiculos)?vRes.vehiculos:[];
     const servicios=Array.isArray(sRes.servicios)?sRes.servicios:[];
+    const estadoFlota=Array.isArray(eRes.estadoFlota)?eRes.estadoFlota:[];
 
     const propios=servicios.filter(s =>
       String(s.idChofer||'')===String(idChofer) &&
@@ -261,7 +261,8 @@ async function cargarDashboard(){
       ? vehiculos.find(v=>String(v.idUnidad)===String(referenciaVehiculo.idUnidad))
       : null;
 
-    renderVehicle(referenciaVehiculo,vehiculo);
+    const estadoVehiculo=estadoFlota.find(x=>String(x.dominio||'').trim().toUpperCase()===String(vehiculo?.dominio||referenciaVehiculo?.dominio||'').trim().toUpperCase()) || null;
+    renderVehicle(referenciaVehiculo,vehiculo,estadoVehiculo);
     renderService(servicioActual);
   }catch(err){
     $('serviceBox').innerHTML='<div class="empty">No se pudieron consultar los datos operativos.<br>Intentá actualizar en unos segundos.</div>';
@@ -280,31 +281,36 @@ function convertirFotoDrive(url){
   const raw=String(url||'').trim();
   if(!raw) return '';
   const m=raw.match(/\/d\/([a-zA-Z0-9_-]+)/);
-  if(m) return 'https://drive.google.com/uc?export=view&id='+m[1];
+  if(m) return 'https://drive.google.com/thumbnail?id='+m[1]+'&sz=w1000';
   const q=raw.match(/[?&]id=([a-zA-Z0-9_-]+)/);
-  if(q) return 'https://drive.google.com/uc?export=view&id='+q[1];
+  if(q) return 'https://drive.google.com/thumbnail?id='+q[1]+'&sz=w1000';
   return raw;
 }
 
-function renderVehicle(a,v){
+function formatearKm(v){
+  const n=String(v??'').trim();
+  if(!n) return '—';
+  const num=Number(String(n).replace(/\./g,'').replace(',','.'));
+  if(Number.isFinite(num)) return Math.round(num).toLocaleString('es-AR')+' km';
+  return n+' km';
+}
+
+function renderVehicle(a,v,estadoFlota){
   if(!a){
     $('vehicleName').textContent='Sin asignación activa';
     $('vehiclePlate').textContent='—';
-    $('vehicleInfo').innerHTML='<div class="empty">No tenés un vehículo asignado actualmente.</div>';
+    $('vehicleKm').textContent='—';
+    $('vehiclePhoto').innerHTML='<span class="vehicle-placeholder">🚛</span>';
     return;
   }
-  $('vehicleName').textContent=(v?.marca||'Vehículo')+' '+(v?.modelo||'');
-  $('vehiclePlate').textContent=v?.dominio || a.dominio || 'SIN DOMINIO';
+  const dominio=v?.dominio || a.dominio || 'SIN DOMINIO';
+  $('vehicleName').textContent=[v?.marca,v?.modelo].filter(Boolean).join(' ') || 'Vehículo';
+  $('vehiclePlate').textContent=dominio;
   const foto=convertirFotoDrive(v?.fotoUrl);
   $('vehiclePhoto').innerHTML=foto
-    ? `<img src="${escapeHtml(foto)}" alt="Foto de ${escapeHtml(v?.dominio||a.dominio||'vehículo')}" onerror="this.parentElement.innerHTML='<span class=\"vehicle-placeholder\">🚛</span>'">`
+    ? `<img src="${escapeHtml(foto)}" alt="Foto de ${escapeHtml(dominio)}" onerror="this.parentElement.innerHTML='<span class=\"vehicle-placeholder\">🚛</span>'">`
     : '<span class="vehicle-placeholder">🚛</span>';
-  $('vehicleInfo').innerHTML=[
-    ['Interno',v?.numeroInterno||a.numeroInterno||'—'],
-    ['Unidad',a.idUnidad||'—'],
-    ['Base',a.base||v?.base||'—'],
-    ['Turno',a.turno||'—']
-  ].map(x=>`<div class="info-row"><span>${escapeHtml(x[0])}</span><strong>${escapeHtml(x[1])}</strong></div>`).join('');
+  $('vehicleKm').textContent=formatearKm(estadoFlota?.km);
 }
 
 function renderService(s){
@@ -335,33 +341,12 @@ function renderService(s){
 function formatearHora(v){
   const s=String(v??'').trim();
   if(!s) return '—';
-  const m=s.match(/T(\\d{2}):(\\d{2})/);
+  const m=s.match(/T(\d{2}):(\d{2})/);
   if(m) return m[1]+':'+m[2];
-  const h=s.match(/(\\d{1,2}):(\\d{2})/);
-  if(h) return h[1].padStart(2,'0')+':'+h[2];
-  return s;
+  const h=s.match(/(?:^|\s)(\d{1,2}):(\d{2})(?::\d{2})?/);
+  if(h) return String(h[1]).padStart(2,'0')+':'+h[2];
+  return '—';
 }
-
-
-function cerrarSesion(){
-  if(dashboardTimer) clearInterval(dashboardTimer);
-  dashboardTimer=null;
-  sessionStorage.removeItem('diaVerdeChofer');
-  session=null;
-  $('topUser').classList.add('hidden');
-  $('dashboardScreen').classList.add('hidden');
-  $('loginScreen').classList.remove('hidden');
-  $('usuario').value='';
-  $('contrasena').value='';
-  $('loginError').style.display='none';
-  $('vehicleName').textContent='Consultando…';
-  $('vehiclePlate').textContent='—';
-  $('vehicleInfo').innerHTML='';
-  $('serviceBox').innerHTML='Consultando servicios…';
-  $('usuario').focus();
-}
-
-let servicioEnInspeccion=null;
 
 function verServicio(id){
   const s=window.__servicioActual;
