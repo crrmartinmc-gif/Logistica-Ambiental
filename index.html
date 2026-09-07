@@ -109,6 +109,7 @@ button{cursor:pointer}
 .logout-btn{border:1px solid rgba(255,255,255,.28);background:transparent;color:#fff;border-radius:9px;padding:7px 11px;font-weight:800;font-size:11px;cursor:pointer}
 .logout-btn:hover{background:rgba(255,255,255,.10)}
 }
+.inspection-wrap{max-width:980px;margin:28px auto;padding:0 18px 40px}.inspection-card{background:#fff;border:1px solid #dce9e3;border-radius:18px;box-shadow:0 10px 28px rgba(0,70,45,.08);overflow:hidden}.inspection-head{background:linear-gradient(135deg,#004b35,#087a52);color:#fff;padding:24px}.inspection-head h2{margin:4px 0 6px;font-size:24px}.inspection-head p{margin:0;opacity:.88}.check-section{padding:20px 22px;border-bottom:1px solid #e7efeb}.check-section h3{margin:0 0 14px;font-size:17px}.check-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.check-item{border:1px solid #dce9e3;border-radius:12px;padding:12px;background:#fafdfb}.check-item strong{display:block;margin-bottom:8px;font-size:14px}.check-options{display:flex;gap:7px;flex-wrap:wrap}.check-options label{cursor:pointer}.check-options input{display:none}.check-options span{display:inline-block;padding:7px 10px;border-radius:9px;border:1px solid #cbdad3;font-size:12px;font-weight:700}.check-options input:checked+span{background:#0a8b5d;color:#fff;border-color:#0a8b5d}.check-options .attention input:checked+span{background:#e58b00;border-color:#e58b00}.check-options .critical input:checked+span{background:#d33b3b;border-color:#d33b3b}.wheel-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.inspection-actions{padding:20px 22px;display:flex;gap:12px;justify-content:flex-end;flex-wrap:wrap}.secondary{background:#eef5f1;color:#07543e;border:1px solid #cfe1d8;padding:12px 18px;border-radius:10px;font-weight:800;cursor:pointer}.inspection-alert{display:none;margin:0 22px 18px;padding:12px 14px;border-radius:10px;background:#fff1f1;color:#9f2222;font-weight:700}.status-banner{margin:18px 22px 0;padding:12px 14px;border-radius:10px;background:#eef8f3;color:#076043;font-weight:800}@media(max-width:700px){.check-grid,.wheel-grid{grid-template-columns:1fr}.inspection-wrap{padding:0 10px 28px}.inspection-actions button{width:100%}}
 </style>
 </head>
 <body>
@@ -179,6 +180,8 @@ button{cursor:pointer}
       <div id="serviceBox" class="empty">Consultando servicios…</div>
     </div>
   </div>
+
+  <section id="inspectionScreen" class="inspection-wrap hidden"><div class="inspection-card"><div class="inspection-head"><div class="eyebrow" style="color:#bfead5">CONTROL PREVIO</div><h2>Inspección del vehículo</h2><p id="inspectionServiceLabel">Antes de salir, verificá el estado de la unidad.</p></div><div class="status-banner" id="inspectionStatus">INSPECCIÓN EN CURSO</div><div class="check-section"><h3>Espejos</h3><div class="check-grid"><div class="check-item"><strong>Derecho</strong><div class="check-options"><label><input name="espejo_derecho" value="BIEN" type="radio"><span>🟢 BIEN</span></label><label class="attention"><input name="espejo_derecho" value="ATENCION" type="radio"><span>🟠 ATENCIÓN</span></label><label class="critical"><input name="espejo_derecho" value="CRITICO" type="radio"><span>🔴 CRÍTICO</span></label></div></div><div class="check-item"><strong>Izquierdo</strong><div class="check-options"><label><input name="espejo_izquierdo" value="BIEN" type="radio"><span>🟢 BIEN</span></label><label class="attention"><input name="espejo_izquierdo" value="ATENCION" type="radio"><span>🟠 ATENCIÓN</span></label><label class="critical"><input name="espejo_izquierdo" value="CRITICO" type="radio"><span>🔴 CRÍTICO</span></label></div></div><div class="check-item"><strong>Retrovisor</strong><div class="check-options"><label><input name="retrovisor" value="BIEN" type="radio"><span>🟢 BIEN</span></label><label class="attention"><input name="retrovisor" value="ATENCION" type="radio"><span>🟠 ATENCIÓN</span></label><label class="critical"><input name="retrovisor" value="CRITICO" type="radio"><span>🔴 CRÍTICO</span></label></div></div></div></div><div class="check-section"><h3>Luces</h3><div class="check-grid" id="lightsGrid"></div></div><div class="check-section"><h3>Patente</h3><div class="check-grid"><div class="check-item"><strong>Delantera</strong><div class="check-options"><label><input name="patente_delantera" value="BIEN" type="radio"><span>🟢 BIEN</span></label><label class="attention"><input name="patente_delantera" value="ATENCION" type="radio"><span>🟠 ATENCIÓN</span></label><label class="critical"><input name="patente_delantera" value="CRITICO" type="radio"><span>🔴 CRÍTICO</span></label></div></div><div class="check-item"><strong>Trasera</strong><div class="check-options"><label><input name="patente_trasera" value="BIEN" type="radio"><span>🟢 BIEN</span></label><label class="attention"><input name="patente_trasera" value="ATENCION" type="radio"><span>🟠 ATENCIÓN</span></label><label class="critical"><input name="patente_trasera" value="CRITICO" type="radio"><span>🔴 CRÍTICO</span></label></div></div></div></div><div class="check-section"><h3>Neumáticos</h3><div class="wheel-grid" id="wheelGrid"></div></div><div class="check-section"><h3>Observaciones</h3><textarea id="inspectionObs" rows="4" style="width:100%;box-sizing:border-box;border:1px solid #cbdad3;border-radius:10px;padding:12px;font:inherit;resize:vertical" placeholder="Indicá cualquier novedad antes de salir..."></textarea></div><div class="inspection-alert" id="inspectionAlert"></div><div class="inspection-actions"><button class="secondary" type="button" onclick="volverServicio()">VOLVER</button><button class="primary" type="button" id="finishInspectionBtn" onclick="finalizarInspeccion()">FINALIZAR INSPECCIÓN</button></div></div></section>
 
   <div class="footer-note">Salida de Servicio · Logística Ambiental · Sin GPS</div>
 </section>
@@ -277,6 +280,7 @@ function renderVehicle(a,v){
 }
 
 function renderService(s){
+  window.__servicioActual=s||null;
   if(!s){
     $('serviceBox').innerHTML='<div class="empty"><strong>No tenés servicios pendientes.</strong><br><span>Cuando administración te asigne uno, aparecerá acá.</span></div>';
     return;
@@ -289,8 +293,6 @@ function renderService(s){
       </div>
       <div class="route">
         <div class="route-point"><div class="dot"></div><div><strong>${escapeHtml(s.destinoInicial||'Origen no informado')}</strong><small>Origen</small></div></div>
-        <div class="arrow">↓</div>
-        <div class="route-point"><div class="dot"></div><div><strong>${escapeHtml(s.destinoFinal||'Destino no informado')}</strong><small>Destino</small></div></div>
       </div>
       <div class="service-meta">
         <div class="meta"><span>Horario</span><strong>${escapeHtml(formatearHora(s.horaProgramada))}</strong></div>
@@ -329,8 +331,144 @@ function cerrarSesion(){
   $('usuario').focus();
 }
 
+let servicioEnInspeccion=null;
+
 function verServicio(id){
-  alert('Servicio '+id+'\\n\\nLa siguiente etapa será la pantalla de inspección y el flujo operativo.');
+  const s=window.__servicioActual;
+  if(!s || String(s.idServicio)!==String(id)){
+    alert('No se pudo cargar el servicio seleccionado.');
+    return;
+  }
+  servicioEnInspeccion=s;
+  $('serviceBox').classList.add('hidden');
+  $('inspectionScreen').classList.remove('hidden');
+  $('inspectionServiceLabel').textContent=(s.nombreServicio||s.descripcion||'Servicio')+' · '+formatearHora(s.horaProgramada);
+  $('inspectionStatus').textContent='INSPECCIÓN EN CURSO';
+  $('inspectionAlert').style.display='none';
+  $('finishInspectionBtn').disabled=false;
+  $('finishInspectionBtn').textContent='FINALIZAR INSPECCIÓN';
+  construirChecklist(s);
+  $('inspectionScreen').scrollIntoView({behavior:'smooth',block:'start'});
+  postJson({accion:'registrarEventoServicio',idServicio:s.idServicio,evento:'INSPECCION_INICIADA',idChofer:session.idChofer,idUnidad:s.idUnidad||'',observaciones:'Inspección iniciada desde SALIDA DE SERVICIO'}).catch(()=>{});
+}
+
+function opcionHTML(n){return `<div class="check-options"><label><input name="${n}" value="BIEN" type="radio"><span>🟢 BIEN</span></label><label class="attention"><input name="${n}" value="ATENCION" type="radio"><span>🟠 ATENCIÓN</span></label><label class="critical"><input name="${n}" value="CRITICO" type="radio"><span>🔴 CRÍTICO</span></label></div>`}
+
+function construirChecklist(s){
+  const luces=['Altas','Bajas','Giro delantero izquierdo','Giro delantero derecho','Giro trasero izquierdo','Giro trasero derecho','Posición','Stop','Balizas'];
+  $('lightsGrid').innerHTML=luces.map((n,i)=>`<div class="check-item"><strong>${n}</strong>${opcionHTML('luz_'+i)}</div>`).join('');
+  const cantidad=Number(s?.cantidadRuedas||0)||4;
+  const ruedas=cantidad===4
+    ? ['Delantera izquierda','Delantera derecha','Trasera izquierda','Trasera derecha']
+    : cantidad===6
+      ? ['Delantera izquierda','Delantera derecha','Trasera izquierda exterior','Trasera izquierda interior','Trasera derecha interior','Trasera derecha exterior']
+      : cantidad===10
+        ? ['Delantera izquierda','Delantera derecha','2° eje izquierda exterior','2° eje izquierda interior','2° eje derecha interior','2° eje derecha exterior','3° eje izquierda exterior','3° eje izquierda interior','3° eje derecha interior','3° eje derecha exterior']
+        : Array.from({length:cantidad},(_,i)=>'Rueda '+(i+1));
+  $('wheelGrid').innerHTML=ruedas.map((n,i)=>`<div class="check-item"><strong>${n}</strong>${opcionHTML('rueda_'+i)}</div>`).join('');
+}
+
+function obtenerInspeccion(){
+  const radios=[...document.querySelectorAll('#inspectionScreen input[type=radio]')];
+  const resultado={},criticos=[],faltantes=[];
+  [...new Set(radios.map(r=>r.name))].forEach(name=>{
+    const e=document.querySelector(`#inspectionScreen input[name="${name}"]:checked`);
+    resultado[name]=e?.value||'';
+    if(!e) faltantes.push(name);
+    if(e?.value==='CRITICO') criticos.push(name);
+  });
+  return {resultado,criticos,faltantes,observaciones:$('inspectionObs').value.trim()};
+}
+
+async function finalizarInspeccion(){
+  const btn=$('finishInspectionBtn'),a=$('inspectionAlert'),info=obtenerInspeccion();
+  a.style.display='none';
+  if(info.faltantes.length){
+    a.textContent='Completá todos los puntos de la inspección antes de finalizar.';
+    a.style.display='block';
+    return;
+  }
+  if(info.criticos.length){
+    a.textContent='La unidad presenta un estado CRÍTICO. No puede quedar lista para salir. Revisá el vehículo y comunicate con administración.';
+    a.style.display='block';
+    $('inspectionStatus').textContent='🔴 VEHÍCULO BLOQUEADO';
+    return;
+  }
+  btn.disabled=true;btn.textContent='GUARDANDO…';
+  try{
+    const obs=['Resultado de inspección: '+JSON.stringify(info.resultado),info.observaciones?'Observaciones: '+info.observaciones:''].filter(Boolean).join(' | ');
+    const res=await postJson({accion:'registrarEventoServicio',idServicio:servicioEnInspeccion.idServicio,evento:'INSPECCION_FINALIZADA',idChofer:session.idChofer,idUnidad:servicioEnInspeccion.idUnidad||'',observaciones:obs});
+    if(!res?.ok) throw new Error(res?.error||'No se pudo registrar la inspección.');
+    servicioEnInspeccion.estado='LISTO PARA SALIR';
+    window.__servicioActual=servicioEnInspeccion;
+    $('inspectionStatus').textContent='🟢 LISTO PARA SALIR';
+    a.textContent='Inspección finalizada correctamente. El servicio quedó LISTO PARA SALIR.';
+    a.style.display='block';
+    btn.textContent='INICIAR VIAJE';
+    btn.disabled=false;
+    btn.onclick=iniciarViaje;
+  }catch(err){
+    a.textContent=err.message||'No se pudo registrar la inspección.';
+    a.style.display='block';
+    btn.disabled=false;
+    btn.textContent='FINALIZAR INSPECCIÓN';
+  }
+}
+
+async function iniciarViaje(){
+  const btn=$('finishInspectionBtn'),a=$('inspectionAlert');
+  btn.disabled=true;btn.textContent='INICIANDO…';a.style.display='none';
+  try{
+    const res=await postJson({accion:'iniciarViaje',idServicio:servicioEnInspeccion.idServicio,idChofer:session.idChofer,idUnidad:servicioEnInspeccion.idUnidad||''});
+    if(!res?.ok) throw new Error(res?.error||'No se pudo iniciar el viaje.');
+    servicioEnInspeccion.estado='EN VIAJE';
+    window.__servicioActual=servicioEnInspeccion;
+    $('inspectionStatus').textContent='🟢 EN VIAJE';
+    a.textContent='Viaje iniciado correctamente.';
+    a.style.display='block';
+    btn.textContent='FINALIZAR VIAJE';
+    btn.disabled=false;
+    btn.onclick=finalizarViaje;
+  }catch(err){
+    a.textContent=err.message||'No se pudo iniciar el viaje.';
+    a.style.display='block';
+    btn.disabled=false;
+    btn.textContent='INICIAR VIAJE';
+  }
+}
+
+async function finalizarViaje(){
+  const btn=$('finishInspectionBtn'),a=$('inspectionAlert');
+  btn.disabled=true;btn.textContent='FINALIZANDO…';a.style.display='none';
+  try{
+    const res=await postJson({accion:'finalizarViaje',idServicio:servicioEnInspeccion.idServicio,idChofer:session.idChofer,idUnidad:servicioEnInspeccion.idUnidad||''});
+    if(!res?.ok) throw new Error(res?.error||'No se pudo finalizar el viaje.');
+    servicioEnInspeccion.estado='FINALIZADO';
+    window.__servicioActual=servicioEnInspeccion;
+    $('inspectionStatus').textContent='✅ SERVICIO FINALIZADO';
+    a.textContent='Servicio finalizado correctamente.';
+    a.style.display='block';
+    btn.textContent='VOLVER AL INICIO';
+    btn.disabled=false;
+    btn.onclick=volverInicio;
+  }catch(err){
+    a.textContent=err.message||'No se pudo finalizar el viaje.';
+    a.style.display='block';
+    btn.disabled=false;
+    btn.textContent='FINALIZAR VIAJE';
+  }
+}
+
+function volverInicio(){
+  $('inspectionScreen').classList.add('hidden');
+  $('serviceBox').classList.remove('hidden');
+  cargarDashboard();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function volverServicio(){
+  $('inspectionScreen').classList.add('hidden');
+  $('serviceBox').classList.remove('hidden');
 }
 
 $('loginForm').addEventListener('submit',async e=>{
