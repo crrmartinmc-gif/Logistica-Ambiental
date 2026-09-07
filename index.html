@@ -106,6 +106,8 @@ button{cursor:pointer}
   .topbar{height:64px;padding:0 14px}.logo{width:38px;height:38px}.userbar{font-size:0}.screen{padding:22px 13px 35px}
   .grid{grid-template-columns:1fr}.welcome{align-items:flex-start}.welcome h1{font-size:25px}
   .card{padding:17px}.service-meta{grid-template-columns:1fr 1fr}.brand span{font-size:14px}
+.logout-btn{border:1px solid rgba(255,255,255,.28);background:transparent;color:#fff;border-radius:9px;padding:7px 11px;font-weight:800;font-size:11px;cursor:pointer}
+.logout-btn:hover{background:rgba(255,255,255,.10)}
 }
 </style>
 </head>
@@ -118,7 +120,7 @@ button{cursor:pointer}
     <div><span>SALIDA DE SERVICIO</span><small>Logística Ambiental</small></div>
   </div>
   <div class="userbar hidden" id="topUser">
-    <span id="topUserName"></span><div class="avatar" id="avatar">C</div>
+    <span id="topUserName"></span><button class="logout-btn" type="button" onclick="cerrarSesion()">SALIR</button><div class="avatar" id="avatar">C</div>
   </div>
 </header>
 
@@ -232,13 +234,6 @@ async function cargarDashboard(){
     const vehiculos=Array.isArray(vRes.vehiculos)?vRes.vehiculos:[];
     const servicios=Array.isArray(sRes.servicios)?sRes.servicios:[];
 
-    const vehiculo=asignacion
-      ? vehiculos.find(v=>String(v.idUnidad)===String(asignacion.idUnidad))
-      : null;
-
-    renderVehicle(asignacion,vehiculo);
-
-    const hoy=new Date().toISOString().slice(0,10);
     const propios=servicios.filter(s =>
       String(s.idChofer||'')===String(idChofer) &&
       String(s.estado||'').toUpperCase()!=='FINALIZADO'
@@ -247,7 +242,17 @@ async function cargarDashboard(){
     propios.sort((a,b)=>String(a.fecha||'').localeCompare(String(b.fecha||'')) ||
                          String(a.horaProgramada||'').localeCompare(String(b.horaProgramada||'')));
 
-    renderService(propios[0]||null);
+    const servicioActual=propios[0]||null;
+    // Primero usamos la asignación activa de ASIGNACIONES.
+    // Si todavía no existe, usamos el ID_UNIDAD del servicio como respaldo.
+    // Así el chofer puede ver el vehículo ya asociado al servicio.
+    const referenciaVehiculo=asignacion || servicioActual;
+    const vehiculo=referenciaVehiculo
+      ? vehiculos.find(v=>String(v.idUnidad)===String(referenciaVehiculo.idUnidad))
+      : null;
+
+    renderVehicle(referenciaVehiculo,vehiculo);
+    renderService(servicioActual);
   }catch(err){
     $('serviceBox').innerHTML='<div class="empty">No se pudieron consultar los datos operativos.<br>Intentá actualizar en unos segundos.</div>';
     console.error(err);
@@ -305,6 +310,23 @@ function formatearHora(v){
   const h=s.match(/(\\d{1,2}):(\\d{2})/);
   if(h) return h[1].padStart(2,'0')+':'+h[2];
   return s;
+}
+
+
+function cerrarSesion(){
+  sessionStorage.removeItem('diaVerdeChofer');
+  session=null;
+  $('topUser').classList.add('hidden');
+  $('dashboardScreen').classList.add('hidden');
+  $('loginScreen').classList.remove('hidden');
+  $('usuario').value='';
+  $('contrasena').value='';
+  $('loginError').style.display='none';
+  $('vehicleName').textContent='Consultando…';
+  $('vehiclePlate').textContent='—';
+  $('vehicleInfo').innerHTML='';
+  $('serviceBox').innerHTML='Consultando servicios…';
+  $('usuario').focus();
 }
 
 function verServicio(id){
