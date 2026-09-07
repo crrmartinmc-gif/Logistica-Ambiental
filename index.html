@@ -203,6 +203,7 @@ const BACKEND_URL = 'https://script.google.com/macros/s/AKfycbyLa6dr_bfxG8UKJoTb
 const $ = id => document.getElementById(id);
 let session = null;
 let dashboardTimer = null;
+let ultimaInspeccionCargada = null;
 
 function escapeHtml(v){
   return String(v ?? '').replace(/[&<>"']/g, c => ({
@@ -373,13 +374,15 @@ function formatearHora(v){
   return '—';
 }
 
-function verServicio(id){
+async function verServicio(id){
   const s=window.__servicioActual;
   if(!s || String(s.idServicio)!==String(id)){
     alert('No se pudo cargar el servicio seleccionado.');
     return;
   }
+
   servicioEnInspeccion=s;
+  ultimaInspeccionCargada=null;
   $('serviceBox').classList.add('hidden');
   $('inspectionScreen').classList.remove('hidden');
   $('inspectionServiceLabel').textContent=(s.nombreServicio||s.descripcion||'Servicio')+' · '+formatearHora(s.horaProgramada);
@@ -387,16 +390,49 @@ function verServicio(id){
   $('inspectionAlert').style.display='none';
   $('finishInspectionBtn').disabled=false;
   $('finishInspectionBtn').textContent='FINALIZAR INSPECCIÓN';
+
   construirChecklist(s);
+
+  // Cargar automáticamente la última inspección de ESTA unidad.
+  // El nuevo chofer no vuelve a marcar los puntos que siguen iguales.
+  try{
+    const idUnidad=String(s.idUnidad||'').trim();
+    if(idUnidad){
+      const res=await getJson('listarUltimaInspeccion',{idUnidad});
+      if(res?.ok && res.inspeccion){
+        ultimaInspeccionCargada=res.inspeccion;
+        aplicarUltimaInspeccion(res.inspeccion);
+      }
+    }
+  }catch(err){
+    console.warn('No se pudo cargar la última inspección:',err);
+  }
+
   $('inspectionScreen').scrollIntoView({behavior:'smooth',block:'start'});
-  postJson({accion:'registrarEventoServicio',idServicio:s.idServicio,evento:'INSPECCION_INICIADA',idChofer:session.idChofer,idUnidad:s.idUnidad||'',observaciones:'Inspección iniciada desde SALIDA DE SERVICIO'}).catch(()=>{});
+  postJson({
+    accion:'registrarEventoServicio',
+    idServicio:s.idServicio,
+    evento:'INSPECCION_INICIADA',
+    idChofer:session.idChofer,
+    idUnidad:s.idUnidad||'',
+    observaciones:ultimaInspeccionCargada
+      ? 'Inspección iniciada con actualización de la última inspección registrada.'
+      : 'Inspección iniciada desde SALIDA DE SERVICIO'
+  }).catch(()=>{});
 }
 
-function opcionHTML(n){return `<div class="check-options"><label><input name="${n}" value="BIEN" type="radio"><span>🟢 BIEN</span></label><label class="attention"><input name="${n}" value="ATENCION" type="radio"><span>🟠 ATENCIÓN</span></label><label class="critical"><input name="${n}" value="CRITICO" type="radio"><span>🔴 CRÍTICO</span></label></div>`}
+function opcionHTML(n){
+  return `<div class="check-options">
+    <label><input name="${n}" value="BIEN" type="radio"><span>🟢 BIEN</span></label>
+    <label class="attention"><input name="${n}" value="ATENCION" type="radio"><span>🟠 ATENCIÓN</span></label>
+    <label class="critical"><input name="${n}" value="CRITICO" type="radio"><span>🔴 CRÍTICO</span></label>
+  </div>`;
+}
 
 function construirChecklist(s){
   const luces=['Altas','Bajas','Giro delantero izquierdo','Giro delantero derecho','Giro trasero izquierdo','Giro trasero derecho','Posición','Stop','Balizas'];
   $('lightsGrid').innerHTML=luces.map((n,i)=>`<div class="check-item"><strong>${n}</strong>${opcionHTML('luz_'+i)}</div>`).join('');
+
   const cantidad=Number(s?.cantidadRuedas||0);
   const ruedas=cantidad===4
     ? ['Delantera izquierda','Delantera derecha','Trasera izquierda','Trasera derecha']
@@ -405,7 +441,26 @@ function construirChecklist(s){
       : cantidad===10
         ? ['Delantera izquierda','Delantera derecha','2° eje izquierda exterior','2° eje izquierda interior','2° eje derecha interior','2° eje derecha exterior','3° eje izquierda exterior','3° eje izquierda interior','3° eje derecha interior','3° eje derecha exterior']
         : Array.from({length:Math.max(4,cantidad||4)},(_,i)=>'Rueda '+(i+1));
+
   $('wheelGrid').innerHTML=ruedas.map((n,i)=>`<div class="check-item"><strong>${n}</strong>${opcionHTML('rueda_'+i)}</div>`).join('');
+}
+
+function aplicarUltimaInspeccion(inspeccion){
+  const resultado=inspeccion?.resultado||{};
+  Object.entries(resultado).forEach(([name,value])=>{
+    const v=String(value||'').toUpperCase();
+    if(!v) return;
+    const input=document.querySelector(`#inspectionScreen input[name="${CSS.escape(name)}"][value="${CSS.escape(v)}"]`);
+    if(input) input.checked=true;
+  });
+
+  if(Object.keys(resultado).length){
+    $('inspectionStatus').textContent='↻ ÚLTIMA INSPECCIÓN CARGADA · REVISÁ SOLO LO QUE CAMBIÓ';
+  }
+
+  if(inspeccion?.observaciones){
+    $('inspectionObs').value=String(inspeccion.observaciones);
+  }
 }
 
 function obtenerInspeccion(){
@@ -449,7 +504,9 @@ async function finalizarInspeccion(){
     servicioEnInspeccion.estado='LISTO PARA SALIR';
     window.__servicioActual=servicioEnInspeccion;
     $('inspectionStatus').textContent='🟢 LISTO PARA SALIR';
-    a.textContent='Inspección finalizada correctamente. El servicio quedó LISTO PARA SALIR.';
+    a.textContent=ultimaInspeccionCargada
+      ? 'Inspección actualizada correctamente. La anterior se tomó como base y se guardó el estado vigente de la unidad.'
+      : 'Inspección finalizada correctamente. El servicio quedó LISTO PARA SALIR.';
     a.style.display='block';
     btn.textContent='INICIAR VIAJE';
     btn.disabled=false;
