@@ -71,12 +71,22 @@ button{cursor:pointer}
 .card-title h2{margin:0;font-size:17px;color:var(--green-950)}
 .eyebrow{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--green-700);font-weight:900}
 .vehicle{
-  display:flex;gap:18px;align-items:center;background:linear-gradient(145deg,#f4fbf7,#e9f6ef);
-  border:1px solid #d8eee2;border-radius:18px;padding:17px
+  display:grid;grid-template-columns:minmax(0,1fr);gap:14px;
+  background:linear-gradient(145deg,#f4fbf7,#e9f6ef);
+  border:1px solid #d8eee2;border-radius:18px;padding:16px
 }
-.vehicle-icon{width:96px;height:96px;border-radius:17px;background:#fff;display:grid;place-items:center;overflow:hidden;box-shadow:0 6px 16px rgba(4,45,32,.08);flex:0 0 96px}.vehicle-icon img{width:100%;height:100%;object-fit:cover;display:block}.vehicle-icon .vehicle-placeholder{font-size:37px}
-.vehicle h3{margin:0;font-size:18px;color:var(--green-950)}
-.vehicle .plate{display:inline-block;margin-top:5px;background:var(--green-950);color:#fff;padding:5px 9px;border-radius:7px;font-weight:900;font-size:12px;letter-spacing:.7px}
+.vehicle-photo{
+  width:100%;min-height:235px;border-radius:16px;background:#fff;
+  display:grid;place-items:center;overflow:hidden;box-shadow:0 6px 16px rgba(4,45,32,.08)
+}
+.vehicle-photo img{width:100%;height:235px;object-fit:cover;display:block}
+.vehicle-photo .vehicle-placeholder{font-size:52px}
+.vehicle-details{text-align:center}
+.vehicle h3{margin:8px 0 0;font-size:20px;color:var(--green-950);line-height:1.15}
+.vehicle .plate{display:inline-block;background:var(--green-950);color:#fff;padding:8px 16px;border-radius:9px;font-weight:900;font-size:14px;letter-spacing:.9px}
+.vehicle-km{margin-top:14px;padding:13px 16px;border-radius:13px;background:#f7fcf9;border:1px solid #dceee5;text-align:left;display:flex;justify-content:space-between;align-items:center;gap:12px}
+.vehicle-km span{font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--green-700);font-weight:900}
+.vehicle-km strong{font-size:18px;color:var(--green-950)}
 .info-list{margin:17px 0 0;display:grid;gap:11px}
 .info-row{display:flex;justify-content:space-between;gap:15px;border-bottom:1px solid #edf2ef;padding-bottom:10px;font-size:13px}
 .info-row:last-child{border-bottom:0;padding-bottom:0}
@@ -105,7 +115,7 @@ button{cursor:pointer}
 @media(max-width:760px){
   .topbar{height:64px;padding:0 14px}.logo{width:38px;height:38px}.userbar{font-size:0}.screen{padding:22px 13px 35px}
   .grid{grid-template-columns:1fr}.welcome{align-items:flex-start}.welcome h1{font-size:25px}
-  .card{padding:17px}.service-meta{grid-template-columns:1fr 1fr}.brand span{font-size:14px}.vehicle-icon{height:220px}
+  .card{padding:17px}.service-meta{grid-template-columns:1fr 1fr}.brand span{font-size:14px}.vehicle{padding:14px;gap:12px}.vehicle-photo{min-height:190px}.vehicle-photo img{height:190px}.vehicle h3{font-size:19px}.vehicle .plate{font-size:13px;padding:7px 14px}.vehicle-km{margin-top:12px}
 .logout-btn{border:1px solid rgba(255,255,255,.28);background:transparent;color:#fff;border-radius:9px;padding:7px 11px;font-weight:800;font-size:11px;cursor:pointer}
 .logout-btn:hover{background:rgba(255,255,255,.10)}
 }
@@ -164,10 +174,12 @@ button{cursor:pointer}
         <div><div class="eyebrow">Asignación actual</div><h2>Mi vehículo</h2></div>
       </div>
       <div id="vehicleBox" class="vehicle">
-        <div class="vehicle-icon" id="vehiclePhoto"><span class="vehicle-placeholder">🚛</span></div>
-        <span class="plate" id="vehiclePlate">—</span>
-        <h3 id="vehicleName">Consultando…</h3>
-        <div class="vehicle-km"><span>KM actual</span><strong id="vehicleKm">—</strong></div>
+        <div class="vehicle-photo" id="vehiclePhoto"><span class="vehicle-placeholder">🚛</span></div>
+        <div class="vehicle-details">
+          <span class="plate" id="vehiclePlate">—</span>
+          <h3 id="vehicleName">Consultando…</h3>
+          <div class="vehicle-km"><span>KM actual</span><strong id="vehicleKm">—</strong></div>
+        </div>
       </div>
     </div>
 
@@ -261,7 +273,8 @@ async function cargarDashboard(){
       ? vehiculos.find(v=>String(v.idUnidad)===String(referenciaVehiculo.idUnidad))
       : null;
 
-    const estadoVehiculo=estadoFlota.find(x=>String(x.dominio||'').trim().toUpperCase()===String(vehiculo?.dominio||referenciaVehiculo?.dominio||'').trim().toUpperCase()) || null;
+    const dominioReferencia=String(vehiculo?.dominio||referenciaVehiculo?.dominio||'').trim().toUpperCase().replace(/\s+/g,'');
+    const estadoVehiculo=estadoFlota.find(x=>String(x.dominio||'').trim().toUpperCase().replace(/\s+/g,'')===dominioReferencia) || null;
     renderVehicle(referenciaVehiculo,vehiculo,estadoVehiculo);
     renderService(servicioActual);
   }catch(err){
@@ -289,8 +302,20 @@ function convertirFotoDrive(url){
 
 function formatearKm(v){
   const n=String(v??'').trim();
-  if(!n) return '—';
-  const num=Number(String(n).replace(/\./g,'').replace(',','.'));
+  if(!n || n==='—') return '—';
+  const limpio=n.replace(/[^0-9,.-]/g,'');
+  let num;
+  if(limpio.includes('.') && limpio.includes(',')){
+    num=Number(limpio.replace(/\./g,'').replace(',','.'));
+  }else if(limpio.includes(',')){
+    const partes=limpio.split(',');
+    num=partes.length===2 && partes[1].length<=2 ? Number(limpio.replace(',','.')) : Number(limpio.replace(/,/g,''));
+  }else if(limpio.includes('.')){
+    const partes=limpio.split('.');
+    num=partes.length>1 && partes.slice(1).every(p=>p.length===3) ? Number(limpio.replace(/\./g,'')) : Number(limpio);
+  }else{
+    num=Number(limpio);
+  }
   if(Number.isFinite(num)) return Math.round(num).toLocaleString('es-AR')+' km';
   return n+' km';
 }
