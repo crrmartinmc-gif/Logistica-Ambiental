@@ -246,6 +246,12 @@ async function cargarDashboard(){
                          String(a.horaProgramada||'').localeCompare(String(b.horaProgramada||'')));
 
     const servicioActual=propios[0]||null;
+    // La cantidad de ruedas pertenece a cada unidad y se obtiene desde VEHICULOS.
+    // No se fija un número por defecto cuando conocemos la unidad asignada al servicio.
+    if (servicioActual) {
+      const vehiculoServicio=vehiculos.find(v=>String(v.idUnidad)===String(servicioActual.idUnidad));
+      servicioActual.cantidadRuedas=Number(vehiculoServicio?.cantidadRuedas||0);
+    }
     // Primero usamos la asignación activa de ASIGNACIONES.
     // Si todavía no existe, usamos el ID_UNIDAD del servicio como respaldo.
     // Así el chofer puede ver el vehículo ya asociado al servicio.
@@ -357,14 +363,14 @@ function opcionHTML(n){return `<div class="check-options"><label><input name="${
 function construirChecklist(s){
   const luces=['Altas','Bajas','Giro delantero izquierdo','Giro delantero derecho','Giro trasero izquierdo','Giro trasero derecho','Posición','Stop','Balizas'];
   $('lightsGrid').innerHTML=luces.map((n,i)=>`<div class="check-item"><strong>${n}</strong>${opcionHTML('luz_'+i)}</div>`).join('');
-  const cantidad=Number(s?.cantidadRuedas||0)||4;
+  const cantidad=Number(s?.cantidadRuedas||0);
   const ruedas=cantidad===4
     ? ['Delantera izquierda','Delantera derecha','Trasera izquierda','Trasera derecha']
     : cantidad===6
       ? ['Delantera izquierda','Delantera derecha','Trasera izquierda exterior','Trasera izquierda interior','Trasera derecha interior','Trasera derecha exterior']
       : cantidad===10
         ? ['Delantera izquierda','Delantera derecha','2° eje izquierda exterior','2° eje izquierda interior','2° eje derecha interior','2° eje derecha exterior','3° eje izquierda exterior','3° eje izquierda interior','3° eje derecha interior','3° eje derecha exterior']
-        : Array.from({length:cantidad},(_,i)=>'Rueda '+(i+1));
+        : Array.from({length:Math.max(4,cantidad||4)},(_,i)=>'Rueda '+(i+1));
   $('wheelGrid').innerHTML=ruedas.map((n,i)=>`<div class="check-item"><strong>${n}</strong>${opcionHTML('rueda_'+i)}</div>`).join('');
 }
 
