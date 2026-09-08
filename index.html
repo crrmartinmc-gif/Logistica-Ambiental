@@ -483,14 +483,15 @@ function renderVehicle(a,v,estadoFlota){
     $('vehiclePhoto').innerHTML='<span class="vehicle-placeholder">🚛</span>';
     return;
   }
-  const dominio=v?.dominio || a.dominio || 'SIN DOMINIO';
+  const dominio=v?.dominio || a.dominio || estadoFlota?.dominio || 'SIN DOMINIO';
   $('vehicleName').textContent=[v?.marca,v?.modelo].filter(Boolean).join(' ') || 'Vehículo';
   $('vehiclePlate').textContent=dominio;
   const foto=convertirFotoDrive(v?.fotoUrl);
   $('vehiclePhoto').innerHTML=foto
     ? `<img src="${escapeHtml(foto)}" alt="Foto de ${escapeHtml(dominio)}" onerror="this.parentElement.innerHTML='<span class=\"vehicle-placeholder\">🚛</span>'">`
     : '<span class="vehicle-placeholder">🚛</span>';
-  $('vehicleKm').textContent=formatearKm(estadoFlota?.km);
+  const kmActual = estadoFlota?.km ?? estadoFlota?.kmActual ?? estadoFlota?.['KM ACTUAL'] ?? estadoFlota?.kilometraje ?? estadoFlota?.['KILOMETRAJE'] ?? v?.kmActual ?? v?.kilometraje ?? v?.['KM ACTUAL'] ?? '';
+  $('vehicleKm').textContent=formatearKm(kmActual);
 }
 
 function renderService(s){
@@ -560,13 +561,13 @@ async function verServicio(id){
   try{
     const estado=await getJson('listarEstadoFlota');
     const lista=estado?.estadoFlota||estado?.resultado||estado?.data||[];
-    const dom=String(s.dominio||'').trim().toUpperCase();
+    const dom=String(s.dominio||s.patente||'').trim().toUpperCase().replace(/\s+/g,'');
     const encontrado=Array.isArray(lista)
-      ? lista.find(x=>String(x.dominio||'').trim().toUpperCase()===dom)
+      ? lista.find(x=>String(x.dominio||x.patente||x.PATENTE||x.DOMINIO||'').trim().toUpperCase().replace(/\s+/g,'')===dom)
       : null;
 
-    if(encontrado?.km!==undefined && encontrado?.km!==null && String(encontrado.km).trim()!==''){
-      $('lastKmHint').textContent='Último KM registrado: '+formatearKilometraje(encontrado.km);
+    if((encontrado?.km!==undefined || encontrado?.kmActual!==undefined || encontrado?.['KM ACTUAL']!==undefined || encontrado?.kilometraje!==undefined) && String(encontrado?.km ?? encontrado?.kmActual ?? encontrado?.['KM ACTUAL'] ?? encontrado?.kilometraje ?? '').trim()!==''){
+      $('lastKmHint').textContent='Último KM registrado: '+formatearKilometraje(encontrado?.km ?? encontrado?.kmActual ?? encontrado?.['KM ACTUAL'] ?? encontrado?.kilometraje);
     }else{
       $('lastKmHint').textContent='Todavía no hay un kilometraje registrado para esta unidad.';
     }
