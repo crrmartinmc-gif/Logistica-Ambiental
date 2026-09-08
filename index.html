@@ -390,6 +390,37 @@ function initials(name){
   return (p[0]?.[0]||'C')+(p[1]?.[0]||'');
 }
 
+function guardarSesionLocal(){
+  try{ localStorage.setItem('diaVerdeChofer',JSON.stringify(session)); }catch(e){}
+}
+
+function limpiarSesionLocal(){
+  try{
+    localStorage.removeItem('diaVerdeChofer');
+    sessionStorage.removeItem('diaVerdeChofer');
+    localStorage.removeItem('diaVerdeServicioActivo');
+  }catch(e){}
+}
+
+function cerrarSesion(){
+  if(!confirm('¿Querés cerrar la sesión?')) return;
+  limpiarSesionLocal();
+  session=null;
+  servicioEnInspeccion=null;
+  window.__servicioActual=null;
+  window.__salidaFotos={frente:null,trasera:null,lateral_derecho:null,lateral_izquierdo:null};
+  if(dashboardTimer) clearInterval(dashboardTimer);
+  dashboardTimer=null;
+  $('topUser').classList.add('hidden');
+  $('dashboardScreen').classList.add('hidden');
+  $('inspectionScreen').classList.add('hidden');
+  $('loginScreen').classList.remove('hidden');
+  $('usuario').value='';
+  $('contrasena').value='';
+  $('loginError').style.display='none';
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
 async function cargarDashboard(){
   const idChofer=session.idChofer;
   try{
@@ -514,7 +545,7 @@ function renderService(s){
         <div class="meta"><span>Estado</span><strong>${escapeHtml(s.estado||'PROGRAMADO')}</strong></div>
       </div>
       <div class="actions" style="padding:0 19px 19px">
-        <button class="primary" type="button" onclick="verServicio('${escapeHtml(s.idServicio||'')}')">VER SERVICIO</button>
+        <button class="primary" type="button" onclick="verServicio('${escapeHtml(s.idServicio||'')}')">${String(s.estado||'').toUpperCase()==='EN VIAJE'?'CONTINUAR VIAJE':'VER SERVICIO'}</button>
       </div>
     </div>`;
 }
@@ -538,21 +569,47 @@ async function verServicio(id){
 
   servicioEnInspeccion=s;
   ultimaInspeccionCargada=null;
-  window.__salidaFotos={frente:null,trasera:null,lateral_derecho:null,lateral_izquierdo:null};
 
   $('serviceBox').classList.add('hidden');
   $('inspectionScreen').classList.remove('hidden');
 
   $('inspectionServiceLabel').textContent =
     (s.nombreServicio||s.descripcion||'Servicio')+' · '+formatearHora(s.horaProgramada);
-
-  $('inspectionStatus').className='status-banner pending'; $('inspectionStatus').innerHTML='📸 <strong>Preparando salida</strong> · 4 fotos + kilometraje requeridos';
   $('inspectionAlert').style.display='none';
+
+  // Si el servicio ya está EN VIAJE, NO volvemos a pedir fotos ni KM inicial.
+  // El estado del backend es la fuente de verdad y permite recuperar el viaje
+  // aunque el chofer haya cerrado la app o el navegador.
+  if(String(s.estado||'').toUpperCase()==='EN VIAJE'){
+    window.__servicioActual=s;
+    try{ localStorage.setItem('diaVerdeServicioActivo',JSON.stringify({idServicio:s.idServicio})); }catch(e){}
+    $('inspectionStatus').className='status-banner travel';
+    $('inspectionStatus').innerHTML='🟢 <strong>EN VIAJE</strong> · servicio activo recuperado';
+    $('inspectionAlert').textContent='El viaje ya estaba iniciado. Podés finalizarlo desde acá.';
+    $('inspectionAlert').style.display='block';
+    $('finishInspectionBtn').disabled=false;
+    $('finishInspectionBtn').textContent='FINALIZAR VIAJE';
+    $('finishInspectionBtn').onclick=finalizarViaje;
+    $('currentKm').value='';
+    $('currentKm').disabled=true;
+    $('inspectionObs').value='';
+    $('inspectionObs').disabled=true;
+    $('vehiclePhotosGrid').innerHTML='<div style="grid-column:1/-1;padding:18px;border:1px solid #cfe2d9;border-radius:13px;background:#f4faf7;color:#356156;font-weight:700">✓ Las fotos de salida ya fueron registradas al iniciar este viaje.</div>';
+    if($('photoProgress')) $('photoProgress').textContent='Salida registrada';
+    $('lastKmHint').textContent='El kilometraje inicial ya fue registrado. No hace falta volver a cargarlo.';
+    $('inspectionScreen').scrollIntoView({behavior:'smooth',block:'start'});
+    return;
+  }
+
+  window.__salidaFotos={frente:null,trasera:null,lateral_derecho:null,lateral_izquierdo:null};
+  $('inspectionStatus').className='status-banner pending'; $('inspectionStatus').innerHTML='📸 <strong>Preparando salida</strong> · 4 fotos + kilometraje requeridos';
   $('finishInspectionBtn').disabled=true;
   $('finishInspectionBtn').textContent='▶ INICIAR VIAJE';
   $('finishInspectionBtn').onclick=iniciarViaje;
   $('currentKm').value='';
+  $('currentKm').disabled=false;
   $('inspectionObs').value='';
+  $('inspectionObs').disabled=false;
 
   construirFotosSalida();
   actualizarEstadoInicio();
@@ -726,8 +783,16 @@ function renderObservacion(){return `<div class="modal-field"><label class="moda
 function renderFoto(){return `<div class="modal-field"><label class="modal-label">Foto (opcional)</label><div class="report-photo">📷 Adjuntar foto de la falla<input id="controlFoto" type="file" accept="image/*" capture="environment"></div></div>`}
 function renderModalActions(){return `<div class="modal-actions"><button type="button" class="modal-cancel" onclick="cerrarControlVehiculo()">CANCELAR</button><button type="button" class="modal-save" onclick="registrarControlVehiculo()">REGISTRAR</button></div>`}
 function seleccionarElemento(btn,valor){
-  document.querySelectorAll('#vehicleModalBody .choice-btn').forEach(b=>{if(b.parentElement===btn.parentElement && !b.classList.contains('state-good')&&!b.classList.contains('state-attention')&&!b.classList.contains('state-critical')&&!b.classList.contains('vtv-valid')&&!b.classList.contains('vtv-expired')) b.classList.remove('active')});
-  btn.classList.add('active'); controlDraft.elemento=valor;
+  if(!btn) return;
+  // La selección del elemento es independiente de la selección de estado.
+  // Usamos el grupo inmediato del botón para evitar que las botoneras de
+  // LUCES se interfieran con la botonera BIEN/ATENCIÓN/CRÍTICO.
+  const grupo=btn.closest('.choice-grid');
+  if(grupo){
+    grupo.querySelectorAll('.choice-btn').forEach(b=>b.classList.remove('active'));
+  }
+  btn.classList.add('active');
+  controlDraft.elemento=valor;
 }
 function seleccionarEstado(btn,valor){
   const grupo=btn.parentElement; grupo.querySelectorAll('.choice-btn').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); controlDraft.estado=valor;
@@ -829,10 +894,20 @@ async function iniciarViaje(){
       }
     });
 
-    if(!res?.ok) throw new Error(res?.error||'No se pudo iniciar el viaje.');
+    if(!res?.ok){
+      const msg=String(res?.error||'');
+      if(/ya.*EN VIAJE|EN VIAJE.*ya/i.test(msg)){
+        servicioEnInspeccion.estado='EN VIAJE';
+        window.__servicioActual=servicioEnInspeccion;
+        try{ localStorage.setItem('diaVerdeServicioActivo',JSON.stringify({idServicio:servicioEnInspeccion.idServicio})); }catch(e){}
+        return configurarPantallaViajeRecuperado(msg);
+      }
+      throw new Error(msg||'No se pudo iniciar el viaje.');
+    }
 
     servicioEnInspeccion.estado='EN VIAJE';
     window.__servicioActual=servicioEnInspeccion;
+    try{ localStorage.setItem('diaVerdeServicioActivo',JSON.stringify({idServicio:servicioEnInspeccion.idServicio})); }catch(e){}
 
     $('inspectionStatus').className='status-banner travel';
     $('inspectionStatus').innerHTML='🟢 <strong>EN VIAJE</strong> · servicio activo';
@@ -852,6 +927,18 @@ async function iniciarViaje(){
   }
 }
 
+function configurarPantallaViajeRecuperado(mensaje){
+  const btn=$('finishInspectionBtn'),a=$('inspectionAlert');
+  $('inspectionStatus').className='status-banner travel';
+  $('inspectionStatus').innerHTML='🟢 <strong>EN VIAJE</strong> · servicio activo recuperado';
+  a.textContent=mensaje||'El viaje ya estaba iniciado. Podés finalizarlo desde acá.';
+  a.style.display='block';
+  btn.disabled=false;
+  btn.textContent='FINALIZAR VIAJE';
+  btn.onclick=finalizarViaje;
+  try{ $('currentKm').disabled=true; $('inspectionObs').disabled=true; }catch(e){}
+}
+
 async function finalizarViaje(){
   const btn=$('finishInspectionBtn'),a=$('inspectionAlert');
   btn.disabled=true;btn.textContent='FINALIZANDO…';a.style.display='none';
@@ -860,6 +947,7 @@ async function finalizarViaje(){
     if(!res?.ok) throw new Error(res?.error||'No se pudo finalizar el viaje.');
     servicioEnInspeccion.estado='FINALIZADO';
     window.__servicioActual=servicioEnInspeccion;
+    try{ localStorage.removeItem('diaVerdeServicioActivo'); }catch(e){}
     $('inspectionStatus').className='status-banner ready';
     $('inspectionStatus').innerHTML='✅ <strong>Servicio finalizado</strong>'; 
     a.textContent='Servicio finalizado correctamente.';
@@ -911,6 +999,7 @@ $('loginForm').addEventListener('submit',async e=>{
     };
 
     sessionStorage.setItem('diaVerdeChofer',JSON.stringify(session));
+    guardarSesionLocal();
 
     $('driverName').textContent=session.nombre;
     $('topUserName').textContent=session.nombre;
@@ -931,7 +1020,7 @@ $('loginForm').addEventListener('submit',async e=>{
 
 (function restore(){
   try{
-    const raw=sessionStorage.getItem('diaVerdeChofer');
+    const raw=localStorage.getItem('diaVerdeChofer') || sessionStorage.getItem('diaVerdeChofer');
     if(!raw) return;
     session=JSON.parse(raw);
     if(!session?.idChofer) return;
