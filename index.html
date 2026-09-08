@@ -1,745 +1,434 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Salida de Servicio · Logística Ambiental</title>
-<style>
-:root{
-  --green-950:#062d20;
-  --green-900:#073d2b;
-  --green-850:#0a4b35;
-  --green-800:#0b5a3e;
-  --green-700:#08734c;
-  --green-500:#18a66b;
-  --green-100:#e8f6ef;
-  --cream:#f5f8f5;
-  --white:#fff;
-  --text:#163028;
-  --muted:#6a7d75;
-  --line:#dce8e2;
-  --danger:#c93636;
-  --shadow:0 18px 45px rgba(4,45,32,.14);
-}
-*{box-sizing:border-box}
-html,body{margin:0;min-height:100%;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--cream);color:var(--text)}
-button,input{font:inherit}
-button{cursor:pointer}
-.app{min-height:100vh}
-.topbar{
-  height:72px;background:linear-gradient(135deg,var(--green-950),var(--green-800));
-  color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 22px;
-  position:sticky;top:0;z-index:10;box-shadow:0 5px 22px rgba(0,0,0,.12)
-}
-.brand{display:flex;align-items:center;gap:12px;font-weight:800;letter-spacing:.2px}
-.logo{width:42px;height:42px;border-radius:13px;background:#fff;display:grid;place-items:center;color:var(--green-800);font-size:21px;box-shadow:0 7px 18px rgba(0,0,0,.12)}
-.brand small{display:block;font-size:11px;font-weight:600;opacity:.72;margin-top:1px}
-.userbar{display:flex;align-items:center;gap:10px;font-size:13px}
-.avatar{width:38px;height:38px;border-radius:50%;background:#dff4e8;color:var(--green-900);display:grid;place-items:center;font-weight:800}
-.screen{max-width:1100px;margin:0 auto;padding:30px 18px 50px}
-.login-wrap{min-height:calc(100vh - 72px);display:grid;place-items:center;padding:25px 18px}
-.login-card{
-  width:min(430px,100%);background:#fff;border:1px solid var(--line);border-radius:26px;
-  box-shadow:var(--shadow);overflow:hidden
-}
-.login-head{background:linear-gradient(145deg,var(--green-950),var(--green-700));padding:32px;color:#fff}
-.login-head .big-logo{width:62px;height:62px;background:#fff;color:var(--green-800);border-radius:19px;display:grid;place-items:center;font-size:30px;margin-bottom:20px}
-.login-head h1{margin:0 0 6px;font-size:27px}
-.login-head p{margin:0;opacity:.78;font-size:14px}
-.login-body{padding:28px}
-.field{margin-bottom:18px}
-.field label{display:block;font-size:12px;font-weight:800;color:var(--muted);margin:0 0 8px;text-transform:uppercase;letter-spacing:.7px}
-.field input{
-  width:100%;height:52px;border:1px solid var(--line);border-radius:14px;padding:0 15px;
-  outline:none;background:#fbfdfc;color:var(--text);transition:.2s
-}
-.field input:focus{border-color:var(--green-500);box-shadow:0 0 0 4px rgba(24,166,107,.11);background:#fff}
-.primary{
-  width:100%;height:54px;border:0;border-radius:15px;background:linear-gradient(135deg,var(--green-800),var(--green-500));
-  color:#fff;font-weight:800;box-shadow:0 10px 24px rgba(8,115,76,.23)
-}
-.primary:disabled{opacity:.6;cursor:not-allowed}
-.error{display:none;margin:0 0 16px;padding:12px 13px;border-radius:12px;background:#fff0f0;color:var(--danger);font-size:13px;font-weight:700}
-.loading{display:none;text-align:center;color:var(--muted);font-size:12px;margin-top:14px}
-.welcome{display:flex;justify-content:space-between;align-items:flex-end;gap:20px;margin-bottom:24px}
-.welcome h1{margin:0;font-size:30px;color:var(--green-950)}
-.welcome p{margin:6px 0 0;color:var(--muted)}
-.status-pill{padding:8px 12px;border-radius:999px;background:var(--green-100);color:var(--green-800);font-size:12px;font-weight:800}
-.grid{display:grid;grid-template-columns:1.05fr .95fr;gap:18px}
-.card{background:#fff;border:1px solid var(--line);border-radius:22px;box-shadow:0 8px 28px rgba(4,45,32,.06);padding:22px}
-.card-title{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
-.card-title h2{margin:0;font-size:17px;color:var(--green-950)}
-.eyebrow{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--green-700);font-weight:900}
-.vehicle{
-  display:grid;grid-template-columns:minmax(0,1fr);gap:14px;
-  background:linear-gradient(145deg,#f4fbf7,#e9f6ef);
-  border:1px solid #d8eee2;border-radius:18px;padding:16px
-}
-.vehicle-photo{
-  width:100%;min-height:235px;border-radius:16px;background:#fff;
-  display:grid;place-items:center;overflow:hidden;box-shadow:0 6px 16px rgba(4,45,32,.08)
-}
-.vehicle-photo img{width:100%;height:235px;object-fit:cover;display:block}
-.vehicle-photo .vehicle-placeholder{font-size:52px}
-.vehicle-details{text-align:center}
-.vehicle h3{margin:8px 0 0;font-size:20px;color:var(--green-950);line-height:1.15}
-.vehicle .plate{display:inline-block;background:var(--green-950);color:#fff;padding:8px 16px;border-radius:9px;font-weight:900;font-size:14px;letter-spacing:.9px}
-.vehicle-km{margin-top:14px;padding:13px 16px;border-radius:13px;background:#f7fcf9;border:1px solid #dceee5;text-align:left;display:flex;justify-content:space-between;align-items:center;gap:12px}
-.vehicle-km span{font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--green-700);font-weight:900}
-.vehicle-km strong{font-size:18px;color:var(--green-950)}
-.info-list{margin:17px 0 0;display:grid;gap:11px}
-.info-row{display:flex;justify-content:space-between;gap:15px;border-bottom:1px solid #edf2ef;padding-bottom:10px;font-size:13px}
-.info-row:last-child{border-bottom:0;padding-bottom:0}
-.info-row span:first-child{color:var(--muted)}
-.info-row strong{text-align:right;color:var(--text)}
-.service-card{border:1px solid #d8eee2;border-radius:18px;overflow:hidden}
-.service-head{padding:18px;background:linear-gradient(135deg,var(--green-950),var(--green-800));color:#fff}
-.service-head h2{margin:4px 0 0;font-size:21px}
-.route{padding:19px;display:grid;gap:10px}
-.route-point{display:flex;align-items:flex-start;gap:11px}
-.dot{width:12px;height:12px;border-radius:50%;background:var(--green-500);margin-top:4px;box-shadow:0 0 0 5px #e3f6ec}
-.route-point strong{display:block;font-size:14px}
-.route-point small{color:var(--muted);font-size:11px}
-.arrow{color:var(--green-700);font-weight:900;margin-left:4px}
-.service-meta{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 19px 19px}
-.meta{background:#f6faf8;border-radius:13px;padding:12px}
-.meta span{display:block;color:var(--muted);font-size:10px;text-transform:uppercase;font-weight:800}
-.meta strong{display:block;margin-top:4px;font-size:14px}
-.actions{display:grid;gap:10px;margin-top:17px}
-.secondary{
-  height:48px;border:1px solid var(--line);border-radius:13px;background:#fff;color:var(--green-800);font-weight:800
-}
-.empty{padding:25px;text-align:center;background:#f7faf8;border:1px dashed #cbded5;border-radius:17px;color:var(--muted)}
-.hidden{display:none!important}
-.footer-note{text-align:center;margin-top:22px;color:#8b9a94;font-size:11px}
-@media(max-width:760px){
-  .topbar{height:64px;padding:0 14px}.logo{width:38px;height:38px}.userbar{font-size:0}.screen{padding:22px 13px 35px}
-  .grid{grid-template-columns:1fr}.welcome{align-items:flex-start}.welcome h1{font-size:25px}
-  .card{padding:17px}.service-meta{grid-template-columns:1fr 1fr}.brand span{font-size:14px}.vehicle{padding:14px;gap:12px}.vehicle-photo{min-height:190px}.vehicle-photo img{height:190px}.vehicle h3{font-size:19px}.vehicle .plate{font-size:13px;padding:7px 14px}.vehicle-km{margin-top:12px}
-.logout-btn{border:1px solid rgba(255,255,255,.28);background:transparent;color:#fff;border-radius:9px;padding:7px 11px;font-weight:800;font-size:11px;cursor:pointer}
-.logout-btn:hover{background:rgba(255,255,255,.10)}
-}
-.inspection-wrap{max-width:980px;margin:28px auto;padding:0 18px 40px}.inspection-card{background:#fff;border:1px solid #dce9e3;border-radius:18px;box-shadow:0 10px 28px rgba(0,70,45,.08);overflow:hidden}.inspection-head{background:linear-gradient(135deg,#004b35,#087a52);color:#fff;padding:24px}.inspection-head h2{margin:4px 0 6px;font-size:24px}.inspection-head p{margin:0;opacity:.88}.check-section{padding:20px 22px;border-bottom:1px solid #e7efeb}.check-section h3{margin:0 0 14px;font-size:17px}
-/* V12 — fotos obligatorias de salida */
-.vehicle-photo-card{background:#f7fbf9;border:1px solid #d5e6de;border-radius:14px;padding:9px;text-align:center}
-.vehicle-photo-preview{width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:10px;background:#e9f1ed;display:block}
-.vehicle-photo-label{display:block;margin:8px 0 7px;font-weight:800;font-size:13px;color:#073f2e}
-.vehicle-photo-btn{width:100%;border:1px solid #c6dcd3;background:white;border-radius:10px;padding:9px;font-weight:800;color:#086544;cursor:pointer}
-.vehicle-photo-btn:disabled{opacity:.5;cursor:not-allowed}
-.vehicle-photo-ok{display:block;margin-top:6px;font-size:11px;color:#087044;font-weight:800}
-@media(max-width:800px){
-  #vehiclePhotosGrid{grid-template-columns:repeat(2,minmax(0,1fr)) !important}
-}
-@media(max-width:480px){
-  #vehiclePhotosGrid{grid-template-columns:1fr 1fr !important;gap:8px !important}
-  .vehicle-photo-card{padding:7px}
-  .vehicle-photo-label{font-size:12px}
-  .vehicle-photo-btn{font-size:12px;padding:8px 5px}
-}
-
-</style>
-</head>
-<body>
-<div class="app">
-
-<header class="topbar">
-  <div class="brand">
-    <div class="logo">♻</div>
-    <div><span>SALIDA DE SERVICIO</span><small>Logística Ambiental</small></div>
-  </div>
-  <div class="userbar hidden" id="topUser">
-    <span id="topUserName"></span><button class="logout-btn" type="button" onclick="cerrarSesion()">SALIR</button><div class="avatar" id="avatar">C</div>
-  </div>
-</header>
-
-<section id="loginScreen" class="login-wrap">
-  <div class="login-card">
-    <div class="login-head">
-      <div class="big-logo">♻</div>
-      <h1>Bienvenido</h1>
-      <p>Ingresá para consultar tu vehículo y los servicios asignados.</p>
-    </div>
-    <form class="login-body" id="loginForm">
-      <div class="error" id="loginError"></div>
-      <div class="field">
-        <label for="usuario">Usuario</label>
-        <input id="usuario" autocomplete="username" inputmode="text" required>
-      </div>
-      <div class="field">
-        <label for="contrasena">Contraseña</label>
-        <input id="contrasena" type="password" autocomplete="current-password" required>
-      </div>
-      <button class="primary" id="loginBtn" type="submit">INGRESAR</button>
-      <div class="loading" id="loginLoading">Verificando credenciales…</div>
-    </form>
-  </div>
-</section>
-
-<section id="dashboardScreen" class="screen hidden">
-  <div class="welcome">
-    <div>
-      <div class="eyebrow">Panel del chofer</div>
-      <h1>Hola, <span id="driverName">Chofer</span> 👋</h1>
-      <p>Acá vas a encontrar tu vehículo y los servicios que tenés asignados.</p>
-    </div>
-    <div class="status-pill">● CUENTA ACTIVA</div>
-  </div>
-
-  <div class="grid">
-    <div class="card">
-      <div class="card-title">
-        <div><div class="eyebrow">Asignación actual</div><h2>Mi vehículo</h2></div>
-      </div>
-      <div id="vehicleBox" class="vehicle">
-        <div class="vehicle-photo" id="vehiclePhoto"><span class="vehicle-placeholder">🚛</span></div>
-        <div class="vehicle-details">
-          <span class="plate" id="vehiclePlate">—</span>
-          <h3 id="vehicleName">Consultando…</h3>
-          <div class="vehicle-km"><span>KM actual</span><strong id="vehicleKm">—</strong></div>
-        </div>
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="card-title">
-        <div><div class="eyebrow">Agenda operativa</div><h2>Servicio asignado</h2></div>
-      </div>
-      <div id="serviceBox" class="empty">Consultando servicios…</div>
-    </div>
-  </div>
-
-  <section id="inspectionScreen" class="inspection-wrap hidden">
-    <div class="inspection-card">
-      <div class="inspection-head">
-        <div class="eyebrow" style="color:#bfead5">INICIO DE SERVICIO</div>
-        <h2>Preparar salida</h2>
-        <p id="inspectionServiceLabel">Completá los datos antes de comenzar el viaje.</p>
-      </div>
-
-      <div class="status-banner" id="inspectionStatus">FOTOS PENDIENTES</div>
-
-      <div class="check-section">
-        <h3>1. Fotos del vehículo <span style="color:#c33">*</span></h3>
-        <p style="margin:0 0 14px;color:#71807a;font-size:13px">
-          Sacá las 4 fotos obligatorias: frente, trasera, lateral derecho y lateral izquierdo.
-        </p>
-
-        <div id="vehiclePhotosGrid" style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px"></div>
-
-        <div id="photoProgress" style="margin-top:12px;color:#557168;font-size:13px;font-weight:700">
-          0 de 4 fotos cargadas
-        </div>
-      </div>
-
-      <div class="check-section">
-        <h3>2. Ingresar kilometraje actual <span style="color:#c33">*</span></h3>
-        <p style="margin:0 0 10px;color:#71807a;font-size:13px">
-          Ingresá el kilometraje que figura en el tablero del vehículo al momento de salir.
-        </p>
-        <div style="display:flex;gap:10px;align-items:center">
-          <input id="currentKm" type="text" inputmode="numeric" autocomplete="off"
-            placeholder="Ej.: 125.430"
-            oninput="actualizarEstadoInicio()"
-            style="width:100%;height:56px;box-sizing:border-box;border:1px solid #cbdad3;border-radius:13px;padding:0 16px;font-size:20px;font-weight:800;color:#073f2e;background:#fbfdfc">
-          <span style="font-weight:800;color:#557168">km</span>
-        </div>
-        <div id="lastKmHint" style="margin-top:9px;color:#71807a;font-size:12px"></div>
-      </div>
-
-      <div class="check-section">
-        <h3>3. Observación a reportar <span style="color:#71807a;font-weight:600;font-size:13px">(opcional)</span></h3>
-        <textarea id="inspectionObs" rows="4" maxlength="500"
-          style="width:100%;box-sizing:border-box;border:1px solid #cbdad3;border-radius:13px;padding:14px;font:inherit;resize:vertical"
-          placeholder="Escribí cualquier novedad que quieras reportar sobre la unidad..."></textarea>
-        <div style="margin-top:7px;color:#71807a;font-size:12px">Si no hay novedades, podés dejar este campo vacío.</div>
-      </div>
-
-      <div class="inspection-alert" id="inspectionAlert"></div>
-
-      <div class="inspection-actions">
-        <button class="secondary" type="button" onclick="volverServicio()">VOLVER</button>
-        <button class="primary" type="button" id="finishInspectionBtn" onclick="iniciarViaje()" disabled>
-          ▶ INICIAR VIAJE
-        </button>
-      </div>
-
-      <div style="margin-top:12px;padding:11px 14px;border-radius:12px;background:#eef7ff;color:#315a72;font-size:12px">
-        ℹ️ Las 4 fotos quedan vinculadas a esta salida de servicio y se almacenan en Google Drive.
-      </div>
-    </div>
-  </section>
-
-  <div class="footer-note">Salida de Servicio · Logística Ambiental · Sin GPS</div>
-</section>
-</div>
-
-<script>
-const BACKEND_URL = 'https://script.google.com/macros/s/AKfycbyLa6dr_bfxG8UKJoTbA69q6nShN8r4fmdy862KzqW7fqxrCyKy-D5q7zA02BjPtzdvYw/exec';
-
-const $ = id => document.getElementById(id);
-let session = null;
-let dashboardTimer = null;
-let ultimaInspeccionCargada = null;
-
-function escapeHtml(v){
-  return String(v ?? '').replace(/[&<>"']/g, c => ({
-    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'
-  }[c]));
-}
-
-async function postJson(payload){
-  const r = await fetch(BACKEND_URL,{
-    method:'POST',
-    headers:{'Content-Type':'text/plain;charset=utf-8'},
-    body:JSON.stringify(payload)
-  });
-  return await r.json();
-}
-
-async function getJson(action, params={}){
-  const qs = new URLSearchParams({accion:action,...params});
-  const r = await fetch(BACKEND_URL+'?'+qs.toString());
-  return await r.json();
-}
-
-function showError(msg){
-  $('loginError').textContent = msg;
-  $('loginError').style.display = 'block';
-}
-
-function initials(name){
-  const p=String(name||'Chofer').trim().split(/\s+/);
-  return (p[0]?.[0]||'C')+(p[1]?.[0]||'');
-}
-
-async function cargarDashboard(){
-  const idChofer=session.idChofer;
-  try{
-    const [aRes,vRes,sRes,eRes] = await Promise.all([
-      getJson('asignacionActiva',{idChofer}),
-      getJson('listarVehiculos'),
-      getJson('listarServicios'),
-      getJson('listarEstadoFlota')
-    ]);
-
-    const asignacion=aRes.asignacion || null;
-    const vehiculos=Array.isArray(vRes.vehiculos)?vRes.vehiculos:[];
-    const servicios=Array.isArray(sRes.servicios)?sRes.servicios:[];
-    const estadoFlota=Array.isArray(eRes.estadoFlota)?eRes.estadoFlota:[];
-
-    const propios=servicios.filter(s =>
-      String(s.idChofer||'')===String(idChofer) &&
-      String(s.estado||'').toUpperCase()!=='FINALIZADO'
-    );
-
-    propios.sort((a,b)=>String(a.fecha||'').localeCompare(String(b.fecha||'')) ||
-                         String(a.horaProgramada||'').localeCompare(String(b.horaProgramada||'')));
-
-    const servicioActual=propios[0]||null;
-    // La cantidad de ruedas pertenece a cada unidad y se obtiene desde VEHICULOS.
-    // No se fija un número por defecto cuando conocemos la unidad asignada al servicio.
-    if (servicioActual) {
-      const vehiculoServicio=vehiculos.find(v=>String(v.idUnidad)===String(servicioActual.idUnidad));
-      servicioActual.cantidadRuedas=Number(vehiculoServicio?.cantidadRuedas||0);
-    }
-    // Primero usamos la asignación activa de ASIGNACIONES.
-    // Si todavía no existe, usamos el ID_UNIDAD del servicio como respaldo.
-    // Así el chofer puede ver el vehículo ya asociado al servicio.
-    const referenciaVehiculo=asignacion || servicioActual;
-    const vehiculo=referenciaVehiculo
-      ? vehiculos.find(v=>String(v.idUnidad)===String(referenciaVehiculo.idUnidad))
-      : null;
-
-    const dominioReferencia=String(vehiculo?.dominio||referenciaVehiculo?.dominio||'').trim().toUpperCase().replace(/\s+/g,'');
-    const estadoVehiculo=estadoFlota.find(x=>String(x.dominio||'').trim().toUpperCase().replace(/\s+/g,'')===dominioReferencia) || null;
-    renderVehicle(referenciaVehiculo,vehiculo,estadoVehiculo);
-    renderService(servicioActual);
-  }catch(err){
-    $('serviceBox').innerHTML='<div class="empty">No se pudieron consultar los datos operativos.<br>Intentá actualizar en unos segundos.</div>';
-    console.error(err);
-  }
-}
-
-function iniciarActualizacionAutomatica(){
-  if(dashboardTimer) clearInterval(dashboardTimer);
-  dashboardTimer=setInterval(()=>{
-    if(session && !$('dashboardScreen').classList.contains('hidden')) cargarDashboard();
-  },15000);
-}
-
-function convertirFotoDrive(url){
-  const raw=String(url||'').trim();
-  if(!raw) return '';
-  const m=raw.match(/\/d\/([a-zA-Z0-9_-]+)/);
-  if(m) return 'https://drive.google.com/thumbnail?id='+m[1]+'&sz=w1000';
-  const q=raw.match(/[?&]id=([a-zA-Z0-9_-]+)/);
-  if(q) return 'https://drive.google.com/thumbnail?id='+q[1]+'&sz=w1000';
-  return raw;
-}
-
-function formatearKm(v){
-  const n=String(v??'').trim();
-  if(!n || n==='—') return '—';
-  const limpio=n.replace(/[^0-9,.-]/g,'');
-  let num;
-  if(limpio.includes('.') && limpio.includes(',')){
-    num=Number(limpio.replace(/\./g,'').replace(',','.'));
-  }else if(limpio.includes(',')){
-    const partes=limpio.split(',');
-    num=partes.length===2 && partes[1].length<=2 ? Number(limpio.replace(',','.')) : Number(limpio.replace(/,/g,''));
-  }else if(limpio.includes('.')){
-    const partes=limpio.split('.');
-    num=partes.length>1 && partes.slice(1).every(p=>p.length===3) ? Number(limpio.replace(/\./g,'')) : Number(limpio);
-  }else{
-    num=Number(limpio);
-  }
-  if(Number.isFinite(num)) return Math.round(num).toLocaleString('es-AR')+' km';
-  return n+' km';
-}
-
-function renderVehicle(a,v,estadoFlota){
-  if(!a){
-    $('vehicleName').textContent='Sin asignación activa';
-    $('vehiclePlate').textContent='—';
-    $('vehicleKm').textContent='—';
-    $('vehiclePhoto').innerHTML='<span class="vehicle-placeholder">🚛</span>';
-    return;
-  }
-  const dominio=v?.dominio || a.dominio || 'SIN DOMINIO';
-  $('vehicleName').textContent=[v?.marca,v?.modelo].filter(Boolean).join(' ') || 'Vehículo';
-  $('vehiclePlate').textContent=dominio;
-  const foto=convertirFotoDrive(v?.fotoUrl);
-  $('vehiclePhoto').innerHTML=foto
-    ? `<img src="${escapeHtml(foto)}" alt="Foto de ${escapeHtml(dominio)}" onerror="this.parentElement.innerHTML='<span class=\"vehicle-placeholder\">🚛</span>'">`
-    : '<span class="vehicle-placeholder">🚛</span>';
-  $('vehicleKm').textContent=formatearKm(estadoFlota?.km);
-}
-
-function renderService(s){
-  window.__servicioActual=s||null;
-  if(!s){
-    $('serviceBox').innerHTML='<div class="empty"><strong>No tenés servicios pendientes.</strong><br><span>Cuando administración te asigne uno, aparecerá acá.</span></div>';
-    return;
-  }
-  $('serviceBox').innerHTML=`
-    <div class="service-card">
-      <div class="service-head">
-        <div class="eyebrow" style="color:#bfead5">${escapeHtml(s.tipo||'SERVICIO')}</div>
-        <h2>${escapeHtml(s.nombreServicio||s.descripcion||'Servicio')}</h2>
-      </div>
-      <div class="route">
-        <div class="route-point"><div class="dot"></div><div><strong>${escapeHtml(s.destinoInicial||'Origen no informado')}</strong><small>Origen</small></div></div>
-      </div>
-      <div class="service-meta">
-        <div class="meta"><span>Horario</span><strong>${escapeHtml(formatearHora(s.horaProgramada))}</strong></div>
-        <div class="meta"><span>Estado</span><strong>${escapeHtml(s.estado||'PROGRAMADO')}</strong></div>
-      </div>
-      <div class="actions" style="padding:0 19px 19px">
-        <button class="primary" type="button" onclick="verServicio('${escapeHtml(s.idServicio||'')}')">VER SERVICIO</button>
-      </div>
-    </div>`;
-}
-
-function formatearHora(v){
-  const s=String(v??'').trim();
-  if(!s) return '—';
-  const m=s.match(/T(\d{2}):(\d{2})/);
-  if(m) return m[1]+':'+m[2];
-  const h=s.match(/(?:^|\s)(\d{1,2}):(\d{2})(?::\d{2})?/);
-  if(h) return String(h[1]).padStart(2,'0')+':'+h[2];
-  return '—';
-}
-
-async function verServicio(id){
-  const s=window.__servicioActual;
-  if(!s || String(s.idServicio)!==String(id)){
-    alert('No se pudo cargar el servicio seleccionado.');
-    return;
-  }
-
-  servicioEnInspeccion=s;
-  ultimaInspeccionCargada=null;
-  window.__salidaFotos={frente:null,trasera:null,lateral_derecho:null,lateral_izquierdo:null};
-
-  $('serviceBox').classList.add('hidden');
-  $('inspectionScreen').classList.remove('hidden');
-
-  $('inspectionServiceLabel').textContent =
-    (s.nombreServicio||s.descripcion||'Servicio')+' · '+formatearHora(s.horaProgramada);
-
-  $('inspectionStatus').textContent='FOTOS PENDIENTES';
-  $('inspectionAlert').style.display='none';
-  $('finishInspectionBtn').disabled=true;
-  $('finishInspectionBtn').textContent='▶ INICIAR VIAJE';
-  $('finishInspectionBtn').onclick=iniciarViaje;
-  $('currentKm').value='';
-  $('inspectionObs').value='';
-
-  construirFotosSalida();
-  actualizarEstadoInicio();
-
-  // Mostrar último KM como referencia.
-  try{
-    const estado=await getJson('listarEstadoFlota');
-    const lista=estado?.estadoFlota||estado?.resultado||estado?.data||[];
-    const dom=String(s.dominio||'').trim().toUpperCase();
-    const encontrado=Array.isArray(lista)
-      ? lista.find(x=>String(x.dominio||'').trim().toUpperCase()===dom)
-      : null;
-
-    if(encontrado?.km!==undefined && encontrado?.km!==null && String(encontrado.km).trim()!==''){
-      $('lastKmHint').textContent='Último KM registrado: '+formatearKilometraje(encontrado.km);
-    }else{
-      $('lastKmHint').textContent='Todavía no hay un kilometraje registrado para esta unidad.';
-    }
-  }catch(err){
-    $('lastKmHint').textContent='';
-  }
-
-  $('inspectionScreen').scrollIntoView({behavior:'smooth',block:'start'});
-}
-
-function construirFotosSalida(){
-  const fotos=[
-    ['frente','Frente'],
-    ['trasera','Trasera'],
-    ['lateral_derecho','Lateral derecho'],
-    ['lateral_izquierdo','Lateral izquierdo']
-  ];
-
-  $('vehiclePhotosGrid').innerHTML=fotos.map(([key,label])=>`
-    <div class="vehicle-photo-card">
-      <img id="photoPreview_${key}" class="vehicle-photo-preview"
-           alt="${label}" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Crect width='100%25' height='100%25' fill='%23e9f1ed'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%2371807a' font-size='22'%3E${encodeURIComponent(label)}%3C/text%3E%3C/svg%3E">
-      <span class="vehicle-photo-label">${label}</span>
-      <input id="photoInput_${key}" type="file" accept="image/*" capture="environment"
-             style="display:none" onchange="seleccionarFotoSalida('${key}',this)">
-      <button type="button" class="vehicle-photo-btn"
-              onclick="document.getElementById('photoInput_${key}').click()">📷 Sacar foto</button>
-      <span id="photoOk_${key}" class="vehicle-photo-ok" style="display:none">✓ Cargada</span>
-    </div>
-  `).join('');
-}
-
-function seleccionarFotoSalida(key,input){
-  const file=input?.files?.[0];
-  if(!file) return;
-
-  // El navegador móvil puede entregar HEIC/HEIF. El canvas intentará convertir
-  // formatos compatibles a JPEG antes de enviarlos.
-  const reader=new FileReader();
-  reader.onload=()=>{
-    window.__salidaFotos[key]={
-      dataUrl:reader.result,
-      name:file.name||key+'.jpg',
-      type:file.type||'image/jpeg'
-    };
-    const img=$('photoPreview_'+key);
-    img.src=reader.result;
-    $('photoOk_'+key).style.display='block';
-    $('photoOk_'+key).textContent='✓ Cargada';
-    actualizarEstadoInicio();
-  };
-  reader.readAsDataURL(file);
-}
-
-function contarFotosSalida(){
-  const f=window.__salidaFotos||{};
-  return ['frente','trasera','lateral_derecho','lateral_izquierdo']
-    .filter(k=>!!f[k]?.dataUrl).length;
-}
-
-function actualizarEstadoInicio(){
-  const fotos=contarFotosSalida();
-  const km=parsearKilometraje($('currentKm')?.value);
-
-  if($('photoProgress')) $('photoProgress').textContent=fotos+' de 4 fotos cargadas';
-
-  const listo=fotos===4 && km!==null;
-
-  $('finishInspectionBtn').disabled=!listo;
-
-  if(listo){
-    $('inspectionStatus').textContent='🟢 LISTO PARA INICIAR';
-  }else if(fotos<4 && km===null){
-    $('inspectionStatus').textContent='FALTAN 4 FOTOS Y KILOMETRAJE';
-  }else if(fotos<4){
-    $('inspectionStatus').textContent='FALTAN '+(4-fotos)+' FOTOS';
-  }else{
-    $('inspectionStatus').textContent='INGRESÁ EL KILOMETRAJE';
-  }
-}
-
-function parsearKilometraje(v){
-  if(v===null || v===undefined) return null;
-  let s=String(v).trim().replace(/\s/g,'');
-  if(!s) return null;
-  s=s.replace(/\./g,'').replace(/,/g,'.');
-  const n=Number(s);
-  return Number.isFinite(n) && n>=0 ? Math.round(n) : null;
-}
-
-function formatearKilometraje(v){
-  const n=parsearKilometraje(v);
-  if(n===null) return '—';
-  return new Intl.NumberFormat('es-AR').format(n)+' km';
-}
-
-async function iniciarViaje(){
-  const btn=$('finishInspectionBtn'),a=$('inspectionAlert');
-  const km=parsearKilometraje($('currentKm').value);
-  const fotos=window.__salidaFotos||{};
-  const observacion=$('inspectionObs').value.trim();
-
-  a.style.display='none';
-
-  if(contarFotosSalida()!==4){
-    a.textContent='Tenés que cargar las 4 fotos obligatorias antes de iniciar el viaje.';
-    a.style.display='block';
-    return;
-  }
-
-  if(km===null){
-    a.textContent='Ingresá el kilometraje actual para poder iniciar el viaje.';
-    a.style.display='block';
-    $('currentKm').focus();
-    return;
-  }
-
-  btn.disabled=true;
-  btn.textContent='GUARDANDO FOTOS…';
-
-  try{
-    const res=await postJson({
-      accion:'iniciarViaje',
-      idServicio:servicioEnInspeccion.idServicio,
-      idChofer:session.idChofer,
-      idUnidad:servicioEnInspeccion.idUnidad||'',
-      dominio:servicioEnInspeccion.dominio||'',
-      kilometraje:km,
-      observacion:observacion,
-      fotos:{
-        frente:fotos.frente.dataUrl,
-        trasera:fotos.trasera.dataUrl,
-        lateral_derecho:fotos.lateral_derecho.dataUrl,
-        lateral_izquierdo:fotos.lateral_izquierdo.dataUrl
-      }
-    });
-
-    if(!res?.ok) throw new Error(res?.error||'No se pudo iniciar el viaje.');
-
-    servicioEnInspeccion.estado='EN VIAJE';
-    window.__servicioActual=servicioEnInspeccion;
-
-    $('inspectionStatus').textContent='🟢 EN VIAJE';
-    a.textContent='Viaje iniciado correctamente. KM y 4 fotos registrados.';
-    if(observacion) a.textContent+=' La observación también fue registrada.';
-    a.style.display='block';
-
-    btn.textContent='FINALIZAR VIAJE';
-    btn.disabled=false;
-    btn.onclick=finalizarViaje;
-  }catch(err){
-    a.textContent=err.message||'No se pudo iniciar el viaje.';
-    a.style.display='block';
-    btn.disabled=false;
-    btn.textContent='▶ INICIAR VIAJE';
-    btn.onclick=iniciarViaje;
-  }
-}
-
-async function finalizarViaje(){
-  const btn=$('finishInspectionBtn'),a=$('inspectionAlert');
-  btn.disabled=true;btn.textContent='FINALIZANDO…';a.style.display='none';
-  try{
-    const res=await postJson({accion:'finalizarViaje',idServicio:servicioEnInspeccion.idServicio,idChofer:session.idChofer,idUnidad:servicioEnInspeccion.idUnidad||''});
-    if(!res?.ok) throw new Error(res?.error||'No se pudo finalizar el viaje.');
-    servicioEnInspeccion.estado='FINALIZADO';
-    window.__servicioActual=servicioEnInspeccion;
-    $('inspectionStatus').textContent='✅ SERVICIO FINALIZADO';
-    a.textContent='Servicio finalizado correctamente.';
-    a.style.display='block';
-    btn.textContent='VOLVER AL INICIO';
-    btn.disabled=false;
-    btn.onclick=volverInicio;
-  }catch(err){
-    a.textContent=err.message||'No se pudo finalizar el viaje.';
-    a.style.display='block';
-    btn.disabled=false;
-    btn.textContent='FINALIZAR VIAJE';
-  }
-}
-
-function volverInicio(){
-  $('inspectionScreen').classList.add('hidden');
-  $('serviceBox').classList.remove('hidden');
-  cargarDashboard();
-  window.scrollTo({top:0,behavior:'smooth'});
-}
-
-function volverServicio(){
-  $('inspectionScreen').classList.add('hidden');
-  $('serviceBox').classList.remove('hidden');
-}
-
-$('loginForm').addEventListener('submit',async e=>{
-  e.preventDefault();
-  $('loginError').style.display='none';
-  $('loginBtn').disabled=true;
-  $('loginLoading').style.display='block';
-
-  try{
-    const res=await postJson({
-      accion:'loginChofer',
-      usuario:$('usuario').value,
-      contrasena:$('contrasena').value
-    });
-
-    const data=res?.resultado||res;
-    if(!res?.ok || !data?.login) throw new Error(res?.error||data?.error||'Usuario o contraseña incorrectos.');
-
-    session={
-      idChofer:data.idChofer,
-      nombre:data.nombre,
-      usuario:data.usuario,
-      estado:data.estado
-    };
-
-    sessionStorage.setItem('diaVerdeChofer',JSON.stringify(session));
-
-    $('driverName').textContent=session.nombre;
-    $('topUserName').textContent=session.nombre;
-    $('avatar').textContent=initials(session.nombre);
-    $('topUser').classList.remove('hidden');
-    $('loginScreen').classList.add('hidden');
-    $('dashboardScreen').classList.remove('hidden');
-
-    await cargarDashboard();
-    iniciarActualizacionAutomatica();
-  }catch(err){
-    showError(err.message||'No se pudo iniciar sesión.');
-  }finally{
-    $('loginBtn').disabled=false;
-    $('loginLoading').style.display='none';
-  }
-});
-
-(function restore(){
-  try{
-    const raw=sessionStorage.getItem('diaVerdeChofer');
-    if(!raw) return;
-    session=JSON.parse(raw);
-    if(!session?.idChofer) return;
-    $('driverName').textContent=session.nombre||'Chofer';
-    $('topUserName').textContent=session.nombre||'Chofer';
-    $('avatar').textContent=initials(session.nombre);
-    $('topUser').classList.remove('hidden');
-    $('loginScreen').classList.add('hidden');
-    $('dashboardScreen').classList.remove('hidden');
-    cargarDashboard();
-    iniciarActualizacionAutomatica();
-  }catch(e){}
-})();
-</script>
-</body>
-</html>
+SALIDA DE SERVICIO · LOGÍSTICA AMBIENTAL
+V13 — CONTROL DEL VEHÍCULO OPCIONAL
+============================================================
+
+BASE:
+Esta versión agrega al flujo actual de SALIDA DE SERVICIO un módulo
+opcional de control/reporte del estado del vehículo.
+
+NO reemplaza:
+- Login
+- Vehículo asignado
+- Foto real del vehículo
+- 4 fotos obligatorias de salida
+- Kilometraje actual
+- Observación general
+- INICIAR VIAJE
+- Carga de fotos a Google Drive
+- Registro del servicio
+
+La salida NO queda bloqueada por estos controles.
+
+------------------------------------------------------------
+1. UBICACIÓN EN LA APP
+------------------------------------------------------------
+
+Debajo de:
+
+2. KILOMETRAJE ACTUAL
+
+agregar:
+
+3. CONTROL DEL VEHÍCULO (opcional)
+
+Texto:
+"Reportá una falla o novedad si detectás algo en la unidad."
+
+Diseño:
+Botonera moderna de tarjetas grandes, responsive y táctil.
+
+Botones:
+
+🔴 FRENOS
+"Delanteros / Traseros"
+
+💡 LUCES
+"Todas las opciones"
+
+🛞 RUEDAS
+"Según cantidad de ruedas"
+
+⚙️ FALLA MECÁNICA
+"Motor, caja, dirección, etc."
+
+🏗️ FALLA ESTRUCTURAL
+"Carrocería, chasis, hidráulica, etc."
+
+🎨 PLOTEO / PINTURA
+"Estado general del ploteo y pintura"
+
+📄 VERIFICACIÓN TÉCNICA (VTV)
+"Vigente / Vencida"
+
+------------------------------------------------------------
+2. FRENOS
+------------------------------------------------------------
+
+Al tocar FRENOS abrir un panel/modal:
+
+REPORTAR FALLA · FRENOS
+
+Zona:
+[ DELANTEROS ] [ TRASEROS ]
+
+Estado:
+[ 🟢 BIEN ] [ 🟠 ATENCIÓN ] [ 🔴 CRÍTICO ]
+
+Observación opcional:
+[ textarea ]
+
+Foto opcional:
+[ 📷 AGREGAR FOTO ]
+
+[ CANCELAR ]       [ REGISTRAR ]
+
+No es obligatorio completar nada para iniciar el viaje.
+
+------------------------------------------------------------
+3. LUCES
+------------------------------------------------------------
+
+Al tocar LUCES mostrar:
+
+REPORTAR FALLA · LUCES
+
+[ ALTAS ]
+[ BAJAS ]
+[ GIRO DELANTERO IZQUIERDO ]
+[ GIRO DELANTERO DERECHO ]
+[ GIRO TRASERO IZQUIERDO ]
+[ GIRO TRASERO DERECHO ]
+[ POSICIÓN ]
+[ STOP ]
+[ BALIZAS ]
+
+Cada elemento puede seleccionarse y recibir:
+
+🟢 BIEN
+🟠 ATENCIÓN
+🔴 CRÍTICO
+
+Observación opcional.
+Foto opcional.
+
+IMPORTANTE:
+Usar exactamente estos nombres para evitar duplicados.
+
+------------------------------------------------------------
+4. RUEDAS
+------------------------------------------------------------
+
+La botonera se genera dinámicamente según:
+
+VEHICULOS.CANTIDAD_RUEDAS
+
+Reglas:
+
+4 ruedas:
+- Delantera izquierda
+- Delantera derecha
+- Trasera izquierda
+- Trasera derecha
+
+6 ruedas:
+- Delantera izquierda
+- Delantera derecha
+- Trasera izquierda exterior
+- Trasera izquierda interior
+- Trasera derecha interior
+- Trasera derecha exterior
+
+10 ruedas:
+usar las 10 posiciones reales de la unidad,
+siguiendo la nomenclatura existente de POSICIONES_RUEDAS.
+
+Cada posición:
+🟢 BIEN / 🟠 ATENCIÓN / 🔴 CRÍTICO
+
+No crear posiciones adicionales con nombres alternativos.
+
+------------------------------------------------------------
+5. FALLA MECÁNICA
+------------------------------------------------------------
+
+Al tocar:
+
+⚙️ FALLA MECÁNICA
+
+mostrar:
+
+Sistema / elemento:
+[ campo de texto ]
+
+Estado:
+[ 🟢 BIEN ] [ 🟠 ATENCIÓN ] [ 🔴 CRÍTICO ]
+
+Descripción:
+[ textarea ]
+
+Foto opcional:
+[ 📷 AGREGAR FOTO ]
+
+[ CANCELAR ] [ REGISTRAR FALLA ]
+
+Ejemplos:
+- Motor
+- Caja
+- Embrague
+- Dirección
+- Suspensión
+- Frenos hidráulicos
+- Pérdida de aceite
+- Pérdida de combustible
+- Pérdida de aire
+- Otro
+
+La descripción debe quedar en un único registro de falla.
+
+------------------------------------------------------------
+6. FALLA ESTRUCTURAL
+------------------------------------------------------------
+
+Al tocar:
+
+🏗️ FALLA ESTRUCTURAL
+
+mostrar:
+
+Elemento / sector:
+[ campo de texto ]
+
+Estado:
+[ 🟢 BIEN ] [ 🟠 ATENCIÓN ] [ 🔴 CRÍTICO ]
+
+Descripción:
+[ textarea ]
+
+Foto opcional:
+[ 📷 AGREGAR FOTO ]
+
+[ CANCELAR ] [ REGISTRAR FALLA ]
+
+Ejemplos:
+- Carrocería
+- Chasis
+- Caja compactadora
+- Hidráulica
+- Portón
+- Paragolpes
+- Soporte
+- Otro
+
+------------------------------------------------------------
+7. PLOTEO / PINTURA
+------------------------------------------------------------
+
+Nueva botonera:
+
+🎨 PLOTEO / PINTURA
+"Estado general del ploteo y pintura"
+
+Al abrir:
+
+PLOTEO / PINTURA
+
+Estado:
+
+[ 🟢 BIEN ]
+[ 🟠 ATENCIÓN ]
+[ 🔴 CRÍTICO ]
+
+Observación opcional:
+[ textarea ]
+
+Foto opcional:
+[ 📷 AGREGAR FOTO ]
+
+[ CANCELAR ] [ REGISTRAR ]
+
+No utilizar VIGENTE/VENCIDA aquí.
+Los estados son exclusivamente:
+BIEN / ATENCIÓN / CRÍTICO.
+
+------------------------------------------------------------
+8. VERIFICACIÓN TÉCNICA (VTV)
+------------------------------------------------------------
+
+Nueva botonera:
+
+📄 VERIFICACIÓN TÉCNICA (VTV)
+"Vigente / Vencida"
+
+Al abrir:
+
+VERIFICACIÓN TÉCNICA (VTV)
+
+Estado:
+
+[ ✅ VIGENTE ]     [ ⚠️ VENCIDA ]
+
+Observación opcional:
+[ textarea ]
+
+Foto opcional:
+[ 📷 AGREGAR FOTO ]
+
+[ CANCELAR ] [ REGISTRAR ]
+
+IMPORTANTE:
+VTV NO utiliza BIEN / ATENCIÓN / CRÍTICO.
+Sus únicos estados son:
+
+VIGENTE
+VENCIDA
+
+------------------------------------------------------------
+9. REGLA GENERAL DE LOS ESTADOS
+------------------------------------------------------------
+
+Para evitar duplicados y confusiones:
+
+FRENOS:
+BIEN / ATENCIÓN / CRÍTICO
+
+LUCES:
+BIEN / ATENCIÓN / CRÍTICO
+
+RUEDAS:
+BIEN / ATENCIÓN / CRÍTICO
+
+FALLA MECÁNICA:
+BIEN / ATENCIÓN / CRÍTICO
+
+FALLA ESTRUCTURAL:
+BIEN / ATENCIÓN / CRÍTICO
+
+PLOTEO / PINTURA:
+BIEN / ATENCIÓN / CRÍTICO
+
+VTV:
+VIGENTE / VENCIDA
+
+------------------------------------------------------------
+10. INICIAR VIAJE
+------------------------------------------------------------
+
+El botón:
+
+▶ INICIAR VIAJE
+
+NO debe depender del control opcional.
+
+Requisitos obligatorios actuales:
+- 4 fotos de salida
+- Kilometraje actual
+
+Los controles de esta sección son informativos/reportables.
+
+El chofer puede:
+A) No reportar nada → iniciar viaje.
+B) Reportar una falla → registrar → iniciar viaje.
+C) Reportar varias fallas → registrar → iniciar viaje.
+
+------------------------------------------------------------
+11. REGISTRO DE DATOS
+------------------------------------------------------------
+
+Cada reporte debe quedar asociado a:
+
+ID_REPORTE
+FECHA_HORA
+ID_SERVICIO
+ID_CHOFER
+CHOFER
+ID_UNIDAD
+DOMINIO
+KILOMETRAJE
+CATEGORIA
+ELEMENTO
+POSICION
+ESTADO
+OBSERVACION
+FOTO_URL
+ORIGEN
+
+Categorías normalizadas:
+
+FRENOS
+LUCES
+NEUMÁTICOS
+FALLA MECÁNICA
+FALLA ESTRUCTURAL
+PLOTEO / PINTURA
+VTV
+
+No crear otra categoría para el mismo elemento.
+
+------------------------------------------------------------
+12. TRAZABILIDAD
+------------------------------------------------------------
+
+El reporte queda vinculado a:
+
+SERVICIO
+↓
+CHOFER
+↓
+VEHÍCULO
+↓
+KILOMETRAJE
+↓
+REPORTE
+↓
+MANTENIMIENTO
+
+Esto permitirá posteriormente que el Panel de Control muestre:
+
+"AB773LE informó:
+Falla en freno trasero
+ATENCIÓN
+08/09/2026 08:32
+75.000 km
+Chofer: [nombre]
+Servicio: [ID_SERVICIO]"
+
+------------------------------------------------------------
+13. DISEÑO VISUAL
+------------------------------------------------------------
+
+Las botoneras deben ser grandes, modernas y fáciles de tocar desde
+un teléfono.
+
+Propuesta visual:
+
+┌──────────────────────┬──────────────────────┐
+│ 🔴  FRENOS           │ 💡  LUCES            │
+│ Delanteros / Traseros│ Todas las opciones   │
+├──────────────────────┼──────────────────────┤
+│ 🛞  RUEDAS            │ ⚙️  FALLA MECÁNICA   │
+│ Según la unidad      │ Motor, caja, etc.    │
+├──────────────────────┼──────────────────────┤
+│ 🏗️ FALLA ESTRUCTURAL │ 🎨 PLOTEO / PINTURA   │
+│ Carrocería, chasis   │ Estado general       │
+├──────────────────────┴──────────────────────┤
+│ 📄 VERIFICACIÓN TÉCNICA (VTV)               │
+│ Vigente / Vencida                           │
+└─────────────────────────────────────────────┘
+
+Cada tarjeta abre solamente su propio formulario.
+
+------------------------------------------------------------
+14. NOTA DE IMPLEMENTACIÓN
+------------------------------------------------------------
+
+Esta V13 debe integrarse sobre la versión actual que ya contiene las
+4 fotos obligatorias de salida y el kilometraje.
+
+NO eliminar ni modificar el funcionamiento de las 4 fotos obligatorias.
+
+NO volver a mostrar la antigua inspección de 26 ítems como formulario
+obligatorio.
+
+La nueva inspección es una botonera opcional y modular.
+
+FIN V13
