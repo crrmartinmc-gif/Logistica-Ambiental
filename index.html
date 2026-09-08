@@ -119,8 +119,7 @@ button{cursor:pointer}
 .logout-btn{border:1px solid rgba(255,255,255,.28);background:transparent;color:#fff;border-radius:9px;padding:7px 11px;font-weight:800;font-size:11px;cursor:pointer}
 .logout-btn:hover{background:rgba(255,255,255,.10)}
 }
-.inspection-wrap{max-width:980px;margin:28px auto;padding:0 18px 40px}.inspection-card{background:#fff;border:1px solid #dce9e3;border-radius:18px;box-shadow:0 10px 28px rgba(0,70,45,.08);overflow:hidden}.inspection-head{background:linear-gradient(135deg,#004b35,#087a52);color:#fff;padding:24px}.inspection-head h2{margin:4px 0 6px;font-size:24px}.inspection-head p{margin:0;opacity:.88}.check-section{padding:20px 22px;border-bottom:1px solid #e7efeb}.check-section h3{margin:0 0 14px;font-size:17px}.check-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.check-item{border:1px solid #dce9e3;border-radius:12px;padding:12px;background:#fafdfb}.check-item strong{display:block;margin-bottom:8px;font-size:14px}.check-options{display:flex;gap:7px;flex-wrap:wrap}.check-options label{cursor:pointer}.check-options input{display:none}.check-options span{display:inline-block;padding:7px 10px;border-radius:9px;border:1px solid #cbdad3;font-size:12px;font-weight:700}.check-options input:checked+span{background:#0a8b5d;color:#fff;border-color:#0a8b5d}.check-options .attention input:checked+span{background:#e58b00;border-color:#e58b00}.check-options .critical input:checked+span{background:#d33b3b;border-color:#d33b3b}.wheel-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.inspection-actions{padding:20px 22px;display:flex;gap:12px;justify-content:flex-end;flex-wrap:wrap}.secondary{background:#eef5f1;color:#07543e;border:1px solid #cfe1d8;padding:12px 18px;border-radius:10px;font-weight:800;cursor:pointer}.inspection-alert{display:none;margin:0 22px 18px;padding:12px 14px;border-radius:10px;background:#fff1f1;color:#9f2222;font-weight:700}.status-banner{margin:18px 22px 0;padding:12px 14px;border-radius:10px;background:#eef8f3;color:#076043;font-weight:800}@media(max-width:700px){.check-grid,.wheel-grid{grid-template-columns:1fr}.inspection-wrap{padding:0 10px 28px}.inspection-actions button{width:100%}}
-</style>
+.inspection-wrap{max-width:980px;margin:28px auto;padding:0 18px 40px}.inspection-card{background:#fff;border:1px solid #dce9e3;border-radius:18px;box-shadow:0 10px 28px rgba(0,70,45,.08);overflow:hidden}.inspection-head{background:linear-gradient(135deg,#004b35,#087a52);color:#fff;padding:24px}.inspection-head h2{margin:4px 0 6px;font-size:24px}.inspection-head p{margin:0;opacity:.88}.check-section{padding:20px 22px;border-bottom:1px solid #e7efeb}.check-section h3{margin:0 0 14px;font-size:17px}</style>
 </head>
 <body>
 <div class="app">
@@ -191,7 +190,48 @@ button{cursor:pointer}
     </div>
   </div>
 
-  <section id="inspectionScreen" class="inspection-wrap hidden"><div class="inspection-card"><div class="inspection-head"><div class="eyebrow" style="color:#bfead5">CONTROL PREVIO</div><h2>Inspección del vehículo</h2><p id="inspectionServiceLabel">Antes de salir, verificá el estado de la unidad.</p></div><div class="status-banner" id="inspectionStatus">INSPECCIÓN EN CURSO</div><div class="check-section"><h3>Espejos</h3><div class="check-grid"><div class="check-item"><strong>Derecho</strong><div class="check-options"><label><input name="espejo_derecho" value="BIEN" type="radio"><span>🟢 BIEN</span></label><label class="attention"><input name="espejo_derecho" value="ATENCION" type="radio"><span>🟠 ATENCIÓN</span></label><label class="critical"><input name="espejo_derecho" value="CRITICO" type="radio"><span>🔴 CRÍTICO</span></label></div></div><div class="check-item"><strong>Izquierdo</strong><div class="check-options"><label><input name="espejo_izquierdo" value="BIEN" type="radio"><span>🟢 BIEN</span></label><label class="attention"><input name="espejo_izquierdo" value="ATENCION" type="radio"><span>🟠 ATENCIÓN</span></label><label class="critical"><input name="espejo_izquierdo" value="CRITICO" type="radio"><span>🔴 CRÍTICO</span></label></div></div><div class="check-item"><strong>Retrovisor</strong><div class="check-options"><label><input name="retrovisor" value="BIEN" type="radio"><span>🟢 BIEN</span></label><label class="attention"><input name="retrovisor" value="ATENCION" type="radio"><span>🟠 ATENCIÓN</span></label><label class="critical"><input name="retrovisor" value="CRITICO" type="radio"><span>🔴 CRÍTICO</span></label></div></div></div></div><div class="check-section"><h3>Luces</h3><div class="check-grid" id="lightsGrid"></div></div><div class="check-section"><h3>Patente</h3><div class="check-grid"><div class="check-item"><strong>Delantera</strong><div class="check-options"><label><input name="patente_delantera" value="BIEN" type="radio"><span>🟢 BIEN</span></label><label class="attention"><input name="patente_delantera" value="ATENCION" type="radio"><span>🟠 ATENCIÓN</span></label><label class="critical"><input name="patente_delantera" value="CRITICO" type="radio"><span>🔴 CRÍTICO</span></label></div></div><div class="check-item"><strong>Trasera</strong><div class="check-options"><label><input name="patente_trasera" value="BIEN" type="radio"><span>🟢 BIEN</span></label><label class="attention"><input name="patente_trasera" value="ATENCION" type="radio"><span>🟠 ATENCIÓN</span></label><label class="critical"><input name="patente_trasera" value="CRITICO" type="radio"><span>🔴 CRÍTICO</span></label></div></div></div></div><div class="check-section"><h3>Neumáticos</h3><div class="wheel-grid" id="wheelGrid"></div></div><div class="check-section"><h3>Observaciones</h3><textarea id="inspectionObs" rows="4" style="width:100%;box-sizing:border-box;border:1px solid #cbdad3;border-radius:10px;padding:12px;font:inherit;resize:vertical" placeholder="Indicá cualquier novedad antes de salir..."></textarea></div><div class="inspection-alert" id="inspectionAlert"></div><div class="inspection-actions"><button class="secondary" type="button" onclick="volverServicio()">VOLVER</button><button class="primary" type="button" id="finishInspectionBtn" onclick="finalizarInspeccion()">FINALIZAR INSPECCIÓN</button></div></div></section>
+  <section id="inspectionScreen" class="inspection-wrap hidden">
+    <div class="inspection-card">
+      <div class="inspection-head">
+        <div class="eyebrow" style="color:#bfead5">INICIO DE SERVICIO</div>
+        <h2>Preparar salida</h2>
+        <p id="inspectionServiceLabel">Completá los datos antes de comenzar el viaje.</p>
+      </div>
+
+      <div class="status-banner" id="inspectionStatus">LISTO PARA INICIAR</div>
+
+      <div class="check-section">
+        <h3>Ingresar kilometraje actual <span style="color:#c33">*</span></h3>
+        <p style="margin:0 0 10px;color:#71807a;font-size:13px">
+          Ingresá el kilometraje que figura en el tablero del vehículo al momento de salir.
+        </p>
+        <div style="display:flex;gap:10px;align-items:center">
+          <input id="currentKm" type="text" inputmode="numeric" autocomplete="off"
+            placeholder="Ej.: 125.430"
+            style="width:100%;height:56px;box-sizing:border-box;border:1px solid #cbdad3;border-radius:13px;padding:0 16px;font-size:20px;font-weight:800;color:#073f2e;background:#fbfdfc">
+          <span style="font-weight:800;color:#557168">km</span>
+        </div>
+        <div id="lastKmHint" style="margin-top:9px;color:#71807a;font-size:12px"></div>
+      </div>
+
+      <div class="check-section">
+        <h3>Observación a reportar <span style="color:#71807a;font-weight:600;font-size:13px">(opcional)</span></h3>
+        <textarea id="inspectionObs" rows="5" maxlength="500"
+          style="width:100%;box-sizing:border-box;border:1px solid #cbdad3;border-radius:13px;padding:14px;font:inherit;resize:vertical"
+          placeholder="Escribí cualquier novedad que quieras reportar sobre la unidad..."></textarea>
+        <div style="margin-top:7px;color:#71807a;font-size:12px">Si no hay novedades, podés dejar este campo vacío.</div>
+      </div>
+
+      <div class="inspection-alert" id="inspectionAlert"></div>
+
+      <div class="inspection-actions">
+        <button class="secondary" type="button" onclick="volverServicio()">VOLVER</button>
+        <button class="primary" type="button" id="finishInspectionBtn" onclick="iniciarViaje()">
+          ▶ INICIAR VIAJE
+        </button>
+      </div>
+    </div>
+  </section>
 
   <div class="footer-note">Salida de Servicio · Logística Ambiental · Sin GPS</div>
 </section>
@@ -383,153 +423,102 @@ async function verServicio(id){
 
   servicioEnInspeccion=s;
   ultimaInspeccionCargada=null;
+
   $('serviceBox').classList.add('hidden');
   $('inspectionScreen').classList.remove('hidden');
-  $('inspectionServiceLabel').textContent=(s.nombreServicio||s.descripcion||'Servicio')+' · '+formatearHora(s.horaProgramada);
-  $('inspectionStatus').textContent='INSPECCIÓN EN CURSO';
+
+  $('inspectionServiceLabel').textContent =
+    (s.nombreServicio||s.descripcion||'Servicio')+' · '+formatearHora(s.horaProgramada);
+
+  $('inspectionStatus').textContent='LISTO PARA INICIAR';
   $('inspectionAlert').style.display='none';
   $('finishInspectionBtn').disabled=false;
-  $('finishInspectionBtn').textContent='FINALIZAR INSPECCIÓN';
+  $('finishInspectionBtn').textContent='▶ INICIAR VIAJE';
+  $('finishInspectionBtn').onclick=iniciarViaje;
+  $('currentKm').value='';
+  $('inspectionObs').value='';
 
-  construirChecklist(s);
-
-  // Cargar automáticamente la última inspección de ESTA unidad.
-  // El nuevo chofer no vuelve a marcar los puntos que siguen iguales.
+  // Mostrar el último kilometraje registrado como referencia.
   try{
     const idUnidad=String(s.idUnidad||'').trim();
-    if(idUnidad){
-      const res=await getJson('listarUltimaInspeccion',{idUnidad});
-      if(res?.ok && res.inspeccion){
-        ultimaInspeccionCargada=res.inspeccion;
-        aplicarUltimaInspeccion(res.inspeccion);
-      }
+    const estado=await getJson('listarEstadoFlota');
+    const lista=estado?.estadoFlota||estado?.resultado||estado?.data||[];
+    const encontrado=Array.isArray(lista)
+      ? lista.find(x=>String(x.dominio||'').trim().toUpperCase()===String(s.dominio||'').trim().toUpperCase())
+      : null;
+
+    if(encontrado?.km!==undefined && encontrado?.km!==null && String(encontrado.km).trim()!==''){
+      $('lastKmHint').textContent='Último KM registrado: '+formatearKilometraje(encontrado.km);
+    }else{
+      $('lastKmHint').textContent='Todavía no hay un kilometraje registrado para esta unidad.';
     }
   }catch(err){
-    console.warn('No se pudo cargar la última inspección:',err);
+    $('lastKmHint').textContent='';
+    console.warn('No se pudo consultar el último kilometraje:',err);
   }
 
   $('inspectionScreen').scrollIntoView({behavior:'smooth',block:'start'});
-  postJson({
-    accion:'registrarEventoServicio',
-    idServicio:s.idServicio,
-    evento:'INSPECCION_INICIADA',
-    idChofer:session.idChofer,
-    idUnidad:s.idUnidad||'',
-    observaciones:ultimaInspeccionCargada
-      ? 'Inspección iniciada con actualización de la última inspección registrada.'
-      : 'Inspección iniciada desde SALIDA DE SERVICIO'
-  }).catch(()=>{});
 }
 
-function opcionHTML(n){
-  return `<div class="check-options">
-    <label><input name="${n}" value="BIEN" type="radio"><span>🟢 BIEN</span></label>
-    <label class="attention"><input name="${n}" value="ATENCION" type="radio"><span>🟠 ATENCIÓN</span></label>
-    <label class="critical"><input name="${n}" value="CRITICO" type="radio"><span>🔴 CRÍTICO</span></label>
-  </div>`;
+function formatearKilometraje(v){
+  const n=parsearKilometraje(v);
+  if(n===null) return '—';
+  return new Intl.NumberFormat('es-AR').format(n)+' km';
 }
 
-function construirChecklist(s){
-  const luces=['Altas','Bajas','Giro delantero izquierdo','Giro delantero derecho','Giro trasero izquierdo','Giro trasero derecho','Posición','Stop','Balizas'];
-  $('lightsGrid').innerHTML=luces.map((n,i)=>`<div class="check-item"><strong>${n}</strong>${opcionHTML('luz_'+i)}</div>`).join('');
-
-  const cantidad=Number(s?.cantidadRuedas||0);
-  const ruedas=cantidad===4
-    ? ['Delantera izquierda','Delantera derecha','Trasera izquierda','Trasera derecha']
-    : cantidad===6
-      ? ['Delantera izquierda','Delantera derecha','Trasera izquierda exterior','Trasera izquierda interior','Trasera derecha interior','Trasera derecha exterior']
-      : cantidad===10
-        ? ['Delantera izquierda','Delantera derecha','2° eje izquierda exterior','2° eje izquierda interior','2° eje derecha interior','2° eje derecha exterior','3° eje izquierda exterior','3° eje izquierda interior','3° eje derecha interior','3° eje derecha exterior']
-        : Array.from({length:Math.max(4,cantidad||4)},(_,i)=>'Rueda '+(i+1));
-
-  $('wheelGrid').innerHTML=ruedas.map((n,i)=>`<div class="check-item"><strong>${n}</strong>${opcionHTML('rueda_'+i)}</div>`).join('');
+function parsearKilometraje(v){
+  if(v===null || v===undefined) return null;
+  let s=String(v).trim().replace(/\s/g,'');
+  if(!s) return null;
+  // Acepta 125430, 125.430 o 125430,5; el odómetro se registra como km entero.
+  s=s.replace(/\./g,'').replace(/,/g,'.');
+  const n=Number(s);
+  return Number.isFinite(n) && n>=0 ? Math.round(n) : null;
 }
 
-function aplicarUltimaInspeccion(inspeccion){
-  const resultado=inspeccion?.resultado||{};
-  Object.entries(resultado).forEach(([name,value])=>{
-    const v=String(value||'').toUpperCase();
-    if(!v) return;
-    const input=document.querySelector(`#inspectionScreen input[name="${CSS.escape(name)}"][value="${CSS.escape(v)}"]`);
-    if(input) input.checked=true;
-  });
-
-  if(Object.keys(resultado).length){
-    $('inspectionStatus').textContent='↻ ÚLTIMA INSPECCIÓN CARGADA · REVISÁ SOLO LO QUE CAMBIÓ';
-  }
-
-  if(inspeccion?.observaciones){
-    $('inspectionObs').value=String(inspeccion.observaciones);
-  }
-}
-
-function obtenerInspeccion(){
-  const radios=[...document.querySelectorAll('#inspectionScreen input[type=radio]')];
-  const resultado={},criticos=[],faltantes=[];
-  [...new Set(radios.map(r=>r.name))].forEach(name=>{
-    const e=document.querySelector(`#inspectionScreen input[name="${name}"]:checked`);
-    resultado[name]=e?.value||'';
-    if(!e) faltantes.push(name);
-    if(e?.value==='CRITICO') criticos.push(name);
-  });
-  return {resultado,criticos,faltantes,observaciones:$('inspectionObs').value.trim()};
-}
-
-async function finalizarInspeccion(){
-  const btn=$('finishInspectionBtn'),a=$('inspectionAlert'),info=obtenerInspeccion();
-  a.style.display='none';
-  if(info.faltantes.length){
-    a.textContent='Completá todos los puntos de la inspección antes de finalizar.';
-    a.style.display='block';
-    return;
-  }
-  if(info.criticos.length){
-    try{
-      const obs=['Resultado de inspección: '+JSON.stringify(info.resultado),info.observaciones?'Observaciones: '+info.observaciones:''].filter(Boolean).join(' | ');
-      const res=await postJson({accion:'registrarInspeccion',idServicio:servicioEnInspeccion.idServicio,idChofer:session.idChofer,idUnidad:servicioEnInspeccion.idUnidad||'',observaciones:obs});
-      if(!res?.ok) throw new Error(res?.error||'No se pudieron registrar las alertas.');
-      a.textContent='⚠️ Inspección registrada. Hay elementos CRÍTICOS. El servicio queda bloqueado hasta que administración intervenga.';
-    }catch(err){
-      a.textContent='⚠️ Hay elementos CRÍTICOS. No se pudo sincronizar la alerta con el Panel: '+(err.message||'error');
-    }
-    a.style.display='block';
-    $('inspectionStatus').textContent='🔴 VEHÍCULO BLOQUEADO';
-    return;
-  }
-  btn.disabled=true;btn.textContent='GUARDANDO…';
-  try{
-    const obs=['Resultado de inspección: '+JSON.stringify(info.resultado),info.observaciones?'Observaciones: '+info.observaciones:''].filter(Boolean).join(' | ');
-    const res=await postJson({accion:'registrarEventoServicio',idServicio:servicioEnInspeccion.idServicio,evento:'INSPECCION_FINALIZADA',idChofer:session.idChofer,idUnidad:servicioEnInspeccion.idUnidad||'',observaciones:obs});
-    if(!res?.ok) throw new Error(res?.error||'No se pudo registrar la inspección.');
-    servicioEnInspeccion.estado='LISTO PARA SALIR';
-    window.__servicioActual=servicioEnInspeccion;
-    $('inspectionStatus').textContent='🟢 LISTO PARA SALIR';
-    a.textContent=ultimaInspeccionCargada
-      ? 'Inspección actualizada correctamente. La anterior se tomó como base y se guardó el estado vigente de la unidad.'
-      : 'Inspección finalizada correctamente. El servicio quedó LISTO PARA SALIR.';
-    a.style.display='block';
-    btn.textContent='INICIAR VIAJE';
-    btn.disabled=false;
-    btn.onclick=iniciarViaje;
-  }catch(err){
-    a.textContent=err.message||'No se pudo registrar la inspección.';
-    a.style.display='block';
-    btn.disabled=false;
-    btn.textContent='FINALIZAR INSPECCIÓN';
-  }
+function obtenerDatosSalida(){
+  const km=parsearKilometraje($('currentKm').value);
+  const observacion=$('inspectionObs').value.trim();
+  return {km,observacion};
 }
 
 async function iniciarViaje(){
   const btn=$('finishInspectionBtn'),a=$('inspectionAlert');
-  btn.disabled=true;btn.textContent='INICIANDO…';a.style.display='none';
+  const datos=obtenerDatosSalida();
+
+  a.style.display='none';
+
+  if(datos.km===null){
+    a.textContent='Ingresá el kilometraje actual para poder iniciar el viaje.';
+    a.style.display='block';
+    $('currentKm').focus();
+    return;
+  }
+
+  btn.disabled=true;
+  btn.textContent='GUARDANDO…';
+
   try{
-    const res=await postJson({accion:'iniciarViaje',idServicio:servicioEnInspeccion.idServicio,idChofer:session.idChofer,idUnidad:servicioEnInspeccion.idUnidad||''});
+    const res=await postJson({
+      accion:'iniciarViaje',
+      idServicio:servicioEnInspeccion.idServicio,
+      idChofer:session.idChofer,
+      idUnidad:servicioEnInspeccion.idUnidad||'',
+      dominio:servicioEnInspeccion.dominio||'',
+      kilometraje:datos.km,
+      observacion:datos.observacion
+    });
+
     if(!res?.ok) throw new Error(res?.error||'No se pudo iniciar el viaje.');
+
     servicioEnInspeccion.estado='EN VIAJE';
     window.__servicioActual=servicioEnInspeccion;
+
     $('inspectionStatus').textContent='🟢 EN VIAJE';
-    a.textContent='Viaje iniciado correctamente.';
+    a.textContent='Viaje iniciado correctamente. Kilometraje registrado: '+formatearKilometraje(datos.km)+'.';
+    if(datos.observacion) a.textContent+=' La observación fue registrada.';
     a.style.display='block';
+
     btn.textContent='FINALIZAR VIAJE';
     btn.disabled=false;
     btn.onclick=finalizarViaje;
@@ -537,7 +526,8 @@ async function iniciarViaje(){
     a.textContent=err.message||'No se pudo iniciar el viaje.';
     a.style.display='block';
     btn.disabled=false;
-    btn.textContent='INICIAR VIAJE';
+    btn.textContent='▶ INICIAR VIAJE';
+    btn.onclick=iniciarViaje;
   }
 }
 
