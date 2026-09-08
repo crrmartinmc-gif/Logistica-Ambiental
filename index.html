@@ -110,6 +110,18 @@ button{cursor:pointer}
   height:48px;border:1px solid var(--line);border-radius:13px;background:#fff;color:var(--green-800);font-weight:800
 }
 .empty{padding:25px;text-align:center;background:#f7faf8;border:1px dashed #cbded5;border-radius:17px;color:var(--muted)}
+/* Estado de preparación — integrado al diseño */
+.status-banner{
+  margin:16px 22px 0; padding:12px 16px; border-radius:14px;
+  background:#f4f8f6; border:1px solid #dceae4; color:#557168;
+  font-size:12px; font-weight:900; letter-spacing:.35px; text-align:center;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.7);
+}
+.status-banner.ready{background:#e8f7ef;border-color:#bfe4cf;color:#08734c}
+.status-banner.pending{background:#f7faf8;border-color:#dce9e3;color:#657a72}
+.status-banner.warning{background:#fff8e5;border-color:#f0dfaa;color:#966e00}
+.status-banner.travel{background:#e8f7ef;border-color:#bfe4cf;color:#08734c}
+@media(max-width:560px){.status-banner{margin:13px 16px 0;padding:11px 12px;font-size:11px}}
 .hidden{display:none!important}
 .footer-note{text-align:center;margin-top:22px;color:#8b9a94;font-size:11px}
 @media(max-width:760px){
@@ -251,7 +263,7 @@ button{cursor:pointer}
         <p id="inspectionServiceLabel">Completá los datos antes de comenzar el viaje.</p>
       </div>
 
-      <div class="status-banner" id="inspectionStatus">FOTOS PENDIENTES</div>
+      <div class="status-banner pending" id="inspectionStatus">📸 <strong>Preparando salida</strong> · 4 fotos + kilometraje requeridos</div>
 
       <div class="check-section">
         <h3>1. Fotos del vehículo <span style="color:#c33">*</span></h3>
@@ -533,7 +545,7 @@ async function verServicio(id){
   $('inspectionServiceLabel').textContent =
     (s.nombreServicio||s.descripcion||'Servicio')+' · '+formatearHora(s.horaProgramada);
 
-  $('inspectionStatus').textContent='FOTOS PENDIENTES';
+  $('inspectionStatus').className='status-banner pending'; $('inspectionStatus').innerHTML='📸 <strong>Preparando salida</strong> · 4 fotos + kilometraje requeridos';
   $('inspectionAlert').style.display='none';
   $('finishInspectionBtn').disabled=true;
   $('finishInspectionBtn').textContent='▶ INICIAR VIAJE';
@@ -626,13 +638,17 @@ function actualizarEstadoInicio(){
   $('finishInspectionBtn').disabled=!listo;
 
   if(listo){
-    $('inspectionStatus').textContent='🟢 LISTO PARA INICIAR';
+    $('inspectionStatus').className='status-banner ready';
+    $('inspectionStatus').innerHTML='🟢 <strong>Listo para iniciar</strong> · fotos y kilometraje completos';
   }else if(fotos<4 && km===null){
-    $('inspectionStatus').textContent='FALTAN 4 FOTOS Y KILOMETRAJE';
+    $('inspectionStatus').className='status-banner pending';
+    $('inspectionStatus').innerHTML='📸 <strong>Preparando salida</strong> · faltan 4 fotos y el kilometraje';
   }else if(fotos<4){
-    $('inspectionStatus').textContent='FALTAN '+(4-fotos)+' FOTOS';
+    $('inspectionStatus').className='status-banner warning';
+    $('inspectionStatus').innerHTML='📸 <strong>Faltan '+(4-fotos)+' fotos</strong> · completá las fotos para continuar';
   }else{
-    $('inspectionStatus').textContent='INGRESÁ EL KILOMETRAJE';
+    $('inspectionStatus').className='status-banner warning';
+    $('inspectionStatus').innerHTML='🚗 <strong>Ingresá el kilometraje</strong> · falta este dato para continuar';
   }
 }
 
@@ -768,7 +784,7 @@ async function registrarControlVehiculo(){
 }
 function leerArchivoDataUrl(file){return new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve({dataUrl:r.result,name:file.name||'reporte.jpg',type:file.type||'image/jpeg'});r.onerror=reject;r.readAsDataURL(file)})}
 function mostrarResumenControl(categoria,estado){
-  const box=$('controlSummary'); if(!box)return; box.style.display='block'; box.textContent='✓ Reporte registrado: '+categoria+' · '+estado+'. Podés continuar y presionar INICIAR VIAJE.';
+  const box=$('controlSummary'); if(!box)return; box.style.display='block'; box.innerHTML='✓ <strong>Reporte registrado</strong> · '+escapeHtml(categoria)+' · '+escapeHtml(estado)+'. Podés continuar y presionar <strong>INICIAR VIAJE</strong>.';
 }
 
 async function iniciarViaje(){
@@ -817,7 +833,8 @@ async function iniciarViaje(){
     servicioEnInspeccion.estado='EN VIAJE';
     window.__servicioActual=servicioEnInspeccion;
 
-    $('inspectionStatus').textContent='🟢 EN VIAJE';
+    $('inspectionStatus').className='status-banner travel';
+    $('inspectionStatus').innerHTML='🟢 <strong>EN VIAJE</strong> · servicio activo';
     a.textContent='Viaje iniciado correctamente. KM y 4 fotos registrados.';
     if(observacion) a.textContent+=' La observación también fue registrada.';
     a.style.display='block';
@@ -842,7 +859,8 @@ async function finalizarViaje(){
     if(!res?.ok) throw new Error(res?.error||'No se pudo finalizar el viaje.');
     servicioEnInspeccion.estado='FINALIZADO';
     window.__servicioActual=servicioEnInspeccion;
-    $('inspectionStatus').textContent='✅ SERVICIO FINALIZADO';
+    $('inspectionStatus').className='status-banner ready';
+    $('inspectionStatus').innerHTML='✅ <strong>Servicio finalizado</strong>'; 
     a.textContent='Servicio finalizado correctamente.';
     a.style.display='block';
     btn.textContent='VOLVER AL INICIO';
