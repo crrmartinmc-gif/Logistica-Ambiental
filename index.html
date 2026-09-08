@@ -441,8 +441,13 @@ async function cargarDashboard(){
       String(s.estado||'').toUpperCase()!=='FINALIZADO'
     );
 
-    propios.sort((a,b)=>String(a.fecha||'').localeCompare(String(b.fecha||'')) ||
-                         String(a.horaProgramada||'').localeCompare(String(b.horaProgramada||'')));
+    propios.sort((a,b)=>{
+      const ae=String(a.estado||'').toUpperCase()==='EN VIAJE'?0:1;
+      const be=String(b.estado||'').toUpperCase()==='EN VIAJE'?0:1;
+      if(ae!==be) return ae-be;
+      return String(a.fecha||'').localeCompare(String(b.fecha||'')) ||
+             String(a.horaProgramada||'').localeCompare(String(b.horaProgramada||''));
+    });
 
     const servicioActual=propios[0]||null;
     // La cantidad de ruedas pertenece a cada unidad y se obtiene desde VEHICULOS.
@@ -567,6 +572,16 @@ async function verServicio(id){
     return;
   }
 
+  // Refrescar el estado real antes de abrir el servicio. Esto evita que una
+  // copia vieja del navegador deje el botón en INICIAR cuando el backend ya
+  // tiene el servicio EN VIAJE.
+  try{
+    const fresh=await getJson('listarServicios');
+    const listaFresh=Array.isArray(fresh?.servicios)?fresh.servicios:[];
+    const actualizado=listaFresh.find(x=>String(x.idServicio||'')===String(id));
+    if(actualizado) s=actualizado;
+  }catch(e){ console.warn('No se pudo refrescar el estado del servicio:',e); }
+
   servicioEnInspeccion=s;
   ultimaInspeccionCargada=null;
 
@@ -583,21 +598,7 @@ async function verServicio(id){
   if(String(s.estado||'').toUpperCase()==='EN VIAJE'){
     window.__servicioActual=s;
     try{ localStorage.setItem('diaVerdeServicioActivo',JSON.stringify({idServicio:s.idServicio})); }catch(e){}
-    $('inspectionStatus').className='status-banner travel';
-    $('inspectionStatus').innerHTML='🟢 <strong>EN VIAJE</strong> · servicio activo recuperado';
-    $('inspectionAlert').textContent='El viaje ya estaba iniciado. Podés finalizarlo desde acá.';
-    $('inspectionAlert').style.display='block';
-    $('finishInspectionBtn').disabled=false;
-    $('finishInspectionBtn').textContent='FINALIZAR VIAJE';
-    $('finishInspectionBtn').onclick=finalizarViaje;
-    $('currentKm').value='';
-    $('currentKm').disabled=true;
-    $('inspectionObs').value='';
-    $('inspectionObs').disabled=true;
-    $('vehiclePhotosGrid').innerHTML='<div style="grid-column:1/-1;padding:18px;border:1px solid #cfe2d9;border-radius:13px;background:#f4faf7;color:#356156;font-weight:700">✓ Las fotos de salida ya fueron registradas al iniciar este viaje.</div>';
-    if($('photoProgress')) $('photoProgress').textContent='Salida registrada';
-    $('lastKmHint').textContent='El kilometraje inicial ya fue registrado. No hace falta volver a cargarlo.';
-    $('inspectionScreen').scrollIntoView({behavior:'smooth',block:'start'});
+    mostrarModoViajeActivo();
     return;
   }
 
@@ -850,7 +851,47 @@ async function registrarControlVehiculo(){
 }
 function leerArchivoDataUrl(file){return new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve({dataUrl:r.result,name:file.name||'reporte.jpg',type:file.type||'image/jpeg'});r.onerror=reject;r.readAsDataURL(file)})}
 function mostrarResumenControl(categoria,estado){
-  const box=$('controlSummary'); if(!box)return; box.style.display='block'; box.innerHTML='✓ <strong>Reporte registrado</strong> · '+escapeHtml(categoria)+' · '+escapeHtml(estado)+'. Podés continuar y presionar <strong>INICIAR VIAJE</strong>.';
+  const box=$('controlSummary'); if(!box)return; box.style.display='block';
+  const activo=String(servicioEnInspeccion?.estado||'').toUpperCase()==='EN VIAJE';
+  box.innerHTML='✓ <strong>Reporte registrado</strong> · '+escapeHtml(categoria)+' · '+escapeHtml(estado)+(activo?'. El reporte quedó registrado en el servicio activo.':'. Podés continuar y presionar <strong>INICIAR VIAJE</strong>.');
+}
+
+function mostrarModoViajeActivo(){
+  const nombre=escapeHtml(session?.nombre||session?.nombreCompleto||'Chofer');
+  $('inspectionServiceLabel').textContent='Servicio activo · '+(servicioEnInspeccion?.nombreServicio||servicioEnInspeccion?.descripcion||'En viaje');
+  $('inspectionStatus').className='status-banner travel';
+  $('inspectionStatus').innerHTML='🟢 <strong>EN VIAJE</strong> · servicio activo';
+
+  // En un viaje activo no se vuelven a cargar fotos, KM ni observación de salida.
+  // Dejamos únicamente la botonera para reportar problemas y el cierre del servicio.
+  document.querySelectorAll('#inspectionScreen .check-section').forEach(sec=>sec.classList.add('hidden'));
+  $('inspectionAlert').style.display='none';
+  $('inspectionAlert').textContent='';
+  $('vehiclePhotosGrid').innerHTML='';
+  $('currentKm').value='';
+  $('inspectionObs').value='';
+
+  const controlSection=document.querySelector('#inspectionScreen .vehicle-control-section');
+  if(controlSection) controlSection.classList.remove('hidden');
+  const head=controlSection?.querySelector('.vehicle-control-head');
+  if(head){
+    head.querySelector('h3').textContent='¿Necesitás reportar un problema?';
+    head.querySelector('.vehicle-control-help').textContent='Si durante el recorrido detectás una falla o novedad, podés informarla desde acá.';
+    const badge=head.querySelector('.optional-badge');
+    if(badge) badge.textContent='Opcional';
+  }
+
+  const actions=document.querySelector('.inspection-actions');
+  if(actions){
+    actions.innerHTML=`<button class="primary" type="button" id="finishInspectionBtn" onclick="finalizarViaje()">FINALIZAR SERVICIO</button>`;
+  }
+
+  $('inspectionScreen').querySelector('.inspection-head h2').textContent='Servicio en curso';
+  const info=$('inspectionScreen').querySelector('.inspection-head p');
+  if(info) info.innerHTML='Buen viaje, <strong>${nombre}</strong> 👋';
+  const nota=$('inspectionScreen').querySelector('.inspection-card > div:last-child');
+  if(nota && nota.textContent.includes('Las 4 fotos')) nota.classList.add('hidden');
+  $('inspectionScreen').scrollIntoView({behavior:'smooth',block:'start'});
 }
 
 async function iniciarViaje(){
@@ -949,12 +990,14 @@ async function finalizarViaje(){
     window.__servicioActual=servicioEnInspeccion;
     try{ localStorage.removeItem('diaVerdeServicioActivo'); }catch(e){}
     $('inspectionStatus').className='status-banner ready';
-    $('inspectionStatus').innerHTML='✅ <strong>Servicio finalizado</strong>'; 
-    a.textContent='Servicio finalizado correctamente.';
+    $('inspectionStatus').innerHTML='✅ <strong>Servicio finalizado</strong>';
+    a.innerHTML='¡Excelente trabajo! 👋<br><strong>Gracias por el servicio.</strong>';
     a.style.display='block';
     btn.textContent='VOLVER AL INICIO';
     btn.disabled=false;
     btn.onclick=volverInicio;
+    const controlSection=document.querySelector('#inspectionScreen .vehicle-control-section');
+    if(controlSection) controlSection.classList.add('hidden');
   }catch(err){
     a.textContent=err.message||'No se pudo finalizar el viaje.';
     a.style.display='block';
