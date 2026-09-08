@@ -119,7 +119,25 @@ button{cursor:pointer}
 .logout-btn{border:1px solid rgba(255,255,255,.28);background:transparent;color:#fff;border-radius:9px;padding:7px 11px;font-weight:800;font-size:11px;cursor:pointer}
 .logout-btn:hover{background:rgba(255,255,255,.10)}
 }
-.inspection-wrap{max-width:980px;margin:28px auto;padding:0 18px 40px}.inspection-card{background:#fff;border:1px solid #dce9e3;border-radius:18px;box-shadow:0 10px 28px rgba(0,70,45,.08);overflow:hidden}.inspection-head{background:linear-gradient(135deg,#004b35,#087a52);color:#fff;padding:24px}.inspection-head h2{margin:4px 0 6px;font-size:24px}.inspection-head p{margin:0;opacity:.88}.check-section{padding:20px 22px;border-bottom:1px solid #e7efeb}.check-section h3{margin:0 0 14px;font-size:17px}</style>
+.inspection-wrap{max-width:980px;margin:28px auto;padding:0 18px 40px}.inspection-card{background:#fff;border:1px solid #dce9e3;border-radius:18px;box-shadow:0 10px 28px rgba(0,70,45,.08);overflow:hidden}.inspection-head{background:linear-gradient(135deg,#004b35,#087a52);color:#fff;padding:24px}.inspection-head h2{margin:4px 0 6px;font-size:24px}.inspection-head p{margin:0;opacity:.88}.check-section{padding:20px 22px;border-bottom:1px solid #e7efeb}.check-section h3{margin:0 0 14px;font-size:17px}
+/* V12 — fotos obligatorias de salida */
+.vehicle-photo-card{background:#f7fbf9;border:1px solid #d5e6de;border-radius:14px;padding:9px;text-align:center}
+.vehicle-photo-preview{width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:10px;background:#e9f1ed;display:block}
+.vehicle-photo-label{display:block;margin:8px 0 7px;font-weight:800;font-size:13px;color:#073f2e}
+.vehicle-photo-btn{width:100%;border:1px solid #c6dcd3;background:white;border-radius:10px;padding:9px;font-weight:800;color:#086544;cursor:pointer}
+.vehicle-photo-btn:disabled{opacity:.5;cursor:not-allowed}
+.vehicle-photo-ok{display:block;margin-top:6px;font-size:11px;color:#087044;font-weight:800}
+@media(max-width:800px){
+  #vehiclePhotosGrid{grid-template-columns:repeat(2,minmax(0,1fr)) !important}
+}
+@media(max-width:480px){
+  #vehiclePhotosGrid{grid-template-columns:1fr 1fr !important;gap:8px !important}
+  .vehicle-photo-card{padding:7px}
+  .vehicle-photo-label{font-size:12px}
+  .vehicle-photo-btn{font-size:12px;padding:8px 5px}
+}
+
+</style>
 </head>
 <body>
 <div class="app">
@@ -198,16 +216,30 @@ button{cursor:pointer}
         <p id="inspectionServiceLabel">Completá los datos antes de comenzar el viaje.</p>
       </div>
 
-      <div class="status-banner" id="inspectionStatus">LISTO PARA INICIAR</div>
+      <div class="status-banner" id="inspectionStatus">FOTOS PENDIENTES</div>
 
       <div class="check-section">
-        <h3>Ingresar kilometraje actual <span style="color:#c33">*</span></h3>
+        <h3>1. Fotos del vehículo <span style="color:#c33">*</span></h3>
+        <p style="margin:0 0 14px;color:#71807a;font-size:13px">
+          Sacá las 4 fotos obligatorias: frente, trasera, lateral derecho y lateral izquierdo.
+        </p>
+
+        <div id="vehiclePhotosGrid" style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px"></div>
+
+        <div id="photoProgress" style="margin-top:12px;color:#557168;font-size:13px;font-weight:700">
+          0 de 4 fotos cargadas
+        </div>
+      </div>
+
+      <div class="check-section">
+        <h3>2. Ingresar kilometraje actual <span style="color:#c33">*</span></h3>
         <p style="margin:0 0 10px;color:#71807a;font-size:13px">
           Ingresá el kilometraje que figura en el tablero del vehículo al momento de salir.
         </p>
         <div style="display:flex;gap:10px;align-items:center">
           <input id="currentKm" type="text" inputmode="numeric" autocomplete="off"
             placeholder="Ej.: 125.430"
+            oninput="actualizarEstadoInicio()"
             style="width:100%;height:56px;box-sizing:border-box;border:1px solid #cbdad3;border-radius:13px;padding:0 16px;font-size:20px;font-weight:800;color:#073f2e;background:#fbfdfc">
           <span style="font-weight:800;color:#557168">km</span>
         </div>
@@ -215,8 +247,8 @@ button{cursor:pointer}
       </div>
 
       <div class="check-section">
-        <h3>Observación a reportar <span style="color:#71807a;font-weight:600;font-size:13px">(opcional)</span></h3>
-        <textarea id="inspectionObs" rows="5" maxlength="500"
+        <h3>3. Observación a reportar <span style="color:#71807a;font-weight:600;font-size:13px">(opcional)</span></h3>
+        <textarea id="inspectionObs" rows="4" maxlength="500"
           style="width:100%;box-sizing:border-box;border:1px solid #cbdad3;border-radius:13px;padding:14px;font:inherit;resize:vertical"
           placeholder="Escribí cualquier novedad que quieras reportar sobre la unidad..."></textarea>
         <div style="margin-top:7px;color:#71807a;font-size:12px">Si no hay novedades, podés dejar este campo vacío.</div>
@@ -226,9 +258,13 @@ button{cursor:pointer}
 
       <div class="inspection-actions">
         <button class="secondary" type="button" onclick="volverServicio()">VOLVER</button>
-        <button class="primary" type="button" id="finishInspectionBtn" onclick="iniciarViaje()">
+        <button class="primary" type="button" id="finishInspectionBtn" onclick="iniciarViaje()" disabled>
           ▶ INICIAR VIAJE
         </button>
+      </div>
+
+      <div style="margin-top:12px;padding:11px 14px;border-radius:12px;background:#eef7ff;color:#315a72;font-size:12px">
+        ℹ️ Las 4 fotos quedan vinculadas a esta salida de servicio y se almacenan en Google Drive.
       </div>
     </div>
   </section>
@@ -423,6 +459,7 @@ async function verServicio(id){
 
   servicioEnInspeccion=s;
   ultimaInspeccionCargada=null;
+  window.__salidaFotos={frente:null,trasera:null,lateral_derecho:null,lateral_izquierdo:null};
 
   $('serviceBox').classList.add('hidden');
   $('inspectionScreen').classList.remove('hidden');
@@ -430,21 +467,24 @@ async function verServicio(id){
   $('inspectionServiceLabel').textContent =
     (s.nombreServicio||s.descripcion||'Servicio')+' · '+formatearHora(s.horaProgramada);
 
-  $('inspectionStatus').textContent='LISTO PARA INICIAR';
+  $('inspectionStatus').textContent='FOTOS PENDIENTES';
   $('inspectionAlert').style.display='none';
-  $('finishInspectionBtn').disabled=false;
+  $('finishInspectionBtn').disabled=true;
   $('finishInspectionBtn').textContent='▶ INICIAR VIAJE';
   $('finishInspectionBtn').onclick=iniciarViaje;
   $('currentKm').value='';
   $('inspectionObs').value='';
 
-  // Mostrar el último kilometraje registrado como referencia.
+  construirFotosSalida();
+  actualizarEstadoInicio();
+
+  // Mostrar último KM como referencia.
   try{
-    const idUnidad=String(s.idUnidad||'').trim();
     const estado=await getJson('listarEstadoFlota');
     const lista=estado?.estadoFlota||estado?.resultado||estado?.data||[];
+    const dom=String(s.dominio||'').trim().toUpperCase();
     const encontrado=Array.isArray(lista)
-      ? lista.find(x=>String(x.dominio||'').trim().toUpperCase()===String(s.dominio||'').trim().toUpperCase())
+      ? lista.find(x=>String(x.dominio||'').trim().toUpperCase()===dom)
       : null;
 
     if(encontrado?.km!==undefined && encontrado?.km!==null && String(encontrado.km).trim()!==''){
@@ -454,10 +494,89 @@ async function verServicio(id){
     }
   }catch(err){
     $('lastKmHint').textContent='';
-    console.warn('No se pudo consultar el último kilometraje:',err);
   }
 
   $('inspectionScreen').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function construirFotosSalida(){
+  const fotos=[
+    ['frente','Frente'],
+    ['trasera','Trasera'],
+    ['lateral_derecho','Lateral derecho'],
+    ['lateral_izquierdo','Lateral izquierdo']
+  ];
+
+  $('vehiclePhotosGrid').innerHTML=fotos.map(([key,label])=>`
+    <div class="vehicle-photo-card">
+      <img id="photoPreview_${key}" class="vehicle-photo-preview"
+           alt="${label}" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Crect width='100%25' height='100%25' fill='%23e9f1ed'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%2371807a' font-size='22'%3E${encodeURIComponent(label)}%3C/text%3E%3C/svg%3E">
+      <span class="vehicle-photo-label">${label}</span>
+      <input id="photoInput_${key}" type="file" accept="image/*" capture="environment"
+             style="display:none" onchange="seleccionarFotoSalida('${key}',this)">
+      <button type="button" class="vehicle-photo-btn"
+              onclick="document.getElementById('photoInput_${key}').click()">📷 Sacar foto</button>
+      <span id="photoOk_${key}" class="vehicle-photo-ok" style="display:none">✓ Cargada</span>
+    </div>
+  `).join('');
+}
+
+function seleccionarFotoSalida(key,input){
+  const file=input?.files?.[0];
+  if(!file) return;
+
+  // El navegador móvil puede entregar HEIC/HEIF. El canvas intentará convertir
+  // formatos compatibles a JPEG antes de enviarlos.
+  const reader=new FileReader();
+  reader.onload=()=>{
+    window.__salidaFotos[key]={
+      dataUrl:reader.result,
+      name:file.name||key+'.jpg',
+      type:file.type||'image/jpeg'
+    };
+    const img=$('photoPreview_'+key);
+    img.src=reader.result;
+    $('photoOk_'+key).style.display='block';
+    $('photoOk_'+key).textContent='✓ Cargada';
+    actualizarEstadoInicio();
+  };
+  reader.readAsDataURL(file);
+}
+
+function contarFotosSalida(){
+  const f=window.__salidaFotos||{};
+  return ['frente','trasera','lateral_derecho','lateral_izquierdo']
+    .filter(k=>!!f[k]?.dataUrl).length;
+}
+
+function actualizarEstadoInicio(){
+  const fotos=contarFotosSalida();
+  const km=parsearKilometraje($('currentKm')?.value);
+
+  if($('photoProgress')) $('photoProgress').textContent=fotos+' de 4 fotos cargadas';
+
+  const listo=fotos===4 && km!==null;
+
+  $('finishInspectionBtn').disabled=!listo;
+
+  if(listo){
+    $('inspectionStatus').textContent='🟢 LISTO PARA INICIAR';
+  }else if(fotos<4 && km===null){
+    $('inspectionStatus').textContent='FALTAN 4 FOTOS Y KILOMETRAJE';
+  }else if(fotos<4){
+    $('inspectionStatus').textContent='FALTAN '+(4-fotos)+' FOTOS';
+  }else{
+    $('inspectionStatus').textContent='INGRESÁ EL KILOMETRAJE';
+  }
+}
+
+function parsearKilometraje(v){
+  if(v===null || v===undefined) return null;
+  let s=String(v).trim().replace(/\s/g,'');
+  if(!s) return null;
+  s=s.replace(/\./g,'').replace(/,/g,'.');
+  const n=Number(s);
+  return Number.isFinite(n) && n>=0 ? Math.round(n) : null;
 }
 
 function formatearKilometraje(v){
@@ -466,29 +585,21 @@ function formatearKilometraje(v){
   return new Intl.NumberFormat('es-AR').format(n)+' km';
 }
 
-function parsearKilometraje(v){
-  if(v===null || v===undefined) return null;
-  let s=String(v).trim().replace(/\s/g,'');
-  if(!s) return null;
-  // Acepta 125430, 125.430 o 125430,5; el odómetro se registra como km entero.
-  s=s.replace(/\./g,'').replace(/,/g,'.');
-  const n=Number(s);
-  return Number.isFinite(n) && n>=0 ? Math.round(n) : null;
-}
-
-function obtenerDatosSalida(){
-  const km=parsearKilometraje($('currentKm').value);
-  const observacion=$('inspectionObs').value.trim();
-  return {km,observacion};
-}
-
 async function iniciarViaje(){
   const btn=$('finishInspectionBtn'),a=$('inspectionAlert');
-  const datos=obtenerDatosSalida();
+  const km=parsearKilometraje($('currentKm').value);
+  const fotos=window.__salidaFotos||{};
+  const observacion=$('inspectionObs').value.trim();
 
   a.style.display='none';
 
-  if(datos.km===null){
+  if(contarFotosSalida()!==4){
+    a.textContent='Tenés que cargar las 4 fotos obligatorias antes de iniciar el viaje.';
+    a.style.display='block';
+    return;
+  }
+
+  if(km===null){
     a.textContent='Ingresá el kilometraje actual para poder iniciar el viaje.';
     a.style.display='block';
     $('currentKm').focus();
@@ -496,7 +607,7 @@ async function iniciarViaje(){
   }
 
   btn.disabled=true;
-  btn.textContent='GUARDANDO…';
+  btn.textContent='GUARDANDO FOTOS…';
 
   try{
     const res=await postJson({
@@ -505,8 +616,14 @@ async function iniciarViaje(){
       idChofer:session.idChofer,
       idUnidad:servicioEnInspeccion.idUnidad||'',
       dominio:servicioEnInspeccion.dominio||'',
-      kilometraje:datos.km,
-      observacion:datos.observacion
+      kilometraje:km,
+      observacion:observacion,
+      fotos:{
+        frente:fotos.frente.dataUrl,
+        trasera:fotos.trasera.dataUrl,
+        lateral_derecho:fotos.lateral_derecho.dataUrl,
+        lateral_izquierdo:fotos.lateral_izquierdo.dataUrl
+      }
     });
 
     if(!res?.ok) throw new Error(res?.error||'No se pudo iniciar el viaje.');
@@ -515,8 +632,8 @@ async function iniciarViaje(){
     window.__servicioActual=servicioEnInspeccion;
 
     $('inspectionStatus').textContent='🟢 EN VIAJE';
-    a.textContent='Viaje iniciado correctamente. Kilometraje registrado: '+formatearKilometraje(datos.km)+'.';
-    if(datos.observacion) a.textContent+=' La observación fue registrada.';
+    a.textContent='Viaje iniciado correctamente. KM y 4 fotos registrados.';
+    if(observacion) a.textContent+=' La observación también fue registrada.';
     a.style.display='block';
 
     btn.textContent='FINALIZAR VIAJE';
