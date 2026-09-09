@@ -566,7 +566,7 @@ function formatearHora(v){
 }
 
 async function verServicio(id){
-  const s=window.__servicioActual;
+  let s=window.__servicioActual;
   if(!s || String(s.idServicio)!==String(id)){
     alert('No se pudo cargar el servicio seleccionado.');
     return;
