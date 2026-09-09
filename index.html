@@ -369,15 +369,26 @@ async function postJson(payload){
   const r = await fetch(BACKEND_URL,{
     method:'POST',
     headers:{'Content-Type':'text/plain;charset=utf-8'},
-    body:JSON.stringify(payload)
+    body:JSON.stringify(payload),
+    cache:'no-store'
   });
-  return await r.json();
+  const text=await r.text();
+  if(!r.ok) throw new Error('Backend HTTP '+r.status);
+  let data;
+  try{data=JSON.parse(text);}catch(e){throw new Error('El backend no devolvió JSON válido: '+String(text).slice(0,120));}
+  if(data && data.ok===false) throw new Error(data.error||data.resultado?.error||'El backend rechazó la operación.');
+  return data;
 }
 
 async function getJson(action, params={}){
-  const qs = new URLSearchParams({accion:action,...params});
-  const r = await fetch(BACKEND_URL+'?'+qs.toString());
-  return await r.json();
+  const qs = new URLSearchParams({accion:action,...params,_:Date.now()});
+  const r = await fetch(BACKEND_URL+'?'+qs.toString(),{cache:'no-store'});
+  const text=await r.text();
+  if(!r.ok) throw new Error('Backend HTTP '+r.status);
+  let data;
+  try{data=JSON.parse(text);}catch(e){throw new Error('El backend no devolvió JSON válido (posible página de acceso): '+String(text).slice(0,120));}
+  if(data && data.ok===false) throw new Error(data.error||data.resultado?.error||'El backend rechazó la consulta.');
+  return data;
 }
 
 function showError(msg){
