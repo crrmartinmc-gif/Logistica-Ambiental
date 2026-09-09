@@ -1,4 +1,3 @@
-<!-- DÍA VERDE CHOFER V18 ALINEADO · mismo backend maestro -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -370,13 +369,9 @@ async function postJson(payload){
   const r = await fetch(BACKEND_URL,{
     method:'POST',
     headers:{'Content-Type':'text/plain;charset=utf-8'},
-    body:JSON.stringify(payload),
-    cache:'no-store'
+    body:JSON.stringify(payload)
   });
-  if(!r.ok) throw new Error('Backend Día Verde HTTP '+r.status);
-  const data=await r.json();
-  if(!data || data.ok===false) throw new Error(data?.error||'Backend Día Verde devolvió un error.');
-  return data;
+  return await r.json();
 }
 
 async function getJson(action, params={}){
