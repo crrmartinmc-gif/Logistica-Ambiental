@@ -365,6 +365,54 @@ function escapeHtml(v){
   }[c]));
 }
 
+function fechaArgentinaISO(v){
+  if(v==null || String(v).trim()==='') return '';
+  const s=String(v).trim();
+  const m=s.match(/^(\d{4})-(\d{2})-(\d{2})(?:$|T)/);
+  if(m && !s.includes('T')) return `${m[1]}-${m[2]}-${m[3]}`;
+  const d=new Date(v);
+  if(Number.isNaN(d.getTime())) return '';
+  const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Argentina/Buenos_Aires',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(d);
+  const o=Object.fromEntries(parts.map(x=>[x.type,x.value]));
+  return `${o.year}-${o.month}-${o.day}`;
+}
+
+function hoyArgentinaISO(){
+  const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Argentina/Buenos_Aires',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());
+  const o=Object.fromEntries(parts.map(x=>[x.type,x.value]));
+  return `${o.year}-${o.month}-${o.day}`;
+}
+
+function mananaArgentinaISO(){
+  const [y,m,d]=hoyArgentinaISO().split('-').map(Number);
+  const base=new Date(Date.UTC(y,m-1,d+1));
+  return base.toISOString().slice(0,10);
+}
+
+function formatearFechaAR(v){
+  const iso=fechaArgentinaISO(v);
+  if(!iso) return v ? String(v) : '-';
+  const [y,m,d]=iso.split('-');
+  return `${d}/${m}/${y}`;
+}
+
+function formatearHoraAR(v){
+  if(!v) return '-';
+  const s=String(v).trim();
+  const m=s.match(/(?:^|T|\s)(\d{1,2}):(\d{2})(?::\d{2})?/);
+  if(!m) return s;
+  if(s.includes('T') || /Z$|[+-]\d{2}:?\d{2}$/.test(s)){
+    const d=new Date(v);
+    if(!Number.isNaN(d.getTime())) return new Intl.DateTimeFormat('es-AR',{timeZone:'America/Argentina/Buenos_Aires',hour:'2-digit',minute:'2-digit',hour12:false}).format(d);
+  }
+  return String(m[1]).padStart(2,'0')+':'+m[2];
+}
+
+function formatearFechaHoraAR(v){
+  if(!v) return '-';
+  return `${formatearFechaAR(v)} ${formatearHoraAR(v)}`;
+}
+
 async function postJson(payload){
   const r = await fetch(BACKEND_URL,{
     method:'POST',
@@ -461,20 +509,22 @@ async function cargarDashboard(){
     const servicios=Array.isArray(sRes.servicios)?sRes.servicios:[];
     const viajes=Array.isArray(viRes.viajes)?viRes.viajes:[];
 
-    const hoy=new Date();
-    const fechaHoy=(hoy.getFullYear()+'-'+String(hoy.getMonth()+1).padStart(2,'0')+'-'+String(hoy.getDate()).padStart(2,'0'));
-    const normalizarFecha=v=>String(v||'').slice(0,10);
+    const fechaHoy=hoyArgentinaISO();
+    const fechaManana=mananaArgentinaISO();
+    const normalizarFecha=v=>fechaArgentinaISO(v);
 
-    const propias=asignaciones.filter(a=>
-      String(a.ID_CHOFER||'').trim()===idChofer &&
-      String(a.ESTADO||'').trim().toUpperCase()==='ACTIVA'
-    );
+    const propias=asignaciones.filter(a=>{
+      const f=normalizarFecha(a.FECHA);
+      return String(a.ID_CHOFER||'').trim()===idChofer &&
+        String(a.ESTADO||'').trim().toUpperCase()==='ACTIVA' &&
+        (f===fechaHoy || f===fechaManana);
+    });
 
     propias.sort((a,b)=>{
       const ah=normalizarFecha(a.FECHA)===fechaHoy?0:1;
       const bh=normalizarFecha(b.FECHA)===fechaHoy?0:1;
       if(ah!==bh) return ah-bh;
-      return String(b.FECHA||'').localeCompare(String(a.FECHA||''));
+      return String(a.HORA_ASIGNACION||'').localeCompare(String(b.HORA_ASIGNACION||''));
     });
 
     const asignacion=propias[0]||null;
@@ -611,13 +661,8 @@ function renderService(s){
 }
 
 function formatearHora(v){
-  const s=String(v??'').trim();
-  if(!s) return '—';
-  const m=s.match(/T(\d{2}):(\d{2})/);
-  if(m) return m[1]+':'+m[2];
-  const h=s.match(/(?:^|\s)(\d{1,2}):(\d{2})(?::\d{2})?/);
-  if(h) return String(h[1]).padStart(2,'0')+':'+h[2];
-  return '—';
+  const r=formatearHoraAR(v);
+  return r==='-'?'—':r;
 }
 
 async function verServicio(id){
@@ -996,16 +1041,16 @@ async function finalizarViaje(){
     servicioEnInspeccion.estado='FINALIZADO';servicioEnInspeccion.idViaje=idViaje;window.__servicioActual=servicioEnInspeccion;
     try{localStorage.removeItem('diaVerdeServicioActivo');}catch(e){}
     $('inspectionStatus').className='status-banner ready';$('inspectionStatus').innerHTML='✅ <strong>Servicio finalizado</strong>';
-    a.innerHTML='¡Excelente trabajo! 👋<br><strong>Gracias por el servicio.</strong>';a.style.display='block';
-    btn.textContent='VOLVER AL INICIO';btn.disabled=false;btn.onclick=volverInicio;
+    a.innerHTML='¡Excelente trabajo! 👋<br><strong>Viaje finalizado y asignación cerrada.</strong>';a.style.display='block';
+    btn.textContent='VOLVER AL INICIO';btn.disabled=false;btn.onclick=async()=>{ btn.disabled=true; btn.textContent='ACTUALIZANDO…'; await volverInicio(); };
     const controlSection=document.querySelector('#inspectionScreen .vehicle-control-section');if(controlSection)controlSection.classList.add('hidden');
   }catch(err){a.textContent=err.message||'No se pudo finalizar el viaje.';a.style.display='block';btn.disabled=false;btn.textContent='FINALIZAR SERVICIO';}
 }
 
-function volverInicio(){
+async function volverInicio(){
   $('inspectionScreen').classList.add('hidden');
   $('serviceBox').classList.remove('hidden');
-  cargarDashboard();
+  await cargarDashboard();
   window.scrollTo({top:0,behavior:'smooth'});
 }
 
