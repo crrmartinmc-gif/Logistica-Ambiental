@@ -352,7 +352,7 @@ button{cursor:pointer}
 </div>
 
 <script>
-const BACKEND_URL = 'https://script.google.com/macros/s/AKfycbyLa6dr_bfxG8UKJoTbA69q6nShN8r4fmdy862KzqW7fqxrCyKy-D5q7zA02BjPtzdvYw/exec';
+const BACKEND_URL = "https://script.google.com/macros/s/AKfycbz0n4ZlW2p--nP2Wx0SnytyCRt_pL6RFxliEan0j1vUdSSrBrVNCbsTI7VC0JQWl5k9/exec";
 
 const $ = id => document.getElementById(id);
 let session = null;
@@ -386,8 +386,22 @@ async function getJson(action, params={}){
   const text=await r.text();
   if(!r.ok) throw new Error('Backend HTTP '+r.status);
   let data;
-  try{data=JSON.parse(text);}catch(e){throw new Error('El backend no devolvió JSON válido (posible página de acceso): '+String(text).slice(0,120));}
-  if(data && data.ok===false) throw new Error(data.error||data.resultado?.error||'El backend rechazó la consulta.');
+  try{data=JSON.parse(text);}catch(e){throw new Error('El backend no devolvió JSON válido: '+String(text).slice(0,160));}
+  if(data && data.ok===false) throw new Error(data.error||'El backend rechazó la consulta.');
+
+  // El Backend Maestro devuelve las lecturas generales dentro de "datos".
+  // Adaptamos ese contrato a la estructura que usa la app para no duplicar backends.
+  const datos = data?.datos;
+  if(Array.isArray(datos)){
+    if(action==='listarChoferes') return {ok:true,choferes:datos};
+    if(action==='listarVehiculos') return {ok:true,vehiculos:datos};
+    if(action==='listarServicios') return {ok:true,servicios:datos};
+    if(action==='listarAsignaciones') return {ok:true,asignaciones:datos};
+    if(action==='listarViajes') return {ok:true,viajes:datos};
+    if(action==='listarInspecciones') return {ok:true,inspecciones:datos};
+    if(action==='listarReportes') return {ok:true,reportes:datos};
+    if(action==='listarEvidencias') return {ok:true,evidencias:datos};
+  }
   return data;
 }
 
@@ -433,51 +447,80 @@ function cerrarSesion(){
 }
 
 async function cargarDashboard(){
-  const idChofer=session.idChofer;
+  const idChofer=String(session?.idChofer||'').trim();
   try{
-    const [aRes,vRes,sRes,eRes] = await Promise.all([
-      getJson('asignacionActiva',{idChofer}),
+    const [aRes,vRes,sRes,viRes] = await Promise.all([
+      getJson('listarAsignaciones'),
       getJson('listarVehiculos'),
       getJson('listarServicios'),
-      getJson('listarEstadoFlota')
+      getJson('listarViajes')
     ]);
 
-    const asignacion=aRes.asignacion || null;
+    const asignaciones=Array.isArray(aRes.asignaciones)?aRes.asignaciones:[];
     const vehiculos=Array.isArray(vRes.vehiculos)?vRes.vehiculos:[];
     const servicios=Array.isArray(sRes.servicios)?sRes.servicios:[];
-    const estadoFlota=Array.isArray(eRes.estadoFlota)?eRes.estadoFlota:[];
+    const viajes=Array.isArray(viRes.viajes)?viRes.viajes:[];
 
-    const propios=servicios.filter(s =>
-      String(s.idChofer||'')===String(idChofer) &&
-      String(s.estado||'').toUpperCase()!=='FINALIZADO'
+    const hoy=new Date();
+    const fechaHoy=(hoy.getFullYear()+'-'+String(hoy.getMonth()+1).padStart(2,'0')+'-'+String(hoy.getDate()).padStart(2,'0'));
+    const normalizarFecha=v=>String(v||'').slice(0,10);
+
+    const propias=asignaciones.filter(a=>
+      String(a.ID_CHOFER||'').trim()===idChofer &&
+      String(a.ESTADO||'').trim().toUpperCase()==='ACTIVA'
     );
 
-    propios.sort((a,b)=>{
-      const ae=String(a.estado||'').toUpperCase()==='EN VIAJE'?0:1;
-      const be=String(b.estado||'').toUpperCase()==='EN VIAJE'?0:1;
-      if(ae!==be) return ae-be;
-      return String(a.fecha||'').localeCompare(String(b.fecha||'')) ||
-             String(a.horaProgramada||'').localeCompare(String(b.horaProgramada||''));
+    propias.sort((a,b)=>{
+      const ah=normalizarFecha(a.FECHA)===fechaHoy?0:1;
+      const bh=normalizarFecha(b.FECHA)===fechaHoy?0:1;
+      if(ah!==bh) return ah-bh;
+      return String(b.FECHA||'').localeCompare(String(a.FECHA||''));
     });
 
-    const servicioActual=propios[0]||null;
-    // La cantidad de ruedas pertenece a cada unidad y se obtiene desde VEHICULOS.
-    // No se fija un número por defecto cuando conocemos la unidad asignada al servicio.
-    if (servicioActual) {
-      const vehiculoServicio=vehiculos.find(v=>String(v.idUnidad)===String(servicioActual.idUnidad));
-      servicioActual.cantidadRuedas=Number(vehiculoServicio?.cantidadRuedas||0);
-    }
-    // Primero usamos la asignación activa de ASIGNACIONES.
-    // Si todavía no existe, usamos el ID_UNIDAD del servicio como respaldo.
-    // Así el chofer puede ver el vehículo ya asociado al servicio.
-    const referenciaVehiculo=asignacion || servicioActual;
-    const vehiculo=referenciaVehiculo
-      ? vehiculos.find(v=>String(v.idUnidad)===String(referenciaVehiculo.idUnidad))
+    const asignacion=propias[0]||null;
+    const servicioBase=asignacion
+      ? servicios.find(s=>String(s.ID_SERVICIO||'').trim()===String(asignacion.ID_SERVICIO||'').trim())
       : null;
 
-    const dominioReferencia=String(vehiculo?.dominio||referenciaVehiculo?.dominio||'').trim().toUpperCase().replace(/\s+/g,'');
-    const estadoVehiculo=estadoFlota.find(x=>String(x.dominio||'').trim().toUpperCase().replace(/\s+/g,'')===dominioReferencia) || null;
-    renderVehicle(referenciaVehiculo,vehiculo,estadoVehiculo);
+    let servicioActual=servicioBase?{
+      ...servicioBase,
+      idServicio:servicioBase.ID_SERVICIO,
+      fecha:servicioBase.FECHA,
+      horaProgramada:servicioBase.HORA_PROGRAMADA,
+      tipo:servicioBase.TIPO_SERVICIO,
+      nombreServicio:servicioBase.NOMBRE_SERVICIO,
+      idRuta:servicioBase.ID_RUTA,
+      estado:servicioBase.ESTADO,
+      idAsignacion:asignacion.ID_ASIGNACION,
+      idChofer:asignacion.ID_CHOFER,
+      idUnidad:asignacion.ID_VEHICULO,
+      dominio:''
+    }:null;
+
+    if(servicioActual){
+      const vehiculoServicio=vehiculos.find(v=>String(v.ID_VEHICULO||'').trim()===String(asignacion.ID_VEHICULO||'').trim());
+      servicioActual.dominio=vehiculoServicio?.DOMINIO||'';
+      servicioActual.marca=vehiculoServicio?.MARCA||'';
+      servicioActual.modelo=vehiculoServicio?.MODELO||'';
+
+      const viajeActivo=viajes.find(v=>
+        String(v.ID_SERVICIO||'').trim()===String(servicioActual.idServicio).trim() &&
+        String(v.ID_ASIGNACION||'').trim()===String(asignacion.ID_ASIGNACION||'').trim() &&
+        ['EN CURSO','ACTIVO','INICIADO'].includes(String(v.ESTADO||'').trim().toUpperCase())
+      );
+      if(viajeActivo){
+        servicioActual.estado='EN VIAJE';
+        servicioActual.idViaje=viajeActivo.ID_VIAJE;
+        servicioActual.kmInicial=viajeActivo.KM_INICIAL;
+      }
+      servicioActual.cantidadRuedas=Number(vehiculoServicio?.CANTIDAD_RUEDAS||vehiculoServicio?.cantidadRuedas||0);
+    }
+
+    const vehiculo=asignacion
+      ? vehiculos.find(v=>String(v.ID_VEHICULO||'').trim()===String(asignacion.ID_VEHICULO||'').trim())
+      : null;
+
+    renderVehicle(asignacion?{dominio:vehiculo?.DOMINIO,idUnidad:asignacion.ID_VEHICULO}:null,vehiculo,null);
     renderService(servicioActual);
   }catch(err){
     $('serviceBox').innerHTML='<div class="empty">No se pudieron consultar los datos operativos.<br>Intentá actualizar en unos segundos.</div>';
@@ -530,15 +573,15 @@ function renderVehicle(a,v,estadoFlota){
     $('vehiclePhoto').innerHTML='<span class="vehicle-placeholder">🚛</span>';
     return;
   }
-  const dominio=v?.dominio || a.dominio || estadoFlota?.dominio || 'SIN DOMINIO';
-  $('vehicleName').textContent=[v?.marca,v?.modelo].filter(Boolean).join(' ') || 'Vehículo';
+  const dominio=v?.DOMINIO || v?.dominio || a.dominio || 'SIN DOMINIO';
+  $('vehicleName').textContent=[v?.MARCA||v?.marca,v?.MODELO||v?.modelo].filter(Boolean).join(' ') || 'Vehículo';
   $('vehiclePlate').textContent=dominio;
-  const foto=convertirFotoDrive(v?.fotoUrl);
+  const foto=convertirFotoDrive(v?.FOTO_URL||v?.fotoUrl);
   $('vehiclePhoto').innerHTML=foto
     ? `<img src="${escapeHtml(foto)}" alt="Foto de ${escapeHtml(dominio)}" onerror="this.parentElement.innerHTML='<span class=\"vehicle-placeholder\">🚛</span>'">`
     : '<span class="vehicle-placeholder">🚛</span>';
-  const kmActual = estadoFlota?.km ?? estadoFlota?.kmActual ?? estadoFlota?.['KM ACTUAL'] ?? estadoFlota?.kilometraje ?? estadoFlota?.['KILOMETRAJE'] ?? v?.kmActual ?? v?.kilometraje ?? v?.['KM ACTUAL'] ?? '';
-  $('vehicleKm').textContent=formatearKm(kmActual);
+  const kmActual=estadoFlota?.km ?? estadoFlota?.kmActual ?? v?.KM_ACTUAL ?? v?.kmActual ?? '';
+  $('vehicleKm').textContent=kmActual!==''?formatearKm(kmActual):'Se registra al iniciar';
 }
 
 function renderService(s){
@@ -547,21 +590,22 @@ function renderService(s){
     $('serviceBox').innerHTML='<div class="empty"><strong>No tenés servicios pendientes.</strong><br><span>Cuando administración te asigne uno, aparecerá acá.</span></div>';
     return;
   }
+  const activo=['EN VIAJE','EN CURSO','ACTIVO','INICIADO'].includes(String(s.estado||'').toUpperCase());
   $('serviceBox').innerHTML=`
     <div class="service-card">
       <div class="service-head">
         <div class="eyebrow" style="color:#bfead5">${escapeHtml(s.tipo||'SERVICIO')}</div>
-        <h2>${escapeHtml(s.nombreServicio||s.descripcion||'Servicio')}</h2>
+        <h2>${escapeHtml(s.nombreServicio||'Servicio')}</h2>
       </div>
       <div class="route">
-        <div class="route-point"><div class="dot"></div><div><strong>${escapeHtml(s.destinoInicial||'Origen no informado')}</strong><small>Origen</small></div></div>
+        <div class="route-point"><div class="dot"></div><div><strong>${escapeHtml(s.nombreServicio||'Servicio asignado')}</strong><small>Servicio</small></div></div>
       </div>
       <div class="service-meta">
         <div class="meta"><span>Horario</span><strong>${escapeHtml(formatearHora(s.horaProgramada))}</strong></div>
-        <div class="meta"><span>Estado</span><strong>${escapeHtml(s.estado||'PROGRAMADO')}</strong></div>
+        <div class="meta"><span>Estado</span><strong>${escapeHtml(s.estado||'PENDIENTE')}</strong></div>
       </div>
       <div class="actions" style="padding:0 19px 19px">
-        <button class="primary" type="button" onclick="verServicio('${escapeHtml(s.idServicio||'')}')">${String(s.estado||'').toUpperCase()==='EN VIAJE'?'CONTINUAR VIAJE':'VER SERVICIO'}</button>
+        <button class="primary" type="button" onclick="verServicio('${escapeHtml(s.idServicio||'')}')">${activo?'CONTINUAR SERVICIO':'VER SERVICIO'}</button>
       </div>
     </div>`;
 }
@@ -583,32 +627,33 @@ async function verServicio(id){
     return;
   }
 
-  // Refrescar el estado real antes de abrir el servicio. Esto evita que una
-  // copia vieja del navegador deje el botón en INICIAR cuando el backend ya
-  // tiene el servicio EN VIAJE.
+  // Refrescamos viajes para que el estado EN VIAJE sea el real del backend maestro.
   try{
-    const fresh=await getJson('listarServicios');
-    const listaFresh=Array.isArray(fresh?.servicios)?fresh.servicios:[];
-    const actualizado=listaFresh.find(x=>String(x.idServicio||'')===String(id));
-    if(actualizado) s=actualizado;
-  }catch(e){ console.warn('No se pudo refrescar el estado del servicio:',e); }
+    const [sRes,aRes,vRes]=await Promise.all([
+      getJson('listarServicios'),
+      getJson('listarAsignaciones'),
+      getJson('listarViajes')
+    ]);
+    const servicio=(sRes.servicios||[]).find(x=>String(x.ID_SERVICIO||'')===String(id));
+    const asignacion=(aRes.asignaciones||[]).find(x=>String(x.ID_SERVICIO||'')===String(id)&&String(x.ID_CHOFER||'')===String(session.idChofer)&&String(x.ESTADO||'').toUpperCase()==='ACTIVA');
+    const vehiculos=(await getJson('listarVehiculos')).vehiculos||[];
+    const vehiculo=asignacion?vehiculos.find(x=>String(x.ID_VEHICULO||'')===String(asignacion.ID_VEHICULO||'')):null;
+    const viaje=(vRes.viajes||[]).find(x=>String(x.ID_SERVICIO||'')===String(id)&&['EN CURSO','ACTIVO','INICIADO'].includes(String(x.ESTADO||'').toUpperCase()));
+    if(servicio){
+      s={...s,fecha:servicio.FECHA,horaProgramada:servicio.HORA_PROGRAMADA,tipo:servicio.TIPO_SERVICIO,nombreServicio:servicio.NOMBRE_SERVICIO,estado:viaje?'EN VIAJE':servicio.ESTADO,idAsignacion:asignacion?.ID_ASIGNACION||s.idAsignacion,idUnidad:asignacion?.ID_VEHICULO||s.idUnidad,dominio:vehiculo?.DOMINIO||s.dominio,idViaje:viaje?.ID_VIAJE||s.idViaje,kmInicial:viaje?.KM_INICIAL||s.kmInicial};
+    }
+  }catch(e){ console.warn('No se pudo refrescar el servicio:',e); }
 
   servicioEnInspeccion=s;
   ultimaInspeccionCargada=null;
-
   $('serviceBox').classList.add('hidden');
   $('inspectionScreen').classList.remove('hidden');
-
-  $('inspectionServiceLabel').textContent =
-    (s.nombreServicio||s.descripcion||'Servicio')+' · '+formatearHora(s.horaProgramada);
+  $('inspectionServiceLabel').textContent=(s.nombreServicio||'Servicio')+' · '+formatearHora(s.horaProgramada);
   $('inspectionAlert').style.display='none';
 
-  // Si el servicio ya está EN VIAJE, NO volvemos a pedir fotos ni KM inicial.
-  // El estado del backend es la fuente de verdad y permite recuperar el viaje
-  // aunque el chofer haya cerrado la app o el navegador.
-  if(String(s.estado||'').toUpperCase()==='EN VIAJE'){
+  if(['EN VIAJE','EN CURSO','ACTIVO','INICIADO'].includes(String(s.estado||'').toUpperCase())){
     window.__servicioActual=s;
-    try{ localStorage.setItem('diaVerdeServicioActivo',JSON.stringify({idServicio:s.idServicio})); }catch(e){}
+    try{ localStorage.setItem('diaVerdeServicioActivo',JSON.stringify({idServicio:s.idServicio,idViaje:s.idViaje||''})); }catch(e){}
     mostrarModoViajeActivo();
     return;
   }
@@ -622,28 +667,10 @@ async function verServicio(id){
   $('currentKm').disabled=false;
   $('inspectionObs').value='';
   $('inspectionObs').disabled=false;
-
+  const finalBox=document.getElementById('finalKmBox'); if(finalBox) finalBox.remove();
   construirFotosSalida();
   actualizarEstadoInicio();
-
-  // Mostrar último KM como referencia.
-  try{
-    const estado=await getJson('listarEstadoFlota');
-    const lista=estado?.estadoFlota||estado?.resultado||estado?.data||[];
-    const dom=String(s.dominio||s.patente||'').trim().toUpperCase().replace(/\s+/g,'');
-    const encontrado=Array.isArray(lista)
-      ? lista.find(x=>String(x.dominio||x.patente||x.PATENTE||x.DOMINIO||'').trim().toUpperCase().replace(/\s+/g,'')===dom)
-      : null;
-
-    if((encontrado?.km!==undefined || encontrado?.kmActual!==undefined || encontrado?.['KM ACTUAL']!==undefined || encontrado?.kilometraje!==undefined) && String(encontrado?.km ?? encontrado?.kmActual ?? encontrado?.['KM ACTUAL'] ?? encontrado?.kilometraje ?? '').trim()!==''){
-      $('lastKmHint').textContent='Último KM registrado: '+formatearKilometraje(encontrado?.km ?? encontrado?.kmActual ?? encontrado?.['KM ACTUAL'] ?? encontrado?.kilometraje);
-    }else{
-      $('lastKmHint').textContent='Todavía no hay un kilometraje registrado para esta unidad.';
-    }
-  }catch(err){
-    $('lastKmHint').textContent='';
-  }
-
+  $('lastKmHint').textContent='El kilometraje se registrará como KM inicial del viaje.';
   $('inspectionScreen').scrollIntoView({behavior:'smooth',block:'start'});
 }
 
@@ -841,11 +868,15 @@ async function registrarControlVehiculo(){
     const payload={
       accion:'registrarReporteVehiculo',
       idServicio:servicioEnInspeccion?.idServicio||'',
+      idAsignacion:servicioEnInspeccion?.idAsignacion||'',
+      idViaje:servicioEnInspeccion?.idViaje||'',
       idChofer:session?.idChofer||'',
+      idVehiculo:servicioEnInspeccion?.idUnidad||'',
       idUnidad:servicioEnInspeccion?.idUnidad||'',
       dominio:servicioEnInspeccion?.dominio||'',
-      kilometraje:parsearKilometraje($('currentKm')?.value),
+      kilometraje:parsearKilometraje($('currentKm')?.value)||parsearKilometraje($('finalKm')?.value),
       categoria:categoria==='VTV'?'VTV':categoria,
+      tipoReporte:'CONTROL_VEHICULO',
       elemento,
       estado:controlDraft.estado||'',
       observacion:obs,
@@ -868,41 +899,33 @@ function mostrarResumenControl(categoria,estado){
 }
 
 function mostrarModoViajeActivo(){
-  const nombre=escapeHtml(session?.nombre||session?.nombreCompleto||'Chofer');
-  $('inspectionServiceLabel').textContent='Servicio activo · '+(servicioEnInspeccion?.nombreServicio||servicioEnInspeccion?.descripcion||'En viaje');
+  const nombre=escapeHtml(session?.nombre||'Chofer');
+  $('inspectionServiceLabel').textContent='Servicio activo · '+(servicioEnInspeccion?.nombreServicio||'En viaje');
   $('inspectionStatus').className='status-banner travel';
   $('inspectionStatus').innerHTML='🟢 <strong>EN VIAJE</strong> · servicio activo';
-
-  // En un viaje activo no se vuelven a cargar fotos, KM ni observación de salida.
-  // Dejamos únicamente la botonera para reportar problemas y el cierre del servicio.
   document.querySelectorAll('#inspectionScreen .check-section').forEach(sec=>sec.classList.add('hidden'));
   $('inspectionAlert').style.display='none';
-  $('inspectionAlert').textContent='';
-  $('vehiclePhotosGrid').innerHTML='';
-  $('currentKm').value='';
-  $('inspectionObs').value='';
-
+  $('vehiclePhotosGrid').innerHTML='';$('currentKm').value='';$('inspectionObs').value='';
   const controlSection=document.querySelector('#inspectionScreen .vehicle-control-section');
   if(controlSection) controlSection.classList.remove('hidden');
   const head=controlSection?.querySelector('.vehicle-control-head');
-  if(head){
-    head.querySelector('h3').textContent='¿Necesitás reportar un problema?';
-    head.querySelector('.vehicle-control-help').textContent='Si durante el recorrido detectás una falla o novedad, podés informarla desde acá.';
-    const badge=head.querySelector('.optional-badge');
-    if(badge) badge.textContent='Opcional';
-  }
-
+  if(head){head.querySelector('h3').textContent='¿Necesitás reportar un problema?';head.querySelector('.vehicle-control-help').textContent='Si durante el recorrido detectás una falla o novedad, podés informarla desde acá.';}
+  asegurarCampoKmFinal();
   const actions=document.querySelector('.inspection-actions');
-  if(actions){
-    actions.innerHTML=`<button class="primary" type="button" id="finishInspectionBtn" onclick="finalizarViaje()">FINALIZAR SERVICIO</button>`;
-  }
-
+  if(actions) actions.innerHTML=`<button class="primary" type="button" id="finishInspectionBtn" onclick="finalizarViaje()">FINALIZAR SERVICIO</button>`;
   $('inspectionScreen').querySelector('.inspection-head h2').textContent='Servicio en curso';
-  const info=$('inspectionScreen').querySelector('.inspection-head p');
-  if(info) info.innerHTML='Buen viaje, <strong>${nombre}</strong> 👋';
-  const nota=$('inspectionScreen').querySelector('.inspection-card > div:last-child');
-  if(nota && nota.textContent.includes('Las 4 fotos')) nota.classList.add('hidden');
+  const info=$('inspectionScreen').querySelector('.inspection-head p'); if(info) info.innerHTML='Buen viaje, <strong>'+nombre+'</strong> 👋';
+  const nota=$('inspectionScreen').querySelector('.inspection-card > div:last-child'); if(nota && nota.textContent.includes('Las 4 fotos')) nota.classList.add('hidden');
   $('inspectionScreen').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function asegurarCampoKmFinal(){
+  let box=document.getElementById('finalKmBox');
+  if(box) return box;
+  box=document.createElement('div');box.id='finalKmBox';box.className='check-section';
+  box.innerHTML=`<h3>KM de finalización <span style="color:#c33">*</span></h3><p style="margin:0 0 10px;color:#71807a;font-size:13px">Ingresá el kilometraje que figura en el tablero al finalizar el servicio.</p><div style="display:flex;gap:10px;align-items:center"><input id="finalKm" type="text" inputmode="numeric" placeholder="Ej.: 125.870" style="width:100%;height:56px;border:1px solid #cbdad3;border-radius:13px;padding:0 16px;font-size:20px;font-weight:800;color:#073f2e;background:#fbfdfc"><span style="font-weight:800;color:#557168">km</span></div>`;
+  const actions=document.querySelector('.inspection-actions');actions.parentNode.insertBefore(box,actions);
+  return box;
 }
 
 async function iniciarViaje(){
@@ -910,111 +933,73 @@ async function iniciarViaje(){
   const km=parsearKilometraje($('currentKm').value);
   const fotos=window.__salidaFotos||{};
   const observacion=$('inspectionObs').value.trim();
-
   a.style.display='none';
+  if(contarFotosSalida()!==4){a.textContent='Tenés que cargar las 4 fotos obligatorias antes de iniciar el viaje.';a.style.display='block';return;}
+  if(km===null){a.textContent='Ingresá el kilometraje actual para poder iniciar el viaje.';a.style.display='block';$('currentKm').focus();return;}
+  if(!servicioEnInspeccion?.idAsignacion){a.textContent='La asignación del servicio no está disponible. Actualizá la aplicación e intentá nuevamente.';a.style.display='block';return;}
 
-  if(contarFotosSalida()!==4){
-    a.textContent='Tenés que cargar las 4 fotos obligatorias antes de iniciar el viaje.';
-    a.style.display='block';
-    return;
-  }
-
-  if(km===null){
-    a.textContent='Ingresá el kilometraje actual para poder iniciar el viaje.';
-    a.style.display='block';
-    $('currentKm').focus();
-    return;
-  }
-
-  btn.disabled=true;
-  btn.textContent='GUARDANDO FOTOS…';
-
+  btn.disabled=true;btn.textContent='GUARDANDO SALIDA…';
   try{
     const res=await postJson({
       accion:'iniciarViaje',
       idServicio:servicioEnInspeccion.idServicio,
+      idAsignacion:servicioEnInspeccion.idAsignacion,
       idChofer:session.idChofer,
+      idVehiculo:servicioEnInspeccion.idUnidad||'',
       idUnidad:servicioEnInspeccion.idUnidad||'',
       dominio:servicioEnInspeccion.dominio||'',
+      kmInicial:km,
       kilometraje:km,
+      horaInicio:new Date().toISOString(),
+      observaciones:observacion,
       observacion:observacion,
       fotos:{
-        frente:fotos.frente.dataUrl,
-        trasera:fotos.trasera.dataUrl,
-        lateral_derecho:fotos.lateral_derecho.dataUrl,
-        lateral_izquierdo:fotos.lateral_izquierdo.dataUrl
+        frente:fotos.frente?.dataUrl||'',trasera:fotos.trasera?.dataUrl||'',
+        lateral_derecho:fotos.lateral_derecho?.dataUrl||'',lateral_izquierdo:fotos.lateral_izquierdo?.dataUrl||''
       }
     });
-
-    if(!res?.ok){
-      const msg=String(res?.error||'');
-      if(/ya.*EN VIAJE|EN VIAJE.*ya/i.test(msg)){
-        servicioEnInspeccion.estado='EN VIAJE';
-        window.__servicioActual=servicioEnInspeccion;
-        try{ localStorage.setItem('diaVerdeServicioActivo',JSON.stringify({idServicio:servicioEnInspeccion.idServicio})); }catch(e){}
-        return configurarPantallaViajeRecuperado(msg);
-      }
-      throw new Error(msg||'No se pudo iniciar el viaje.');
-    }
-
+    if(!res?.ok) throw new Error(res?.error||'No se pudo iniciar el viaje.');
+    const viaje=res.resultado||res.viaje||{};
     servicioEnInspeccion.estado='EN VIAJE';
+    servicioEnInspeccion.idViaje=viaje.ID_VIAJE||viaje.idViaje||'';
+    servicioEnInspeccion.kmInicial=km;
     window.__servicioActual=servicioEnInspeccion;
-    try{ localStorage.setItem('diaVerdeServicioActivo',JSON.stringify({idServicio:servicioEnInspeccion.idServicio})); }catch(e){}
-
-    $('inspectionStatus').className='status-banner travel';
-    $('inspectionStatus').innerHTML='🟢 <strong>EN VIAJE</strong> · servicio activo';
-    a.textContent='Viaje iniciado correctamente. KM y 4 fotos registrados.';
-    if(observacion) a.textContent+=' La observación también fue registrada.';
-    a.style.display='block';
-
-    btn.textContent='FINALIZAR VIAJE';
-    btn.disabled=false;
-    btn.onclick=finalizarViaje;
+    try{ localStorage.setItem('diaVerdeServicioActivo',JSON.stringify({idServicio:servicioEnInspeccion.idServicio,idViaje:servicioEnInspeccion.idViaje||''})); }catch(e){}
+    configurarPantallaViajeRecuperado('Viaje iniciado correctamente. KM y 4 fotos registrados.');
   }catch(err){
-    a.textContent=err.message||'No se pudo iniciar el viaje.';
-    a.style.display='block';
-    btn.disabled=false;
-    btn.textContent='▶ INICIAR VIAJE';
-    btn.onclick=iniciarViaje;
+    a.textContent=err.message||'No se pudo iniciar el viaje.';a.style.display='block';
+    btn.disabled=false;btn.textContent='▶ INICIAR VIAJE';btn.onclick=iniciarViaje;
   }
 }
 
 function configurarPantallaViajeRecuperado(mensaje){
-  const btn=$('finishInspectionBtn'),a=$('inspectionAlert');
-  $('inspectionStatus').className='status-banner travel';
-  $('inspectionStatus').innerHTML='🟢 <strong>EN VIAJE</strong> · servicio activo recuperado';
-  a.textContent=mensaje||'El viaje ya estaba iniciado. Podés finalizarlo desde acá.';
-  a.style.display='block';
-  btn.disabled=false;
-  btn.textContent='FINALIZAR VIAJE';
-  btn.onclick=finalizarViaje;
-  try{ $('currentKm').disabled=true; $('inspectionObs').disabled=true; }catch(e){}
+  mostrarModoViajeActivo();
+  const a=$('inspectionAlert');a.textContent=mensaje||'El viaje está activo. Podés finalizarlo desde acá.';a.style.display='block';
 }
 
 async function finalizarViaje(){
   const btn=$('finishInspectionBtn'),a=$('inspectionAlert');
+  const kmFinal=parsearKilometraje($('finalKm')?.value);
+  if(kmFinal===null){a.textContent='Ingresá el kilometraje final para poder cerrar el servicio.';a.style.display='block';$('finalKm')?.focus();return;}
   btn.disabled=true;btn.textContent='FINALIZANDO…';a.style.display='none';
   try{
-    const res=await postJson({accion:'finalizarViaje',idServicio:servicioEnInspeccion.idServicio,idChofer:session.idChofer,idUnidad:servicioEnInspeccion.idUnidad||''});
+    let idViaje=servicioEnInspeccion?.idViaje||'';
+    if(!idViaje){
+      const r=await getJson('listarViajes');
+      const viajes=Array.isArray(r.viajes)?r.viajes:[];
+      const viaje=viajes.find(v=>String(v.ID_SERVICIO||'')===String(servicioEnInspeccion.idServicio||'')&&String(v.ID_CHOFER||'')===String(session.idChofer||'')&&['EN CURSO','ACTIVO','INICIADO'].includes(String(v.ESTADO||'').toUpperCase()));
+      idViaje=viaje?.ID_VIAJE||'';
+    }
+    if(!idViaje) throw new Error('No se encontró el viaje activo para finalizar.');
+    const res=await postJson({accion:'finalizarViaje',idViaje,kmFinal, idServicio:servicioEnInspeccion.idServicio,idChofer:session.idChofer,idVehiculo:servicioEnInspeccion.idUnidad||'',observaciones:''});
     if(!res?.ok) throw new Error(res?.error||'No se pudo finalizar el viaje.');
-    servicioEnInspeccion.estado='FINALIZADO';
-    window.__servicioActual=servicioEnInspeccion;
-    try{ localStorage.removeItem('diaVerdeServicioActivo'); }catch(e){}
-    $('inspectionStatus').className='status-banner ready';
-    $('inspectionStatus').innerHTML='✅ <strong>Servicio finalizado</strong>';
-    a.innerHTML='¡Excelente trabajo! 👋<br><strong>Gracias por el servicio.</strong>';
-    a.style.display='block';
-    btn.textContent='VOLVER AL INICIO';
-    btn.disabled=false;
-    btn.onclick=volverInicio;
-    const controlSection=document.querySelector('#inspectionScreen .vehicle-control-section');
-    if(controlSection) controlSection.classList.add('hidden');
-  }catch(err){
-    a.textContent=err.message||'No se pudo finalizar el viaje.';
-    a.style.display='block';
-    btn.disabled=false;
-    btn.textContent='FINALIZAR VIAJE';
-  }
+    servicioEnInspeccion.estado='FINALIZADO';servicioEnInspeccion.idViaje=idViaje;window.__servicioActual=servicioEnInspeccion;
+    try{localStorage.removeItem('diaVerdeServicioActivo');}catch(e){}
+    $('inspectionStatus').className='status-banner ready';$('inspectionStatus').innerHTML='✅ <strong>Servicio finalizado</strong>';
+    a.innerHTML='¡Excelente trabajo! 👋<br><strong>Gracias por el servicio.</strong>';a.style.display='block';
+    btn.textContent='VOLVER AL INICIO';btn.disabled=false;btn.onclick=volverInicio;
+    const controlSection=document.querySelector('#inspectionScreen .vehicle-control-section');if(controlSection)controlSection.classList.add('hidden');
+  }catch(err){a.textContent=err.message||'No se pudo finalizar el viaje.';a.style.display='block';btn.disabled=false;btn.textContent='FINALIZAR SERVICIO';}
 }
 
 function volverInicio(){
@@ -1030,46 +1015,19 @@ function volverServicio(){
 }
 
 $('loginForm').addEventListener('submit',async e=>{
-  e.preventDefault();
-  $('loginError').style.display='none';
-  $('loginBtn').disabled=true;
-  $('loginLoading').style.display='block';
-
+  e.preventDefault();$('loginError').style.display='none';$('loginBtn').disabled=true;$('loginLoading').style.display='block';
   try{
-    const res=await postJson({
-      accion:'loginChofer',
-      usuario:$('usuario').value,
-      contrasena:$('contrasena').value
-    });
-
+    const res=await postJson({accion:'login',usuario:$('usuario').value,contrasena:$('contrasena').value,aplicacion:'CHOFERES'});
     const data=res?.resultado||res;
-    if(!res?.ok || !data?.login) throw new Error(res?.error||data?.error||'Usuario o contraseña incorrectos.');
-
-    session={
-      idChofer:data.idChofer,
-      nombre:data.nombre,
-      usuario:data.usuario,
-      estado:data.estado
-    };
-
-    sessionStorage.setItem('diaVerdeChofer',JSON.stringify(session));
-    guardarSesionLocal();
-
-    $('driverName').textContent=session.nombre;
-    $('topUserName').textContent=session.nombre;
-    $('avatar').textContent=initials(session.nombre);
-    $('topUser').classList.remove('hidden');
-    $('loginScreen').classList.add('hidden');
-    $('dashboardScreen').classList.remove('hidden');
-
-    await cargarDashboard();
-    iniciarActualizacionAutomatica();
-  }catch(err){
-    showError(err.message||'No se pudo iniciar sesión.');
-  }finally{
-    $('loginBtn').disabled=false;
-    $('loginLoading').style.display='none';
-  }
+    const u=data?.usuario;
+    if(!res?.ok || !data?.ok || !u?.ID_CHOFER) throw new Error(res?.error||data?.error||'Usuario o contraseña incorrectos.');
+    session={idChofer:u.ID_CHOFER,nombre:u.NOMBRE,usuario:u.USUARIO,estado:u.ESTADO,rol:u.ROL,aplicacion:u.APLICACION};
+    sessionStorage.setItem('diaVerdeChofer',JSON.stringify(session));guardarSesionLocal();
+    $('driverName').textContent=session.nombre;$('topUserName').textContent=session.nombre;$('avatar').textContent=initials(session.nombre);
+    $('topUser').classList.remove('hidden');$('loginScreen').classList.add('hidden');$('dashboardScreen').classList.remove('hidden');
+    await cargarDashboard();iniciarActualizacionAutomatica();
+  }catch(err){showError(err.message||'No se pudo iniciar sesión.');}
+  finally{$('loginBtn').disabled=false;$('loginLoading').style.display='none';}
 });
 
 (function restore(){
