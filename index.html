@@ -515,8 +515,15 @@ async function cargarDashboard(){
 
     const propias=asignaciones.filter(a=>{
       const f=normalizarFecha(a.FECHA);
+      const servicio=servicios.find(s =>
+        String(s.ID_SERVICIO||'').trim()===String(a.ID_SERVICIO||'').trim()
+      );
+      const estadoAsignacion=String(a.ESTADO||'').trim().toUpperCase();
+      const estadoServicio=String(servicio?.ESTADO||'').trim().toUpperCase();
+
       return String(a.ID_CHOFER||'').trim()===idChofer &&
-        String(a.ESTADO||'').trim().toUpperCase()==='ACTIVA' &&
+        estadoAsignacion==='ACTIVA' &&
+        !['FINALIZADO','CANCELADO','CANCELADA'].includes(estadoServicio) &&
         (f===fechaHoy || f===fechaManana);
     });
 
