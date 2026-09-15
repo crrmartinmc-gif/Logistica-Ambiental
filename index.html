@@ -397,15 +397,38 @@ function formatearFechaAR(v){
 }
 
 function formatearHoraAR(v){
-  if(!v) return '-';
+  if(v==null || String(v).trim()==='') return '-';
   const s=String(v).trim();
-  const m=s.match(/(?:^|T|\s)(\d{1,2}):(\d{2})(?::\d{2})?/);
-  if(!m) return s;
-  if(s.includes('T') || /Z$|[+-]\d{2}:?\d{2}$/.test(s)){
-    const d=new Date(v);
-    if(!Number.isNaN(d.getTime())) return new Intl.DateTimeFormat('es-AR',{timeZone:'America/Argentina/Buenos_Aires',hour:'2-digit',minute:'2-digit',hour12:false}).format(d);
+
+  // Google Sheets puede entregar una hora como fecha base 1899 + UTC.
+  // En ese caso la convertimos explícitamente a horario de Argentina.
+  const iso1899=s.match(/^1899-12-30T(\d{1,2}):(\d{2})(?::\d{2}(?:\.\d+)?)?Z$/i);
+  if(iso1899){
+    const d=new Date(s);
+    if(!Number.isNaN(d.getTime())){
+      return new Intl.DateTimeFormat('es-AR',{
+        timeZone:'America/Argentina/Buenos_Aires',
+        hour:'2-digit',minute:'2-digit',hour12:false
+      }).format(d);
+    }
   }
-  return String(m[1]).padStart(2,'0')+':'+m[2];
+
+  // ISO completo con zona horaria: siempre se muestra en Argentina.
+  if(/T/.test(s) && (/Z$/i.test(s) || /[+-]\d{2}:?\d{2}$/.test(s))){
+    const d=new Date(v);
+    if(!Number.isNaN(d.getTime())){
+      return new Intl.DateTimeFormat('es-AR',{
+        timeZone:'America/Argentina/Buenos_Aires',
+        hour:'2-digit',minute:'2-digit',hour12:false
+      }).format(d);
+    }
+  }
+
+  // Hora simple o fecha/hora sin zona: no desplazamos la hora.
+  const m=s.match(/(?:^|T|\s)(\d{1,2}):(\d{2})(?::\d{2})?/);
+  if(m) return String(m[1]).padStart(2,'0')+':'+m[2];
+
+  return s;
 }
 
 function formatearFechaHoraAR(v){
@@ -444,12 +467,13 @@ async function getJson(action, params={}){
     if(action==='listarChoferes') return {ok:true,choferes:datos};
     if(action==='listarVehiculos') return {ok:true,vehiculos:datos};
     if(action==='listarServicios') return {ok:true,servicios:datos};
+    if(action==='rutas') return {ok:true,rutas:datos};
+    if(action==='listarRutas') return {ok:true,rutas:datos};
     if(action==='listarAsignaciones') return {ok:true,asignaciones:datos};
     if(action==='listarViajes') return {ok:true,viajes:datos};
     if(action==='listarInspecciones') return {ok:true,inspecciones:datos};
     if(action==='listarReportes') return {ok:true,reportes:datos};
     if(action==='listarEvidencias') return {ok:true,evidencias:datos};
-    if(action==='rutas' || action==='listarRutas') return {ok:true,rutas:datos};
   }
   return data;
 }
@@ -542,10 +566,6 @@ async function cargarDashboard(){
       ? servicios.find(s=>String(s.ID_SERVICIO||'').trim()===String(asignacion.ID_SERVICIO||'').trim())
       : null;
 
-    const rutaBase=servicioBase
-      ? rutas.find(r=>String(r.ID_RUTA||'').trim()===String(servicioBase.ID_RUTA||'').trim())
-      : null;
-
     let servicioActual=servicioBase?{
       ...servicioBase,
       idServicio:servicioBase.ID_SERVICIO,
@@ -554,8 +574,7 @@ async function cargarDashboard(){
       tipo:servicioBase.TIPO_SERVICIO,
       nombreServicio:servicioBase.NOMBRE_SERVICIO,
       idRuta:servicioBase.ID_RUTA,
-      nombreRuta:rutaBase?.NOMBRE_RUTA||'',
-      descripcionRuta:rutaBase?.DESCRIPCION||'',
+      rutaNombre:(rutas.find(r=>String(r.ID_RUTA||'').trim()===String(servicioBase.ID_RUTA||'').trim())?.NOMBRE_RUTA)||servicioBase.ID_RUTA||'',
       estado:servicioBase.ESTADO,
       idAsignacion:asignacion.ID_ASIGNACION,
       idChofer:asignacion.ID_CHOFER,
@@ -657,18 +676,15 @@ function renderService(s){
     return;
   }
   const activo=['EN VIAJE','EN CURSO','ACTIVO','INICIADO'].includes(String(s.estado||'').toUpperCase());
-  const nombreServicio=String(s.nombreServicio||'Servicio asignado').trim();
-  const nombreRuta=String(s.nombreRuta||s.descripcionRuta||'Ruta no informada').trim();
   $('serviceBox').innerHTML=`
     <div class="service-card">
       <div class="service-head">
         <div class="eyebrow" style="color:#bfead5">${escapeHtml(s.tipo||'SERVICIO')}</div>
-        <h2>${escapeHtml(nombreServicio)}</h2>
+        <h2>${escapeHtml(s.nombreServicio||'Servicio')}</h2>
       </div>
       <div class="route">
-        <div class="route-point"><div class="dot"></div><div><strong>${escapeHtml(nombreServicio)}</strong><small>Servicio</small></div></div>
-        <div class="arrow">↓</div>
-        <div class="route-point"><div class="dot"></div><div><strong>${escapeHtml(nombreRuta)}</strong><small>Ruta</small></div></div>
+        <div class="route-point"><div class="dot"></div><div><strong>${escapeHtml(s.nombreServicio||'Servicio asignado')}</strong><small>Servicio</small></div></div>
+        <div class="route-point"><div class="dot"></div><div><strong>${escapeHtml(s.rutaNombre||s.idRuta||'Ruta no informada')}</strong><small>Ruta</small></div></div>
       </div>
       <div class="service-meta">
         <div class="meta"><span>Horario</span><strong>${escapeHtml(formatearHora(s.horaProgramada))}</strong></div>
@@ -679,6 +695,7 @@ function renderService(s){
       </div>
     </div>`;
 }
+
 function formatearHora(v){
   const r=formatearHoraAR(v);
   return r==='-'?'—':r;
@@ -696,18 +713,17 @@ async function verServicio(id){
     const [sRes,aRes,vRes,rRes]=await Promise.all([
       getJson('listarServicios'),
       getJson('listarAsignaciones'),
-      getJson('listarVehiculos'),
+      getJson('listarViajes'),
       getJson('rutas')
     ]);
     const servicio=(sRes.servicios||[]).find(x=>String(x.ID_SERVICIO||'')===String(id));
     const asignacion=(aRes.asignaciones||[]).find(x=>String(x.ID_SERVICIO||'')===String(id)&&String(x.ID_CHOFER||'')===String(session.idChofer)&&String(x.ESTADO||'').toUpperCase()==='ACTIVA');
-    const vehiculos=vRes.vehiculos||[];
+    const vehiculos=(await getJson('listarVehiculos')).vehiculos||[];
     const rutas=rRes.rutas||[];
     const vehiculo=asignacion?vehiculos.find(x=>String(x.ID_VEHICULO||'')===String(asignacion.ID_VEHICULO||'')):null;
     const viaje=(vRes.viajes||[]).find(x=>String(x.ID_SERVICIO||'')===String(id)&&['EN CURSO','ACTIVO','INICIADO'].includes(String(x.ESTADO||'').toUpperCase()));
     if(servicio){
-      const ruta=rutas.find(x=>String(x.ID_RUTA||'')===String(servicio.ID_RUTA||''));
-      s={...s,fecha:servicio.FECHA,horaProgramada:servicio.HORA_PROGRAMADA,tipo:servicio.TIPO_SERVICIO,nombreServicio:servicio.NOMBRE_SERVICIO,idRuta:servicio.ID_RUTA,nombreRuta:ruta?.NOMBRE_RUTA||'',descripcionRuta:ruta?.DESCRIPCION||'',estado:viaje?'EN VIAJE':servicio.ESTADO,idAsignacion:asignacion?.ID_ASIGNACION||s.idAsignacion,idUnidad:asignacion?.ID_VEHICULO||s.idUnidad,dominio:vehiculo?.DOMINIO||s.dominio,idViaje:viaje?.ID_VIAJE||s.idViaje,kmInicial:viaje?.KM_INICIAL||s.kmInicial};
+      s={...s,fecha:servicio.FECHA,horaProgramada:servicio.HORA_PROGRAMADA,tipo:servicio.TIPO_SERVICIO,nombreServicio:servicio.NOMBRE_SERVICIO,rutaNombre:(rutas.find(x=>String(x.ID_RUTA||'')===String(servicio.ID_RUTA||''))?.NOMBRE_RUTA)||servicio.ID_RUTA||'',estado:viaje?'EN VIAJE':servicio.ESTADO,idAsignacion:asignacion?.ID_ASIGNACION||s.idAsignacion,idUnidad:asignacion?.ID_VEHICULO||s.idUnidad,dominio:vehiculo?.DOMINIO||s.dominio,idViaje:viaje?.ID_VIAJE||s.idViaje,kmInicial:viaje?.KM_INICIAL||s.kmInicial};
     }
   }catch(e){ console.warn('No se pudo refrescar el servicio:',e); }
 
