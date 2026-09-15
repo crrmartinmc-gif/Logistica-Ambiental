@@ -1,0 +1,17 @@
+APP CHOFERES - FCM V4
+
+Archivos:
+- index.html: App Choferes con registro de token FCM.
+- firebase-messaging-sw.js: Service Worker para recibir notificaciones en segundo plano.
+- manifest.webmanifest: configuración PWA.
+- icon-192.png / icon-512.png: iconos básicos PWA.
+
+IMPORTANTE:
+1. Subir TODOS estos archivos al mismo directorio público donde está index.html.
+2. Mantener HTTPS.
+3. El Service Worker debe poder cargarse desde la misma ruta de la aplicación.
+4. No publicar ni compartir ninguna clave privada de Google Cloud. La cuenta de servicio queda solamente en las propiedades privadas del Apps Script.
+5. En el primer ingreso desde el celular, aceptar las notificaciones.
+
+El flujo esperado es:
+Panel -> Backend Maestro -> FCM -> Service Worker -> notificación del celular.

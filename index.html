@@ -3,6 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#073d2b">
+<link rel="manifest" href="./manifest.webmanifest">
 <title>Salida de Servicio · Logística Ambiental</title>
 <style>
 :root{
@@ -351,6 +353,118 @@ button{cursor:pointer}
   </div>
 </div>
 
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-messaging-compat.js"></script>
+<script>
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyC5-FVVGfNBCaIG2CYCW56534S-iVBZ7oI",
+  authDomain: "panel-de-control-ac0d8.firebaseapp.com",
+  projectId: "panel-de-control-ac0d8",
+  storageBucket: "panel-de-control-ac0d8.firebasestorage.app",
+  messagingSenderId: "477303833717",
+  appId: "1:477303833717:web:436eda13e40968b6c7a43c",
+  measurementId: "G-035YETY4B2"
+};
+const FCM_VAPID_KEY = "BPro6KLDM4GXdFoAc05jhvMe6fsvWvzd1KMyJyQSGl8nb25xy-ZbwwF5UFKOxPjfBYAkStfFsZDPhepK20qgjDE";
+
+let firebaseApp = null;
+let firebaseMessaging = null;
+let firebaseServiceWorkerRegistration = null;
+let fcmTokenActual = null;
+
+function mostrarAvisoPush(texto, tipo="info") {
+  let el = document.getElementById("fcmStatusAviso");
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "fcmStatusAviso";
+    el.style.cssText = "position:fixed;left:14px;right:14px;bottom:88px;z-index:99999;padding:12px 14px;border-radius:12px;background:#073d2b;color:#fff;font-size:14px;font-weight:600;box-shadow:0 10px 28px rgba(0,0,0,.22);text-align:center";
+    document.body.appendChild(el);
+  }
+  el.textContent = texto;
+  el.dataset.tipo = tipo;
+  clearTimeout(window.__fcmAvisoTimer);
+  window.__fcmAvisoTimer = setTimeout(()=>el.remove(), 5000);
+}
+
+async function inicializarNotificacionesPush(pedirPermiso=true) {
+  if (!session?.idChofer) return {ok:false,error:"Sin chofer autenticado"};
+  if (!('serviceWorker' in navigator) || !('Notification' in window)) {
+    mostrarAvisoPush("Este navegador no admite notificaciones push.", "error");
+    return {ok:false,error:"Push no soportado"};
+  }
+
+  try {
+    if (Notification.permission === 'denied') {
+      mostrarAvisoPush("Las notificaciones están bloqueadas en este navegador. Habilitalas en los permisos del sitio.", "error");
+      return {ok:false,error:"Permiso de notificaciones bloqueado"};
+    }
+
+    // Se ejecuta inmediatamente después del login, que es un gesto del usuario.
+    if (Notification.permission === 'default' && pedirPermiso) {
+      const permiso = await Notification.requestPermission();
+      if (permiso !== 'granted') {
+        mostrarAvisoPush("Necesitamos permiso de notificaciones para avisarte cuando te asignen un servicio.", "error");
+        return {ok:false,error:"Permiso no concedido"};
+      }
+    } else if (Notification.permission === 'default') {
+      return {ok:false,error:'Permiso pendiente'};
+    }
+
+    firebaseApp = firebaseApp || firebase.initializeApp(FIREBASE_CONFIG);
+    firebaseMessaging = firebaseMessaging || firebase.messaging(firebaseApp);
+
+    firebaseServiceWorkerRegistration = await navigator.serviceWorker.register('./firebase-messaging-sw.js', {scope:'./'});
+    await navigator.serviceWorker.ready;
+
+    const token = await firebaseMessaging.getToken({
+      vapidKey: FCM_VAPID_KEY,
+      serviceWorkerRegistration: firebaseServiceWorkerRegistration
+    });
+
+    if (!token) throw new Error('Firebase no devolvió un token FCM.');
+    fcmTokenActual = token;
+
+    const appUrl = window.location.href.split('#')[0];
+    const res = await postJson({
+      accion:'registrarTokenPush',
+      idChofer:session.idChofer,
+      token:token,
+      plataforma:'WEB',
+      appUrl:appUrl,
+      userAgent:navigator.userAgent
+    });
+
+    if (firebaseMessaging.onMessage) {
+      firebaseMessaging.onMessage((payload)=>{
+        const n = payload?.notification || {};
+        const title = n.title || '🔔 Nueva notificación';
+        const body = n.body || 'Tenés una novedad en la App Choferes.';
+        mostrarAvisoPush(title + ' — ' + body);
+      });
+    }
+
+    console.info('FCM listo para chofer:', session.idChofer, token.slice(0,12)+'…', res);
+    mostrarAvisoPush("🔔 Notificaciones activadas");
+    return {ok:true,token:token};
+  } catch (err) {
+    console.error('FCM:', err);
+    mostrarAvisoPush('No se pudieron activar las notificaciones: '+(err.message||err), 'error');
+    return {ok:false,error:err.message||String(err)};
+  }
+}
+
+async function desactivarNotificacionesPush() {
+  try {
+    if (fcmTokenActual) {
+      await postJson({accion:'desregistrarTokenPush',token:fcmTokenActual});
+    }
+  } catch (err) {
+    console.warn('No se pudo desactivar el token FCM:', err);
+  }
+  fcmTokenActual = null;
+}
+
+</script>
 <script>
 const BACKEND_URL = "https://script.google.com/macros/s/AKfycbz0n4ZlW2p--nP2Wx0SnytyCRt_pL6RFxliEan0j1vUdSSrBrVNCbsTI7VC0JQWl5k9/exec";
 
@@ -502,6 +616,7 @@ function limpiarSesionLocal(){
 
 function cerrarSesion(){
   if(!confirm('¿Querés cerrar la sesión?')) return;
+  desactivarNotificacionesPush();
   limpiarSesionLocal();
   session=null;
   servicioEnInspeccion=null;
@@ -1099,12 +1214,20 @@ function volverServicio(){
 
 $('loginForm').addEventListener('submit',async e=>{
   e.preventDefault();$('loginError').style.display='none';$('loginBtn').disabled=true;$('loginLoading').style.display='block';
+  // Pedimos el permiso mientras el evento de usuario sigue activo.
+  // Luego del login usamos ese permiso para obtener/registrar el token FCM.
   try{
+    if ('Notification' in window && Notification.permission === 'default') {
+      try { await Notification.requestPermission(); } catch (permErr) { console.warn('Permiso push:', permErr); }
+    }
     const res=await postJson({accion:'login',usuario:$('usuario').value,contrasena:$('contrasena').value,aplicacion:'CHOFERES'});
     const data=res?.resultado||res;
     const u=data?.usuario;
     if(!res?.ok || !data?.ok || !u?.ID_CHOFER) throw new Error(res?.error||data?.error||'Usuario o contraseña incorrectos.');
     session={idChofer:u.ID_CHOFER,nombre:u.NOMBRE,usuario:u.USUARIO,estado:u.ESTADO,rol:u.ROL,aplicacion:u.APLICACION};
+    if (Notification.permission === 'granted') {
+      inicializarNotificacionesPush(false).catch(err => console.warn('FCM:', err));
+    }
     sessionStorage.setItem('diaVerdeChofer',JSON.stringify(session));guardarSesionLocal();
     $('driverName').textContent=session.nombre;$('topUserName').textContent=session.nombre;$('avatar').textContent=initials(session.nombre);
     $('topUser').classList.remove('hidden');$('loginScreen').classList.add('hidden');$('dashboardScreen').classList.remove('hidden');
@@ -1126,6 +1249,7 @@ $('loginForm').addEventListener('submit',async e=>{
     $('loginScreen').classList.add('hidden');
     $('dashboardScreen').classList.remove('hidden');
     cargarDashboard();
+    if (Notification.permission === 'granted') inicializarNotificacionesPush(false);
     iniciarActualizacionAutomatica();
   }catch(e){}
 })();
