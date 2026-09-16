@@ -3,7 +3,7 @@ importScripts('https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js
 importScripts('https://www.gstatic.com/firebasejs/10.14.1/firebase-messaging-compat.js');
 
 firebase.initializeApp({
-  apiKey: 'AIzaSyC5-FVVGfNBCaIG2CYCW56534S-iVBZ7oI',
+  apiKey: 'AIzaSyA-9UIg0i_b3EDwQ4SLW09LKGVSkJozWKc',
   authDomain: 'panel-de-control-ac0d8.firebaseapp.com',
   projectId: 'panel-de-control-ac0d8',
   storageBucket: 'panel-de-control-ac0d8.firebasestorage.app',
