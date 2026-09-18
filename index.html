@@ -476,6 +476,12 @@ button{cursor:pointer}
 </style>
 
 </style>
+<style id="vtv-mes-anio-ui">
+.vtv-fecha-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.modal-control{width:100%;box-sizing:border-box;padding:12px;border:1px solid #d5e4dd;border-radius:11px;background:#fff;color:#31574a;font-weight:700}
+.vtv-info-box{margin:10px 0 12px;padding:10px 12px;border-radius:11px;background:#f2f8f5;border:1px solid #d7e9e0;color:#41685a;font-size:10px;line-height:1.4}
+@media(max-width:380px){.vtv-fecha-grid{gap:7px}.modal-control{padding:10px;font-size:12px}}
+</style>
 </head>
 <body>
 <div class="app">
@@ -1523,10 +1529,30 @@ function renderControlFormulario(categoria){
   if(categoria==='RUEDAS') return renderRuedas();
   if(categoria==='PLOTEO / PINTURA') return `${renderEstados()}${renderObservacion()}${renderFoto()}${renderModalActions()}`;
   if(categoria==='VTV') return `
-    <div class="modal-label">Estado de la VTV</div><div class="choice-grid">
-      <button type="button" class="choice-btn vtv-valid" onclick="seleccionarEstado(this,'VIGENTE')">✅ VIGENTE</button>
-      <button type="button" class="choice-btn vtv-expired" onclick="seleccionarEstado(this,'VENCIDA')">⚠️ VENCIDA</button>
-    </div>${renderObservacion()}${renderFoto()}${renderModalActions()}`;
+    <div class="modal-label">VTV realizada</div>
+    <div class="vtv-fecha-grid">
+      <div class="modal-field">
+        <label class="modal-label">Mes</label>
+        <select id="vtvMesRealizada" class="modal-control">
+          <option value="">Seleccionar</option>
+          <option value="01">Enero</option><option value="02">Febrero</option><option value="03">Marzo</option>
+          <option value="04">Abril</option><option value="05">Mayo</option><option value="06">Junio</option>
+          <option value="07">Julio</option><option value="08">Agosto</option><option value="09">Septiembre</option>
+          <option value="10">Octubre</option><option value="11">Noviembre</option><option value="12">Diciembre</option>
+        </select>
+      </div>
+      <div class="modal-field">
+        <label class="modal-label">Año</label>
+        <input id="vtvAnioRealizada" class="modal-control" type="number" min="2000" max="2100" step="1" placeholder="2026">
+      </div>
+    </div>
+    <div class="modal-label">Resultado</div>
+    <div class="choice-grid two">
+      <button type="button" class="choice-btn vtv-valid" onclick="seleccionarEstado(this,'APROBADA')">✅ APROBADA</button>
+      <button type="button" class="choice-btn vtv-expired" onclick="seleccionarEstado(this,'RECHAZADA')">⚠️ RECHAZADA</button>
+    </div>
+    <div class="vtv-info-box">La vigencia se calcula automáticamente por 1 año desde el mes realizado. El Panel cambiará a <b>PRÓXIMA A VENCER</b> cuando resten 2 meses o menos y luego a <b>VENCIDA</b>.</div>
+    ${renderObservacion()}${renderFoto()}${renderModalActions()}`;
   return `${renderCampoElemento()}${renderEstados()}${renderObservacion()}${renderFoto()}${renderModalActions()}`;
 }
 function renderCampoElemento(){return `<div class="modal-field"><label class="modal-label">Sistema / elemento</label><input id="controlElementoInput" maxlength="120" placeholder="Ej.: Motor, caja, dirección…"></div>`}
@@ -1572,7 +1598,14 @@ async function registrarControlVehiculo(){
     if(!Object.keys(estados).length && !obs && !foto){alert('Seleccioná al menos una posición o agregá una observación.');return;}
   }else if(categoria!=='VTV' && !elemento && !obs && !foto){alert('Seleccioná el elemento o agregá una observación.');return;}
   if(categoria!=='VTV' && categoria!=='RUEDAS' && !controlDraft.estado){alert('Seleccioná un estado: BIEN, ATENCIÓN o CRÍTICO.');return;}
-  if(categoria==='VTV' && !controlDraft.estado){alert('Seleccioná VIGENTE o VENCIDA.');return;}
+  if(categoria==='VTV'){
+    const mes=$('vtvMesRealizada')?.value||'';
+    const anio=Number($('vtvAnioRealizada')?.value||0);
+    if(!mes || !Number.isInteger(anio) || anio<2000 || anio>2100){
+      alert('Indicá el mes y año en que se realizó la VTV.');return;
+    }
+    if(!controlDraft.estado){alert('Seleccioná APROBADA o RECHAZADA.');return;}
+  }
   const btns=$('vehicleModalBody').querySelectorAll('button'); btns.forEach(b=>b.disabled=true);
   try{
     let fotoData=null;
@@ -1591,6 +1624,8 @@ async function registrarControlVehiculo(){
       tipoReporte:'CONTROL_VEHICULO',
       elemento,
       estado:controlDraft.estado||'',
+      vtvMes:categoria==='VTV' ? ($('vtvMesRealizada')?.value||'') : '',
+      vtvAnio:categoria==='VTV' ? (Number($('vtvAnioRealizada')?.value||0)||'') : '',
       observacion:obs,
       ruedas:controlDraft.ruedas||{},
       foto:fotoData
