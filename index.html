@@ -232,41 +232,98 @@ button{cursor:pointer}
 }
 
 
+<style id="admin-report-layout-responsive">
+.admin-report-fields{
+  width:100%;
+  box-sizing:border-box;
+}
+.admin-report-fields > div{
+  width:100%;
+  box-sizing:border-box;
+  margin-bottom:14px;
+}
+.admin-report-fields label{
+  display:block;
+  margin-bottom:7px;
+}
+@media(max-width:600px){
+  .admin-report-fields > div{margin-bottom:11px}
+}
+</style>
 <style id="admin-reporte-opciones-botonera">
-.admin-choice-grid{display:grid;gap:8px}
-.admin-choice-grid-3{grid-template-columns:repeat(3,1fr)}
-.admin-choice-grid-4{grid-template-columns:repeat(4,1fr)}
+.admin-choice-grid{
+  display:grid;
+  gap:10px;
+  width:100%;
+}
+.admin-choice-grid-3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.admin-choice-grid-4{grid-template-columns:repeat(4,minmax(0,1fr))}
 .admin-choice-btn{
-  min-height:64px;
+  width:100%;
+  min-width:0;
+  min-height:72px;
   border:1px solid #d5e4dd;
-  border-radius:13px;
+  border-radius:14px;
   background:#fff;
   color:#31574a;
-  padding:9px 6px;
+  padding:10px 8px;
   display:flex;
   flex-direction:column;
   align-items:center;
   justify-content:center;
-  gap:4px;
+  gap:5px;
   font-weight:900;
-  font-size:10px;
+  font-size:12px;
+  line-height:1.05;
   cursor:pointer;
-  transition:.15s;
+  transition:transform .15s,box-shadow .15s,border-color .15s,background .15s;
+  box-sizing:border-box;
 }
-.admin-choice-btn span{display:block;text-align:center;line-height:1.05}
-.admin-choice-btn:hover{border-color:#79b99d;transform:translateY(-1px)}
+.admin-choice-btn:first-line{font-size:20px}
+.admin-choice-btn span{
+  display:block;
+  width:100%;
+  text-align:center;
+  line-height:1.1;
+  white-space:normal;
+  overflow-wrap:anywhere;
+}
+.admin-choice-btn:hover{
+  border-color:#79b99d;
+  transform:translateY(-1px);
+  box-shadow:0 3px 10px rgba(8,115,76,.10);
+}
+.admin-choice-btn:active{transform:scale(.98)}
 .admin-choice-btn.selected{
   background:linear-gradient(135deg,#08734c,#18a66b);
   border-color:#08734c;
   color:#fff;
   box-shadow:0 5px 14px rgba(8,115,76,.18);
 }
-.admin-choice-grid-4 .admin-choice-btn{min-height:59px}
-@media(max-width:560px){
-  .admin-choice-grid-3{grid-template-columns:repeat(3,1fr)}
-  .admin-choice-grid-4{grid-template-columns:repeat(2,1fr)}
-  .admin-choice-btn{min-height:62px;font-size:9px}
-  .admin-choice-grid-4 .admin-choice-btn{min-height:58px}
+.admin-choice-grid-4 .admin-choice-btn{min-height:68px}
+
+@media(max-width:900px){
+  .admin-choice-grid-4{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .admin-choice-btn{min-height:68px;font-size:11px}
+}
+
+@media(max-width:600px){
+  .admin-choice-grid{gap:8px}
+  .admin-choice-grid-3{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .admin-choice-grid-4{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .admin-choice-btn{
+    min-height:70px;
+    padding:9px 5px;
+    border-radius:12px;
+    font-size:10px;
+  }
+  .admin-choice-grid-4 .admin-choice-btn{min-height:64px}
+}
+
+@media(max-width:380px){
+  .admin-choice-grid{gap:6px}
+  .admin-choice-btn{min-height:66px;font-size:9px}
+  .admin-choice-grid-4 .admin-choice-btn{min-height:61px}
 }
 </style>
 <style id="admin-botonera-chofer-ui">
