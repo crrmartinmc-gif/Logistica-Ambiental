@@ -231,6 +231,35 @@ button{cursor:pointer}
   .camera-guide{inset:9% 7%}
 }
 
+
+<style id="admin-km-reportes-ui">
+.admin-wrap{max-width:1100px;margin:0 auto;padding:24px 18px 45px}
+.admin-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;margin-bottom:20px}
+.admin-head h1{margin:4px 0 5px;color:#062d20;font-size:28px}
+.admin-head p{margin:0;color:#6a7d75}
+.admin-grid{display:grid;grid-template-columns:1.1fr .9fr;gap:18px}
+.admin-card{background:#fff;border:1px solid #dce8e2;border-radius:22px;padding:20px;box-shadow:0 8px 28px rgba(4,45,32,.06)}
+.admin-card h2{margin:0 0 14px;font-size:17px;color:#073d2b}
+.admin-search{display:flex;gap:10px;margin-bottom:15px}
+.admin-search input{flex:1;height:48px;border:1px solid #cbdad3;border-radius:12px;padding:0 13px}
+.admin-list{display:grid;gap:8px;max-height:430px;overflow:auto}
+.admin-vehicle{border:1px solid #dce8e2;border-radius:14px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center;gap:10px;background:#fbfdfc}
+.admin-vehicle strong{display:block;color:#073d2b}.admin-vehicle small{color:#6a7d75}
+.admin-vehicle button{border:0;border-radius:10px;background:#08734c;color:#fff;padding:9px 12px;font-weight:800}
+.admin-selected{background:#e8f6ef;border-color:#18a66b}
+.admin-field{margin-bottom:14px}.admin-field label{display:block;font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.6px;color:#60756d;margin-bottom:7px}
+.admin-field input,.admin-field select,.admin-field textarea{width:100%;border:1px solid #cbdad3;border-radius:12px;padding:12px;font:inherit;background:#fbfdfc}
+.admin-field textarea{min-height:100px;resize:vertical}
+.admin-km{display:flex;gap:10px;align-items:center}.admin-km input{font-size:22px;font-weight:800}
+.admin-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.admin-btn{height:48px;border-radius:13px;font-weight:900;border:1px solid #d1ded8;background:#fff;color:#356156}
+.admin-btn.primary{border:0;color:#fff;background:linear-gradient(135deg,#08734c,#18a66b)}
+.admin-status{margin-top:12px;padding:11px 13px;border-radius:12px;background:#f4f8f6;color:#557168;font-size:12px;font-weight:800;display:none}
+.admin-report{margin-top:16px;border-top:1px solid #e7efeb;padding-top:16px}
+.admin-badge{display:inline-block;padding:6px 9px;border-radius:999px;background:#eef7f2;color:#08734c;font-size:10px;font-weight:900;text-transform:uppercase}
+@media(max-width:760px){.admin-grid{grid-template-columns:1fr}.admin-head{display:block}.admin-head .admin-badge{margin-top:10px}.admin-wrap{padding:18px 13px 35px}}
+</style>
+
 </style>
 </head>
 <body>
@@ -266,6 +295,79 @@ button{cursor:pointer}
       <button class="primary" id="loginBtn" type="submit">INGRESAR</button>
       <div class="loading" id="loginLoading">Verificando credenciales…</div>
     </form>
+  </div>
+</section>
+
+
+<section id="adminScreen" class="admin-wrap hidden">
+  <div class="admin-head">
+    <div>
+      <div class="eyebrow">Acceso administrativo</div>
+      <h1>Control de KM y reportes</h1>
+      <p>Esta interfaz permite cargar kilometraje y registrar reportes o averías.</p>
+    </div>
+    <span class="admin-badge">ADMIN · KM / REPORTES</span>
+  </div>
+
+  <div class="admin-grid">
+    <div class="admin-card">
+      <h2>🚗 Seleccionar vehículo</h2>
+      <div class="admin-search">
+        <input id="adminVehicleSearch" placeholder="Buscar por dominio, interno, marca o modelo" oninput="filtrarVehiculosAdmin()">
+        <button class="admin-btn" type="button" onclick="cargarVehiculosAdmin()">↻</button>
+      </div>
+      <div id="adminVehicleList" class="admin-list">
+        <div class="empty">Cargando vehículos…</div>
+      </div>
+    </div>
+
+    <div class="admin-card">
+      <h2>📍 Kilometraje</h2>
+      <div id="adminSelectedVehicle" class="empty">Seleccioná un vehículo.</div>
+
+      <div id="adminEditor" class="hidden">
+        <div class="admin-field">
+          <label>KM actual</label>
+          <div class="admin-km">
+            <input id="adminKm" type="text" inputmode="numeric" placeholder="Ej.: 125.430">
+            <strong>km</strong>
+          </div>
+        </div>
+        <div class="admin-actions">
+          <button class="admin-btn" type="button" onclick="guardarKmAdmin()">💾 GUARDAR KM</button>
+          <button class="admin-btn primary" type="button" onclick="abrirReporteAdmin()">⚠️ REPORTE / AVERÍA</button>
+        </div>
+        <div id="adminStatus" class="admin-status"></div>
+
+        <div id="adminReportBox" class="admin-report hidden">
+          <h2>⚠️ Nuevo reporte / avería</h2>
+          <div class="admin-field">
+            <label>Tipo</label>
+            <select id="adminReportTipo">
+              <option value="AVERIA">AVERÍA</option>
+              <option value="REPORTE">REPORTE</option>
+              <option value="MANTENIMIENTO">MANTENIMIENTO</option>
+            </select>
+          </div>
+          <div class="admin-field">
+            <label>Categoría</label>
+            <select id="adminReportCategoria">
+              <option>FRENOS</option><option>LUCES</option><option>RUEDAS</option>
+              <option>FALLA MECÁNICA</option><option>FALLA ESTRUCTURAL</option>
+              <option>PLOTEO / PINTURA</option><option>VTV</option><option>OTRO</option>
+            </select>
+          </div>
+          <div class="admin-field">
+            <label>Descripción</label>
+            <textarea id="adminReportObs" placeholder="Describí la avería o novedad…"></textarea>
+          </div>
+          <div class="admin-actions">
+            <button class="admin-btn" type="button" onclick="cerrarReporteAdmin()">CANCELAR</button>
+            <button class="admin-btn primary" type="button" onclick="guardarReporteAdmin()">📤 REGISTRAR</button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </section>
 
@@ -697,6 +799,7 @@ function cerrarSesion(){
   dashboardTimer=null;
   $('topUser').classList.add('hidden');
   $('dashboardScreen').classList.add('hidden');
+  $('adminScreen').classList.add('hidden');
   $('inspectionScreen').classList.add('hidden');
   $('loginScreen').classList.remove('hidden');
   $('usuario').value='';
@@ -1376,6 +1479,134 @@ function volverServicio(){
   $('serviceBox').classList.remove('hidden');
 }
 
+
+let adminVehiculos=[];
+let adminVehiculoSeleccionado=null;
+
+function esAdminKmReportes(){
+  const rol=String(session?.rol||'').trim().toUpperCase();
+  return ['ADMIN_KM_REPORTES','ADMIN_KM','ADMIN_REPORTES'].includes(rol);
+}
+
+async function entrarInterfazAdmin(){
+  $('dashboardScreen').classList.add('hidden');
+  $('inspectionScreen').classList.add('hidden');
+  $('adminScreen').classList.remove('hidden');
+  await cargarVehiculosAdmin();
+}
+
+function salirInterfazAdmin(){
+  $('adminScreen').classList.add('hidden');
+  $('dashboardScreen').classList.remove('hidden');
+  cargarDashboard();
+}
+
+async function cargarVehiculosAdmin(){
+  $('adminVehicleList').innerHTML='<div class="empty">Cargando vehículos…</div>';
+  try{
+    const res=await getJson('listarVehiculos');
+    adminVehiculos=Array.isArray(res.vehiculos)?res.vehiculos:[];
+    filtrarVehiculosAdmin();
+  }catch(err){
+    $('adminVehicleList').innerHTML='<div class="empty">No se pudieron cargar los vehículos.</div>';
+    console.error(err);
+  }
+}
+
+function filtrarVehiculosAdmin(){
+  const q=String($('adminVehicleSearch')?.value||'').trim().toUpperCase();
+  const lista=adminVehiculos.filter(v=>{
+    const t=[v.ID_VEHICULO,v.DOMINIO,v.INTERNO,v.MARCA,v.MODELO,v.AREA].map(x=>String(x||'')).join(' ').toUpperCase();
+    return !q || t.includes(q);
+  });
+  $('adminVehicleList').innerHTML=lista.map(v=>{
+    const selected=adminVehiculoSeleccionado && String(adminVehiculoSeleccionado.ID_VEHICULO)===String(v.ID_VEHICULO);
+    return `<div class="admin-vehicle ${selected?'admin-selected':''}">
+      <div><strong>${escapeHtml(v.DOMINIO||'SIN DOMINIO')}</strong><small>${escapeHtml([v.INTERNO?'Int. '+v.INTERNO:'',v.MARCA,v.MODELO].filter(Boolean).join(' · '))}</small></div>
+      <button type="button" onclick="seleccionarVehiculoAdmin('${escapeHtml(String(v.ID_VEHICULO||''))}')">SELECCIONAR</button>
+    </div>`;
+  }).join('') || '<div class="empty">No se encontraron vehículos.</div>';
+}
+
+function seleccionarVehiculoAdmin(id){
+  adminVehiculoSeleccionado=adminVehiculos.find(v=>String(v.ID_VEHICULO||'')===String(id))||null;
+  if(!adminVehiculoSeleccionado)return;
+  $('adminSelectedVehicle').innerHTML=`<strong>${escapeHtml(adminVehiculoSeleccionado.DOMINIO||'SIN DOMINIO')}</strong><br><span>${escapeHtml([adminVehiculoSeleccionado.INTERNO?'Interno '+adminVehiculoSeleccionado.INTERNO:'',adminVehiculoSeleccionado.MARCA,adminVehiculoSeleccionado.MODELO].filter(Boolean).join(' · '))}</span>`;
+  $('adminEditor').classList.remove('hidden');
+  $('adminKm').value=adminVehiculoSeleccionado.KM_ACTUAL||adminVehiculoSeleccionado.KM||'';
+  $('adminReportBox').classList.add('hidden');
+  filtrarVehiculosAdmin();
+}
+
+function parsearKmAdmin(v){
+  const s=String(v||'').trim().replace(/\s/g,'');
+  if(!s)return NaN;
+  const n=s.includes('.')&&s.includes(',')?Number(s.replace(/\./g,'').replace(',','.'))
+    :s.includes('.')&&s.split('.').slice(1).every(x=>x.length===3)?Number(s.replace(/\./g,''))
+    :Number(s.replace(',','.'));
+  return Number.isFinite(n)?Math.round(n):NaN;
+}
+
+async function guardarKmAdmin(){
+  if(!adminVehiculoSeleccionado)return alert('Seleccioná un vehículo.');
+  const km=parsearKmAdmin($('adminKm').value);
+  if(!Number.isFinite(km)||km<0)return alert('Ingresá un kilometraje válido.');
+  const btns=document.querySelectorAll('#adminEditor .admin-btn');btns.forEach(b=>b.disabled=true);
+  try{
+    const res=await postJson({
+      accion:'actualizarKmAdmin',
+      usuario:session.usuario,
+      idVehiculo:adminVehiculoSeleccionado.ID_VEHICULO,
+      kilometraje:km
+    });
+    if(!res?.ok)throw new Error(res?.error||'No se pudo guardar el KM.');
+    adminVehiculoSeleccionado.KM_ACTUAL=km;
+    $('adminKm').value=km.toLocaleString('es-AR');
+    $('adminStatus').style.display='block';
+    $('adminStatus').textContent='✓ Kilometraje guardado correctamente.';
+  }catch(err){alert(err.message||'No se pudo guardar el KM.');}
+  finally{btns.forEach(b=>b.disabled=false);}
+}
+
+function abrirReporteAdmin(){
+  if(!adminVehiculoSeleccionado)return alert('Seleccioná un vehículo.');
+  $('adminReportBox').classList.remove('hidden');
+  $('adminReportObs').focus();
+}
+function cerrarReporteAdmin(){
+  $('adminReportBox').classList.add('hidden');
+}
+async function guardarReporteAdmin(){
+  if(!adminVehiculoSeleccionado)return alert('Seleccioná un vehículo.');
+  const tipo=$('adminReportTipo').value;
+  const categoria=$('adminReportCategoria').value;
+  const obs=$('adminReportObs').value.trim();
+  if(!obs)return alert('Describí la avería o novedad.');
+  const btns=document.querySelectorAll('#adminReportBox button');btns.forEach(b=>b.disabled=true);
+  try{
+    const res=await postJson({
+      accion:'registrarReporteAdmin',
+      usuario:session.usuario,
+      idVehiculo:adminVehiculoSeleccionado.ID_VEHICULO,
+      dominio:adminVehiculoSeleccionado.DOMINIO||'',
+      kilometraje:parsearKmAdmin($('adminKm').value)||'',
+      tipoReporte:tipo,
+      categoria,
+      observacion:obs,
+      idChofer:'',
+      idServicio:'',
+      idAsignacion:'',
+      idViaje:''
+    });
+    if(!res?.ok)throw new Error(res?.error||'No se pudo registrar el reporte.');
+    $('adminStatus').style.display='block';
+    $('adminStatus').textContent='✓ Reporte / avería registrado correctamente.';
+    $('adminReportObs').value='';
+    cerrarReporteAdmin();
+  }catch(err){alert(err.message||'No se pudo registrar el reporte.');}
+  finally{btns.forEach(b=>b.disabled=false);}
+}
+
 $('loginForm').addEventListener('submit',async e=>{
   e.preventDefault();$('loginError').style.display='none';$('loginBtn').disabled=true;$('loginLoading').style.display='block';
   // Pedimos el permiso mientras el evento de usuario sigue activo.
@@ -1394,8 +1625,14 @@ $('loginForm').addEventListener('submit',async e=>{
     }
     sessionStorage.setItem('diaVerdeChofer',JSON.stringify(session));guardarSesionLocal();
     $('driverName').textContent=session.nombre;$('topUserName').textContent=session.nombre;$('avatar').textContent=initials(session.nombre);
-    $('topUser').classList.remove('hidden');$('loginScreen').classList.add('hidden');$('dashboardScreen').classList.remove('hidden');
-    await cargarDashboard();iniciarActualizacionAutomatica();
+    $('topUser').classList.remove('hidden');$('loginScreen').classList.add('hidden');
+    if(esAdminKmReportes()){
+      await entrarInterfazAdmin();
+    }else{
+      $('dashboardScreen').classList.remove('hidden');
+      await cargarDashboard();
+      iniciarActualizacionAutomatica();
+    }
   }catch(err){showError(err.message||'No se pudo iniciar sesión.');}
   finally{$('loginBtn').disabled=false;$('loginLoading').style.display='none';}
 });
@@ -1411,10 +1648,14 @@ $('loginForm').addEventListener('submit',async e=>{
     $('avatar').textContent=initials(session.nombre);
     $('topUser').classList.remove('hidden');
     $('loginScreen').classList.add('hidden');
-    $('dashboardScreen').classList.remove('hidden');
-    cargarDashboard();
-    if (Notification.permission === 'granted') inicializarNotificacionesPush(false);
-    iniciarActualizacionAutomatica();
+    if(esAdminKmReportes()){
+      entrarInterfazAdmin();
+    }else{
+      $('dashboardScreen').classList.remove('hidden');
+      cargarDashboard();
+      if (Notification.permission === 'granted') inicializarNotificacionesPush(false);
+      iniciarActualizacionAutomatica();
+    }
   }catch(e){}
 })();
 
