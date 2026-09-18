@@ -1981,8 +1981,16 @@ $('loginForm').addEventListener('submit',async e=>{
     const res=await postJson({accion:'login',usuario:$('usuario').value,contrasena:$('contrasena').value,aplicacion:'CHOFERES'});
     const data=res?.resultado||res;
     const u=data?.usuario;
-    if(!res?.ok || !data?.ok || !u?.ID_CHOFER) throw new Error(res?.error||data?.error||'Usuario o contraseña incorrectos.');
-    session={idChofer:u.ID_CHOFER,nombre:u.NOMBRE,usuario:u.USUARIO,estado:u.ESTADO,rol:u.ROL,aplicacion:u.APLICACION};
+    if(!res?.ok || !data?.ok || !u) throw new Error(res?.error||data?.error||'Usuario o contraseña incorrectos.');
+
+    // Los choferes necesitan ID_CHOFER. Los administradores de KM/Reportes no.
+    const rolLogin=String(u.ROL||'').trim().toUpperCase();
+    const esAdminLogin=['ADMIN_KM_REPORTES','ADMIN_KM','ADMIN_REPORTES'].includes(rolLogin);
+    if(!esAdminLogin && !String(u.ID_CHOFER||'').trim()){
+      throw new Error('El usuario está activo pero no tiene ID_CHOFER asignado.');
+    }
+
+    session={idChofer:u.ID_CHOFER||'',nombre:u.NOMBRE,usuario:u.USUARIO,estado:u.ESTADO,rol:u.ROL,aplicacion:u.APLICACION};
     if (Notification.permission === 'granted') {
       inicializarNotificacionesPush(false).catch(err => console.warn('FCM:', err));
     }
@@ -2005,7 +2013,9 @@ $('loginForm').addEventListener('submit',async e=>{
     const raw=localStorage.getItem('diaVerdeChofer') || sessionStorage.getItem('diaVerdeChofer');
     if(!raw) return;
     session=JSON.parse(raw);
-    if(!session?.idChofer) return;
+    const rolRestaurado=String(session?.rol||'').trim().toUpperCase();
+    const adminRestaurado=['ADMIN_KM_REPORTES','ADMIN_KM','ADMIN_REPORTES'].includes(rolRestaurado);
+    if(!session || (!session.idChofer && !adminRestaurado)) return;
     $('driverName').textContent=session.nombre||'Chofer';
     $('topUserName').textContent=session.nombre||'Chofer';
     $('avatar').textContent=initials(session.nombre);
