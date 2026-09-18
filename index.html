@@ -186,6 +186,51 @@ button{cursor:pointer}
 .wheel-position-list{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px}.wheel-position{border:1px solid #d7e3de;border-radius:12px;padding:10px;background:#fbfdfc}.wheel-position strong{display:block;font-size:12px;margin-bottom:7px;color:#24483c}.wheel-state{display:flex;gap:5px}.wheel-state button{flex:1;border:1px solid #d0ddd8;background:#fff;border-radius:8px;padding:7px 3px;font-size:10px;font-weight:800}.wheel-state button.active.good{background:#e8f6ef;border-color:#18a66b;color:#08734c}.wheel-state button.active.attention{background:#fff7dd;border-color:#d99b17;color:#9a7100}.wheel-state button.active.critical{background:#fff0f0;border-color:#c93636;color:#b1262f}
 @media(max-width:560px){.control-grid{grid-template-columns:1fr 1fr;gap:8px}.control-btn{min-height:76px;padding:11px 9px;gap:8px}.control-icon{width:38px;height:38px;flex-basis:38px;font-size:20px}.control-text strong{font-size:11px}.control-text span{font-size:10px}.control-chevron{font-size:18px}.control-vtv{grid-column:1/-1}.choice-grid.three{grid-template-columns:1fr}.wheel-position-list{grid-template-columns:1fr}.vehicle-modal{border-radius:18px}.vehicle-modal-body{padding:16px}}
 
+
+/* V14 — Cámara obligatoria en vivo: no se permite seleccionar fotos de galería */
+.camera-modal-backdrop{
+  position:fixed;inset:0;background:rgba(2,20,14,.82);display:none;
+  align-items:center;justify-content:center;padding:14px;z-index:1000;
+}
+.camera-modal{
+  width:min(520px,100%);background:#fff;border-radius:22px;overflow:hidden;
+  box-shadow:0 25px 80px rgba(0,0,0,.35);
+}
+.camera-head{
+  padding:16px 18px;background:linear-gradient(135deg,#062d20,#0b5a3e);
+  color:#fff;display:flex;align-items:center;justify-content:space-between;gap:12px;
+}
+.camera-head strong{display:block;font-size:16px}.camera-head small{display:block;opacity:.78;margin-top:3px}
+.camera-close{
+  width:38px;height:38px;border:1px solid rgba(255,255,255,.35);
+  border-radius:10px;background:rgba(255,255,255,.12);color:#fff;font-size:21px;
+}
+.camera-stage{position:relative;background:#000;aspect-ratio:4/3;overflow:hidden}
+.camera-stage video{width:100%;height:100%;display:block;object-fit:cover}
+.camera-stage canvas{display:none}
+.camera-guide{
+  position:absolute;inset:12%;border:2px solid rgba(255,255,255,.72);
+  border-radius:16px;pointer-events:none;box-shadow:0 0 0 999px rgba(0,0,0,.10);
+}
+.camera-label{
+  position:absolute;left:14px;bottom:12px;padding:7px 10px;border-radius:9px;
+  background:rgba(0,0,0,.58);color:#fff;font-size:12px;font-weight:800;
+}
+.camera-error{
+  display:none;padding:12px 15px;background:#fff0f0;color:#a52525;
+  font-size:12px;font-weight:700;
+}
+.camera-actions{display:grid;grid-template-columns:1fr 1.3fr;gap:10px;padding:14px}
+.camera-actions button{height:48px;border-radius:13px;font-weight:900}
+.camera-cancel{border:1px solid #d1ded8;background:#fff;color:#356156}
+.camera-capture{border:0;background:linear-gradient(135deg,#08734c,#18a66b);color:#fff}
+.camera-hint{padding:0 15px 14px;color:#71807a;font-size:11px;text-align:center}
+@media(max-width:480px){
+  .camera-modal{border-radius:18px}
+  .camera-stage{aspect-ratio:3/4}
+  .camera-guide{inset:9% 7%}
+}
+
 </style>
 </head>
 <body>
@@ -341,6 +386,32 @@ button{cursor:pointer}
 
   <div class="footer-note">Salida de Servicio · Logística Ambiental · Sin GPS</div>
 </section>
+</div>
+
+
+<!-- V14 — Cámara en vivo obligatoria -->
+<div id="cameraModal" class="camera-modal-backdrop">
+  <div class="camera-modal" role="dialog" aria-modal="true" aria-labelledby="cameraTitle">
+    <div class="camera-head">
+      <div>
+        <strong id="cameraTitle">📷 Sacar foto</strong>
+        <small id="cameraSubtitle">La foto se toma directamente con la cámara.</small>
+      </div>
+      <button type="button" class="camera-close" onclick="cerrarCamara()">×</button>
+    </div>
+    <div class="camera-stage">
+      <video id="cameraVideo" autoplay playsinline muted></video>
+      <canvas id="cameraCanvas"></canvas>
+      <div class="camera-guide"></div>
+      <div class="camera-label" id="cameraLabel">Cámara en vivo</div>
+    </div>
+    <div class="camera-error" id="cameraError"></div>
+    <div class="camera-actions">
+      <button type="button" class="camera-cancel" onclick="cerrarCamara()">CANCELAR</button>
+      <button type="button" class="camera-capture" id="cameraCaptureBtn" onclick="capturarFotoEnVivo()" disabled>● TOMAR FOTO</button>
+    </div>
+    <div class="camera-hint">La galería no está disponible para estas 4 fotos. Se captura una imagen nueva desde la cámara del dispositivo.</div>
+  </div>
 </div>
 
 <div id="vehicleControlModal" class="vehicle-modal-backdrop" onclick="cerrarControlVehiculo(event)">
@@ -872,6 +943,118 @@ async function verServicio(id){
   $('inspectionScreen').scrollIntoView({behavior:'smooth',block:'start'});
 }
 
+let camaraStream=null;
+let camaraKeyActual=null;
+let camaraLabelActual='';
+let camaraAbriendo=false;
+
+async function abrirCamaraSalida(key,label){
+  if(camaraAbriendo) return;
+  camaraAbriendo=true;
+  camaraKeyActual=key;
+  camaraLabelActual=label;
+
+  const modal=$('cameraModal');
+  const video=$('cameraVideo');
+  const error=$('cameraError');
+  const btn=$('cameraCaptureBtn');
+
+  $('cameraTitle').textContent='📷 '+label;
+  $('cameraSubtitle').textContent='Foto nueva obligatoria · tomada ahora';
+  $('cameraLabel').textContent=label+' · cámara en vivo';
+  error.style.display='none';
+  error.textContent='';
+  btn.disabled=true;
+  modal.style.display='flex';
+  document.body.style.overflow='hidden';
+
+  try{
+    if(!navigator.mediaDevices?.getUserMedia){
+      throw new Error('Este dispositivo/navegador no permite acceder a la cámara en vivo.');
+    }
+
+    // Nunca usamos <input type=file>: la imagen nace del stream de cámara.
+    camaraStream=await navigator.mediaDevices.getUserMedia({
+      video:{
+        facingMode:{ideal:'environment'},
+        width:{ideal:1280},
+        height:{ideal:960}
+      },
+      audio:false
+    });
+
+    video.srcObject=camaraStream;
+    await video.play();
+    btn.disabled=false;
+  }catch(err){
+    console.error('Cámara:',err);
+    error.textContent='No se pudo abrir la cámara. Verificá el permiso de cámara del sitio y volvé a intentar.';
+    error.style.display='block';
+    detenerCamara();
+  }finally{
+    camaraAbriendo=false;
+  }
+}
+
+function detenerCamara(){
+  try{
+    if(camaraStream){
+      camaraStream.getTracks().forEach(track=>track.stop());
+    }
+  }catch(e){}
+  camaraStream=null;
+  const video=$('cameraVideo');
+  if(video) video.srcObject=null;
+}
+
+function cerrarCamara(){
+  detenerCamara();
+  camaraKeyActual=null;
+  camaraLabelActual='';
+  const modal=$('cameraModal');
+  if(modal) modal.style.display='none';
+  document.body.style.overflow='';
+}
+
+function capturarFotoEnVivo(){
+  const key=camaraKeyActual;
+  const label=camaraLabelActual;
+  const video=$('cameraVideo');
+  const canvas=$('cameraCanvas');
+  if(!key || !video || !video.videoWidth || !video.videoHeight) return;
+
+  const maxW=1280;
+  const scale=Math.min(1,maxW/video.videoWidth);
+  canvas.width=Math.round(video.videoWidth*scale);
+  canvas.height=Math.round(video.videoHeight*scale);
+
+  const ctx=canvas.getContext('2d',{alpha:false});
+  ctx.drawImage(video,0,0,canvas.width,canvas.height);
+
+  // La captura se genera en este instante desde el frame vivo.
+  const capturedAt=new Date().toISOString();
+  const dataUrl=canvas.toDataURL('image/jpeg',0.88);
+
+  window.__salidaFotos[key]={
+    dataUrl,
+    name:key+'_'+Date.now()+'.jpg',
+    type:'image/jpeg',
+    capturedAt,
+    source:'LIVE_CAMERA'
+  };
+
+  const img=$('photoPreview_'+key);
+  if(img) img.src=dataUrl;
+  const ok=$('photoOk_'+key);
+  if(ok){
+    ok.style.display='block';
+    ok.textContent='✓ Foto tomada ahora';
+  }
+
+  cerrarCamara();
+  actualizarEstadoInicio();
+}
+
 function construirFotosSalida(){
   const fotos=[
     ['frente','Frente'],
@@ -885,35 +1068,11 @@ function construirFotosSalida(){
       <img id="photoPreview_${key}" class="vehicle-photo-preview"
            alt="${label}" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Crect width='100%25' height='100%25' fill='%23e9f1ed'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%2371807a' font-size='22'%3E${encodeURIComponent(label)}%3C/text%3E%3C/svg%3E">
       <span class="vehicle-photo-label">${label}</span>
-      <input id="photoInput_${key}" type="file" accept="image/*" capture="environment"
-             style="display:none" onchange="seleccionarFotoSalida('${key}',this)">
       <button type="button" class="vehicle-photo-btn"
-              onclick="document.getElementById('photoInput_${key}').click()">📷 Sacar foto</button>
-      <span id="photoOk_${key}" class="vehicle-photo-ok" style="display:none">✓ Cargada</span>
+              onclick="abrirCamaraSalida('${key}','${label}')">📷 Abrir cámara</button>
+      <span id="photoOk_${key}" class="vehicle-photo-ok" style="display:none">✓ Foto tomada ahora</span>
     </div>
   `).join('');
-}
-
-function seleccionarFotoSalida(key,input){
-  const file=input?.files?.[0];
-  if(!file) return;
-
-  // El navegador móvil puede entregar HEIC/HEIF. El canvas intentará convertir
-  // formatos compatibles a JPEG antes de enviarlos.
-  const reader=new FileReader();
-  reader.onload=()=>{
-    window.__salidaFotos[key]={
-      dataUrl:reader.result,
-      name:file.name||key+'.jpg',
-      type:file.type||'image/jpeg'
-    };
-    const img=$('photoPreview_'+key);
-    img.src=reader.result;
-    $('photoOk_'+key).style.display='block';
-    $('photoOk_'+key).textContent='✓ Cargada';
-    actualizarEstadoInicio();
-  };
-  reader.readAsDataURL(file);
 }
 
 function contarFotosSalida(){
@@ -1153,7 +1312,12 @@ async function iniciarViaje(){
       observacion:observacion,
       fotos:{
         frente:fotos.frente?.dataUrl||'',trasera:fotos.trasera?.dataUrl||'',
-        lateral_derecho:fotos.lateral_derecho?.dataUrl||'',lateral_izquierdo:fotos.lateral_izquierdo?.dataUrl||''
+        lateral_derecho:fotos.lateral_derecho?.dataUrl||'',lateral_izquierdo:fotos.lateral_izquierdo?.dataUrl||'',
+        frente_capturedAt:fotos.frente?.capturedAt||'',
+        trasera_capturedAt:fotos.trasera?.capturedAt||'',
+        lateral_derecho_capturedAt:fotos.lateral_derecho?.capturedAt||'',
+        lateral_izquierdo_capturedAt:fotos.lateral_izquierdo?.capturedAt||'',
+        source:'LIVE_CAMERA'
       }
     });
     if(!res?.ok) throw new Error(res?.error||'No se pudo iniciar el viaje.');
@@ -1253,6 +1417,8 @@ $('loginForm').addEventListener('submit',async e=>{
     iniciarActualizacionAutomatica();
   }catch(e){}
 })();
+
+window.addEventListener('pagehide',()=>{ try{ detenerCamara(); }catch(e){} });
 </script>
 </body>
 </html>
