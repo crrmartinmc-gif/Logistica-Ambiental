@@ -232,6 +232,43 @@ button{cursor:pointer}
 }
 
 
+<style id="admin-reporte-opciones-botonera">
+.admin-choice-grid{display:grid;gap:8px}
+.admin-choice-grid-3{grid-template-columns:repeat(3,1fr)}
+.admin-choice-grid-4{grid-template-columns:repeat(4,1fr)}
+.admin-choice-btn{
+  min-height:64px;
+  border:1px solid #d5e4dd;
+  border-radius:13px;
+  background:#fff;
+  color:#31574a;
+  padding:9px 6px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:4px;
+  font-weight:900;
+  font-size:10px;
+  cursor:pointer;
+  transition:.15s;
+}
+.admin-choice-btn span{display:block;text-align:center;line-height:1.05}
+.admin-choice-btn:hover{border-color:#79b99d;transform:translateY(-1px)}
+.admin-choice-btn.selected{
+  background:linear-gradient(135deg,#08734c,#18a66b);
+  border-color:#08734c;
+  color:#fff;
+  box-shadow:0 5px 14px rgba(8,115,76,.18);
+}
+.admin-choice-grid-4 .admin-choice-btn{min-height:59px}
+@media(max-width:560px){
+  .admin-choice-grid-3{grid-template-columns:repeat(3,1fr)}
+  .admin-choice-grid-4{grid-template-columns:repeat(2,1fr)}
+  .admin-choice-btn{min-height:62px;font-size:9px}
+  .admin-choice-grid-4 .admin-choice-btn{min-height:58px}
+}
+</style>
 <style id="admin-botonera-chofer-ui">
 /* ADMIN — misma lógica visual de botonera que la app de choferes */
 .admin-botonera-wrap{max-width:760px;margin:0 auto;padding:24px 16px 45px}
@@ -415,21 +452,31 @@ button{cursor:pointer}
     <div id="adminReportBox" class="admin-panel hidden">
       <h3>⚠️ Nuevo reporte / avería</h3>
       <div class="admin-report-fields">
-        <div><label>Tipo</label>
-          <select id="adminReportTipo">
-            <option value="AVERIA">AVERÍA</option>
-            <option value="REPORTE">REPORTE</option>
-            <option value="MANTENIMIENTO">MANTENIMIENTO</option>
-          </select>
+        <div>
+          <label>Tipo de registro</label>
+          <div class="admin-choice-grid admin-choice-grid-3" id="adminReportTipoGrid">
+            <button type="button" class="admin-choice-btn selected" data-value="AVERIA" onclick="seleccionarTipoAdmin(this)">⚠️<span>AVERÍA</span></button>
+            <button type="button" class="admin-choice-btn" data-value="REPORTE" onclick="seleccionarTipoAdmin(this)">📋<span>REPORTE</span></button>
+            <button type="button" class="admin-choice-btn" data-value="MANTENIMIENTO" onclick="seleccionarTipoAdmin(this)">🔧<span>MANTENIMIENTO</span></button>
+          </div>
         </div>
-        <div><label>Categoría</label>
-          <select id="adminReportCategoria">
-            <option>FRENOS</option><option>LUCES</option><option>RUEDAS</option>
-            <option>FALLA MECÁNICA</option><option>FALLA ESTRUCTURAL</option>
-            <option>PLOTEO / PINTURA</option><option>VTV</option><option>OTRO</option>
-          </select>
+
+        <div>
+          <label>Categoría</label>
+          <div class="admin-choice-grid admin-choice-grid-4" id="adminReportCategoriaGrid">
+            <button type="button" class="admin-choice-btn" data-value="FRENOS" onclick="seleccionarCategoriaAdmin(this)">🛑<span>FRENOS</span></button>
+            <button type="button" class="admin-choice-btn" data-value="LUCES" onclick="seleccionarCategoriaAdmin(this)">💡<span>LUCES</span></button>
+            <button type="button" class="admin-choice-btn" data-value="RUEDAS" onclick="seleccionarCategoriaAdmin(this)">🛞<span>RUEDAS</span></button>
+            <button type="button" class="admin-choice-btn" data-value="FALLA MECÁNICA" onclick="seleccionarCategoriaAdmin(this)">⚙️<span>MECÁNICA</span></button>
+            <button type="button" class="admin-choice-btn" data-value="FALLA ESTRUCTURAL" onclick="seleccionarCategoriaAdmin(this)">🚛<span>ESTRUCTURAL</span></button>
+            <button type="button" class="admin-choice-btn" data-value="PLOTEO / PINTURA" onclick="seleccionarCategoriaAdmin(this)">🎨<span>PLOTEO / PINTURA</span></button>
+            <button type="button" class="admin-choice-btn" data-value="VTV" onclick="seleccionarCategoriaAdmin(this)">📄<span>VTV</span></button>
+            <button type="button" class="admin-choice-btn" data-value="OTRO" onclick="seleccionarCategoriaAdmin(this)">➕<span>OTRO</span></button>
+          </div>
         </div>
-        <div><label>Descripción</label>
+
+        <div>
+          <label>Descripción</label>
           <textarea id="adminReportObs" placeholder="Describí la avería o novedad…"></textarea>
         </div>
       </div>
@@ -1676,10 +1723,31 @@ async function guardarKmAdmin(){
   finally{btns.forEach(b=>b.disabled=false);}
 }
 
+let adminReportTipoSeleccionado='AVERIA';
+let adminReportCategoriaSeleccionada='FRENOS';
+
+function seleccionarTipoAdmin(btn){
+  document.querySelectorAll('#adminReportTipoGrid .admin-choice-btn').forEach(b=>b.classList.remove('selected'));
+  btn.classList.add('selected');
+  adminReportTipoSeleccionado=btn.dataset.value||'AVERIA';
+}
+
+function seleccionarCategoriaAdmin(btn){
+  document.querySelectorAll('#adminReportCategoriaGrid .admin-choice-btn').forEach(b=>b.classList.remove('selected'));
+  btn.classList.add('selected');
+  adminReportCategoriaSeleccionada=btn.dataset.value||'OTRO';
+}
+
 function abrirReporteAdmin(){
   if(!adminVehiculoSeleccionado){ abrirSelectorVehiculoAdmin(); return; }
   $('adminKmPanel')?.classList.add('hidden');
   $('adminReportBox').classList.remove('hidden');
+
+  adminReportTipoSeleccionado='AVERIA';
+  adminReportCategoriaSeleccionada='FRENOS';
+  document.querySelectorAll('#adminReportTipoGrid .admin-choice-btn').forEach(b=>b.classList.toggle('selected',b.dataset.value==='AVERIA'));
+  document.querySelectorAll('#adminReportCategoriaGrid .admin-choice-btn').forEach(b=>b.classList.toggle('selected',b.dataset.value==='FRENOS'));
+
   $('adminReportObs').focus();
 }
 function cerrarReporteAdmin(){
@@ -1687,8 +1755,8 @@ function cerrarReporteAdmin(){
 }
 async function guardarReporteAdmin(){
   if(!adminVehiculoSeleccionado)return alert('Seleccioná un vehículo.');
-  const tipo=$('adminReportTipo').value;
-  const categoria=$('adminReportCategoria').value;
+  const tipo=adminReportTipoSeleccionado;
+  const categoria=adminReportCategoriaSeleccionada;
   const obs=$('adminReportObs').value.trim();
   if(!obs)return alert('Describí la avería o novedad.');
   const btns=document.querySelectorAll('#adminReportBox button');btns.forEach(b=>b.disabled=true);
