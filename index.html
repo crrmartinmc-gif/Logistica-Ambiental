@@ -232,6 +232,64 @@ button{cursor:pointer}
 }
 
 
+<style id="admin-subcategorias-botonera">
+.admin-subcat-box{
+  margin-top:10px;
+  padding:10px;
+  border:1px solid #dbe9e2;
+  border-radius:14px;
+  background:#f7fbf9;
+}
+.admin-subcat-title{
+  font-size:11px;
+  font-weight:900;
+  color:#477164;
+  margin-bottom:8px;
+  text-transform:uppercase;
+}
+.admin-subcat-grid{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:7px;
+}
+.admin-subcat-btn{
+  min-height:54px;
+  border:1px solid #d5e4dd;
+  border-radius:11px;
+  background:#fff;
+  color:#31574a;
+  padding:7px 5px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:3px;
+  font-weight:900;
+  font-size:9px;
+  line-height:1.05;
+  cursor:pointer;
+  box-sizing:border-box;
+}
+.admin-subcat-btn span:last-child{
+  text-align:center;
+  width:100%;
+}
+.admin-subcat-icon{font-size:17px;line-height:1}
+.admin-subcat-btn.selected{
+  background:linear-gradient(135deg,#08734c,#18a66b);
+  border-color:#08734c;
+  color:#fff;
+  box-shadow:0 4px 11px rgba(8,115,76,.15);
+}
+@media(max-width:600px){
+  .admin-subcat-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+  .admin-subcat-btn{min-height:56px;font-size:9px}
+}
+@media(max-width:380px){
+  .admin-subcat-grid{gap:6px}
+  .admin-subcat-btn{min-height:53px;font-size:8px}
+}
+</style>
 <style id="admin-report-layout-responsive">
 .admin-report-fields{
   width:100%;
@@ -521,7 +579,7 @@ button{cursor:pointer}
         <div>
           <label>Categoría</label>
           <div class="admin-choice-grid admin-choice-grid-4" id="adminReportCategoriaGrid">
-            <button type="button" class="admin-choice-btn" data-value="FRENOS" onclick="seleccionarCategoriaAdmin(this)">🛑<span>FRENOS</span></button>
+            <button type="button" class="admin-choice-btn selected" data-value="FRENOS" onclick="seleccionarCategoriaAdmin(this)">🛑<span>FRENOS</span></button>
             <button type="button" class="admin-choice-btn" data-value="LUCES" onclick="seleccionarCategoriaAdmin(this)">💡<span>LUCES</span></button>
             <button type="button" class="admin-choice-btn" data-value="RUEDAS" onclick="seleccionarCategoriaAdmin(this)">🛞<span>RUEDAS</span></button>
             <button type="button" class="admin-choice-btn" data-value="FALLA MECÁNICA" onclick="seleccionarCategoriaAdmin(this)">⚙️<span>MECÁNICA</span></button>
@@ -529,6 +587,11 @@ button{cursor:pointer}
             <button type="button" class="admin-choice-btn" data-value="PLOTEO / PINTURA" onclick="seleccionarCategoriaAdmin(this)">🎨<span>PLOTEO / PINTURA</span></button>
             <button type="button" class="admin-choice-btn" data-value="VTV" onclick="seleccionarCategoriaAdmin(this)">📄<span>VTV</span></button>
             <button type="button" class="admin-choice-btn" data-value="OTRO" onclick="seleccionarCategoriaAdmin(this)">➕<span>OTRO</span></button>
+          </div>
+
+          <div id="adminSubcategoriaBox" class="admin-subcat-box">
+            <div class="admin-subcat-title">Subcategoría de <span id="adminSubcategoriaTitulo">FRENOS</span></div>
+            <div id="adminSubcategoriaGrid" class="admin-subcat-grid"></div>
           </div>
         </div>
 
@@ -1782,6 +1845,8 @@ async function guardarKmAdmin(){
 
 let adminReportTipoSeleccionado='AVERIA';
 let adminReportCategoriaSeleccionada='FRENOS';
+  adminReportSubcategoriaSeleccionada='FRENOS DELANTEROS';
+  renderSubcategoriasAdmin('FRENOS');
 
 function seleccionarTipoAdmin(btn){
   document.querySelectorAll('#adminReportTipoGrid .admin-choice-btn').forEach(b=>b.classList.remove('selected'));
@@ -1793,6 +1858,69 @@ function seleccionarCategoriaAdmin(btn){
   document.querySelectorAll('#adminReportCategoriaGrid .admin-choice-btn').forEach(b=>b.classList.remove('selected'));
   btn.classList.add('selected');
   adminReportCategoriaSeleccionada=btn.dataset.value||'OTRO';
+  renderSubcategoriasAdmin(adminReportCategoriaSeleccionada);
+}
+
+const ADMIN_SUBCATEGORIAS = {
+  "FRENOS": [
+    ["FRENOS DELANTEROS","🛑"],["FRENOS TRASEROS","🛑"],["PASTILLAS","▣"],["DISCOS","◉"],
+    ["TAMBORES","◉"],["LIQUIDO DE FRENOS","💧"],["FRENO DE MANO","✋"],["ABS","⚠️"]
+  ],
+  "LUCES": [
+    ["LUCES ALTAS","🔆"],["LUCES BAJAS","💡"],["GIROS","↔️"],["BALIZAS","⚠️"],
+    ["STOP","🔴"],["MARCHA ATRÁS","◀️"],["LUZ PATENTE","🔳"],["LUZ INTERIOR","🔆"]
+  ],
+  "RUEDAS": [
+    ["NEUMÁTICO DELANTERO IZQ.","🛞"],["NEUMÁTICO DELANTERO DER.","🛞"],
+    ["NEUMÁTICO TRASERO IZQ.","🛞"],["NEUMÁTICO TRASERO DER.","🛞"],
+    ["AUXILIO","⭕"],["LLANTA","⭕"],["PRESIÓN","💨"],["TUERCAS","🔩"]
+  ],
+  "FALLA MECÁNICA": [
+    ["MOTOR","⚙️"],["CAJA","⚙️"],["EMBRAGUE","⚙️"],["DIRECCIÓN","↔️"],
+    ["SUSPENSIÓN","🔧"],["REFRIGERACIÓN","🌡️"],["COMBUSTIBLE","⛽"],["ESCAPE","💨"]
+  ],
+  "FALLA ESTRUCTURAL": [
+    ["CARROCERÍA","🚛"],["PUERTAS","🚪"],["CAPOT","▱"],["PORTÓN","▱"],
+    ["PARAGOLPES","🚙"],["VIDRIOS","🪟"],["CHASIS","🔩"],["OTRA ESTRUCTURAL","➕"]
+  ],
+  "PLOTEO / PINTURA": [
+    ["PLOTEO","🎨"],["PINTURA","🖌️"],["IDENTIFICACIÓN","🏷️"],["LOGOS","◼️"],
+    ["REFLECTIVOS","✨"],["NÚMEROS INTERNOS","🔢"],["ROTULACIÓN","✍️"],["OTRO PLOTEO","➕"]
+  ],
+  "VTV": [
+    ["VTV VENCIDA","📄"],["VTV PRÓXIMA","📅"],["OBSERVACIÓN VTV","⚠️"],["REVISIÓN","🔎"],
+    ["DOCUMENTACIÓN","🪪"],["OTRO VTV","➕"]
+  ],
+  "OTRO": [
+    ["BATERÍA","🔋"],["LIMPIAPARABRISAS","🧽"],["AIRE ACONDICIONADO","❄️"],
+    ["RADIO / AUDIO","🔊"],["GPS","📍"],["DOCUMENTACIÓN","🪪"],["ACCESORIOS","🔧"],["OTRO","➕"]
+  ]
+};
+
+let adminReportSubcategoriaSeleccionada='FRENOS DELANTEROS';
+
+function renderSubcategoriasAdmin(categoria){
+  const grid=document.getElementById('adminSubcategoriaGrid');
+  const box=document.getElementById('adminSubcategoriaBox');
+  const title=document.getElementById('adminSubcategoriaTitulo');
+  if(!grid || !box) return;
+
+  const lista=ADMIN_SUBCATEGORIAS[categoria] || ADMIN_SUBCATEGORIAS.OTRO;
+  title.textContent=categoria;
+  grid.innerHTML=lista.map((item,i)=>
+    `<button type="button" class="admin-subcat-btn${i===0?' selected':''}" data-value="${item[0]}" onclick="seleccionarSubcategoriaAdmin(this)">
+      <span class="admin-subcat-icon">${item[1]}</span><span>${item[0]}</span>
+    </button>`
+  ).join('');
+
+  adminReportSubcategoriaSeleccionada=lista[0][0];
+  box.classList.remove('hidden');
+}
+
+function seleccionarSubcategoriaAdmin(btn){
+  document.querySelectorAll('#adminSubcategoriaGrid .admin-subcat-btn').forEach(b=>b.classList.remove('selected'));
+  btn.classList.add('selected');
+  adminReportSubcategoriaSeleccionada=btn.dataset.value || '';
 }
 
 function abrirReporteAdmin(){
@@ -1814,6 +1942,7 @@ async function guardarReporteAdmin(){
   if(!adminVehiculoSeleccionado)return alert('Seleccioná un vehículo.');
   const tipo=adminReportTipoSeleccionado;
   const categoria=adminReportCategoriaSeleccionada;
+  const subcategoria=adminReportSubcategoriaSeleccionada;
   const obs=$('adminReportObs').value.trim();
   if(!obs)return alert('Describí la avería o novedad.');
   const btns=document.querySelectorAll('#adminReportBox button');btns.forEach(b=>b.disabled=true);
