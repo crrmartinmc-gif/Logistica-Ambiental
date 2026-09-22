@@ -182,7 +182,7 @@ button{cursor:pointer}
 .choice-btn.vtv-valid.active{border-color:#18a66b;background:#e8f6ef}.choice-btn.vtv-expired.active{border-color:#c93636;background:#fff0f0}
 .modal-field{margin-bottom:16px}.modal-field input,.modal-field textarea{width:100%;border:1px solid #cbdad3;border-radius:12px;padding:12px;font:inherit;outline:none;background:#fbfdfc}.modal-field textarea{min-height:95px;resize:vertical}.modal-field input:focus,.modal-field textarea:focus{border-color:#18a66b;box-shadow:0 0 0 4px rgba(24,166,107,.10)}
 .modal-actions{display:grid;grid-template-columns:1fr 1.25fr;gap:10px}.modal-actions button{height:48px;border-radius:13px;font-weight:900}.modal-cancel{border:1px solid #d1ded8;background:#fff;color:#356156}.modal-save{border:0;color:#fff;background:linear-gradient(135deg,#08734c,#18a66b)}
-.report-photo{border:1px dashed #bdd3c9;border-radius:12px;padding:12px;text-align:center;color:#567168;font-size:12px}.report-photo input{margin-top:8px;width:100%}
+.report-photo{border:1px dashed #bdd3c9;border-radius:12px;padding:12px;text-align:center;color:#567168;font-size:12px}.report-photo .vehicle-photo-btn{max-width:360px;margin:0 auto}.report-photo .vehicle-photo-ok{margin-top:9px}
 .wheel-position-list{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px}.wheel-position{border:1px solid #d7e3de;border-radius:12px;padding:10px;background:#fbfdfc}.wheel-position strong{display:block;font-size:12px;margin-bottom:7px;color:#24483c}.wheel-state{display:flex;gap:5px}.wheel-state button{flex:1;border:1px solid #d0ddd8;background:#fff;border-radius:8px;padding:7px 3px;font-size:10px;font-weight:800}.wheel-state button.active.good{background:#e8f6ef;border-color:#18a66b;color:#08734c}.wheel-state button.active.attention{background:#fff7dd;border-color:#d99b17;color:#9a7100}.wheel-state button.active.critical{background:#fff0f0;border-color:#c93636;color:#b1262f}
 @media(max-width:560px){.control-grid{grid-template-columns:1fr 1fr;gap:8px}.control-btn{min-height:76px;padding:11px 9px;gap:8px}.control-icon{width:38px;height:38px;flex-basis:38px;font-size:20px}.control-text strong{font-size:11px}.control-text span{font-size:10px}.control-chevron{font-size:18px}.control-vtv{grid-column:1/-1}.choice-grid.three{grid-template-columns:1fr}.wheel-position-list{grid-template-columns:1fr}.vehicle-modal{border-radius:18px}.vehicle-modal-body{padding:16px}}
 
@@ -481,6 +481,112 @@ button{cursor:pointer}
 .modal-control{width:100%;box-sizing:border-box;padding:12px;border:1px solid #d5e4dd;border-radius:11px;background:#fff;color:#31574a;font-weight:700}
 .vtv-info-box{margin:10px 0 12px;padding:10px 12px;border-radius:11px;background:#f2f8f5;border:1px solid #d7e9e0;color:#41685a;font-size:10px;line-height:1.4}
 @media(max-width:380px){.vtv-fecha-grid{gap:7px}.modal-control{padding:10px;font-size:12px}}
+
+/* V26 — interfaz realmente adaptable PC / TABLET / CELULAR */
+:root{--page-max:1180px}
+body{overflow-x:hidden}
+.screen,.inspection-wrap,.admin-wrap,.admin-botonera-wrap{width:100%;max-width:var(--page-max);margin-left:auto;margin-right:auto}
+.topbar{padding-left:clamp(12px,3vw,28px);padding-right:clamp(12px,3vw,28px)}
+.screen{padding-left:clamp(13px,3vw,30px);padding-right:clamp(13px,3vw,30px)}
+.welcome{gap:clamp(12px,3vw,28px)}
+.grid{grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr)}
+.vehicle,.service-card,.card,.inspection-card,.admin-botonera-card,.admin-card{min-width:0}
+.vehicle-photo img{max-width:100%}
+.vehicle-details,.service-card,.route,.info-list{min-width:0}
+.info-row strong,.route-point strong,.meta strong{overflow-wrap:anywhere}
+.modal-field,.choice-grid,.admin-choice-grid,.admin-subcat-grid{min-width:0}
+.vehicle-modal,.camera-modal,.admin-picker-card{width:min(620px,calc(100vw - 28px))}
+.vehicle-modal-body,.camera-actions,.admin-picker-body{min-width:0}
+
+@media(min-width:1200px){
+  .screen{padding-top:34px}
+  .inspection-wrap{max-width:1120px}
+  .inspection-card{border-radius:22px}
+  .admin-botonera-wrap{max-width:1120px}
+  .admin-card{padding:24px}
+  .vehicle-photo{min-height:260px}
+  .vehicle-photo img{height:260px}
+}
+
+@media(max-width:900px){
+  .screen{padding-top:22px}
+  .grid{grid-template-columns:1fr}
+  .inspection-wrap{margin-top:18px;padding-left:13px;padding-right:13px}
+  .inspection-head{padding:20px}
+  .inspection-head h2{font-size:22px}
+  .check-section,.vehicle-control-section{padding:17px 16px}
+  .service-meta{grid-template-columns:1fr 1fr}
+  .control-grid{grid-template-columns:1fr 1fr}
+  .admin-grid{grid-template-columns:1fr}
+}
+
+@media(max-width:600px){
+  .topbar{height:62px}
+  .brand{gap:8px;min-width:0}
+  .brand>div:last-child{min-width:0}
+  .brand span{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px}
+  .screen{padding:17px 10px 30px}
+  .welcome{display:block;margin-bottom:16px}
+  .welcome h1{font-size:23px}
+  .welcome p{font-size:12px;line-height:1.35}
+  .grid{gap:12px}
+  .card{border-radius:17px;padding:14px}
+  .vehicle{padding:11px}
+  .vehicle-photo{min-height:180px}
+  .vehicle-photo img{height:180px}
+  .service-head{padding:15px}
+  .service-head h2{font-size:19px}
+  .route{padding:15px}
+  .service-meta{padding:0 15px 15px;gap:8px}
+  .meta{padding:10px}
+  .inspection-wrap{padding:0 8px 25px;margin-top:10px}
+  .inspection-card{border-radius:16px}
+  .inspection-head{padding:17px 15px}
+  .inspection-head h2{font-size:20px}
+  .inspection-head p{font-size:12px;line-height:1.4}
+  .check-section,.vehicle-control-section{padding:15px 12px}
+  .check-section h3,.vehicle-control-head h3{font-size:15px}
+  #vehiclePhotosGrid{grid-template-columns:1fr 1fr !important;gap:8px !important}
+  #currentKm{font-size:18px !important}
+  .inspection-actions{grid-template-columns:1fr !important}
+  .camera-modal-backdrop{padding:8px}
+  .camera-modal{width:100%;max-height:96vh;border-radius:16px}
+  .camera-head{padding:13px 14px}
+  .camera-stage{aspect-ratio:3/4}
+  .camera-actions{padding:10px}
+  .camera-actions button{height:46px}
+  .vehicle-modal{width:100%;max-height:94vh;border-radius:16px}
+  .vehicle-modal-body{padding:13px}
+  .choice-grid{grid-template-columns:1fr 1fr}
+  .choice-grid.three{grid-template-columns:1fr}
+  .modal-actions{grid-template-columns:1fr 1fr}
+  .admin-botonera-wrap{padding:15px 10px 30px}
+  .admin-botonera-head h1{font-size:22px}
+  .admin-botonera-card{padding:14px;border-radius:17px}
+  .admin-action-grid{grid-template-columns:1fr 1fr}
+  .admin-action-btn{min-height:82px;padding:10px 8px}
+  .admin-panel{padding:12px}
+  .admin-km-line{display:grid;grid-template-columns:1fr}
+  .admin-km-line button{width:100%}
+  .admin-report-buttons{grid-template-columns:1fr 1fr}
+  .admin-choice-grid-3{grid-template-columns:1fr 1fr 1fr}
+  .admin-choice-grid-4{grid-template-columns:1fr 1fr}
+}
+
+@media(max-width:380px){
+  .brand span{max-width:145px}
+  .admin-action-text strong{font-size:10px}
+  .admin-action-text span{font-size:8px}
+  .admin-action-icon{width:34px;height:34px;flex-basis:34px;font-size:18px}
+  .admin-choice-btn{min-height:60px;font-size:9px}
+  .modal-actions{grid-template-columns:1fr}
+}
+
+@media(min-width:601px) and (max-width:1024px){
+  .screen{max-width:960px}
+  .inspection-wrap{max-width:960px}
+  .admin-botonera-wrap{max-width:960px}
+}
 </style>
 </head>
 <body>
@@ -1500,8 +1606,6 @@ function capturarFotoEnVivo(){
       capturedAt,
       source:'LIVE_CAMERA'
     };
-    const preview=$('controlFotoPreview');
-    if(preview) preview.src=dataUrl;
     const ok=$('controlFotoOk');
     if(ok){ok.style.display='block';ok.textContent='✓ Foto tomada ahora';}
   }else{
@@ -1670,7 +1774,7 @@ function renderControlFormulario(categoria){
 }
 function renderCampoElemento(){return `<div class="modal-field"><label class="modal-label">Sistema / elemento</label><input id="controlElementoInput" maxlength="120" placeholder="Ej.: Motor, caja, dirección…"></div>`}
 function renderObservacion(){return `<div class="modal-field"><label class="modal-label">Observación (opcional)</label><textarea id="controlObs" maxlength="500" placeholder="Describí la novedad…"></textarea></div>`}
-function renderFoto(){return `<div class="modal-field"><label class="modal-label">Foto (opcional)</label><div class="report-photo"><button type="button" class="vehicle-photo-btn" onclick="abrirCamaraReporte()">📷 SACAR FOTO</button><img id="controlFotoPreview" style="display:block;width:100%;margin-top:8px;border-radius:10px;aspect-ratio:4/3;object-fit:cover;background:#e9f1ed" alt="Vista previa de la foto"><span id="controlFotoOk" class="vehicle-photo-ok" style="display:none">✓ Foto tomada ahora</span></div></div>`}
+function renderFoto(){return `<div class="modal-field"><label class="modal-label">Foto (opcional)</label><div class="report-photo"><button type="button" class="vehicle-photo-btn" onclick="abrirCamaraReporte()">📷 SACAR FOTO</button><span id="controlFotoOk" class="vehicle-photo-ok" style="display:none">✓ Foto tomada ahora</span></div></div>`}
 function renderModalActions(){return `<div class="modal-actions"><button type="button" class="modal-cancel" onclick="cerrarControlVehiculo()">CANCELAR</button><button type="button" class="modal-save" onclick="registrarControlVehiculo()">REGISTRAR</button></div>`}
 function seleccionarElemento(btn,valor){
   if(!btn) return;
