@@ -890,117 +890,12 @@ body{overflow-x:hidden}
   </div>
 </div>
 
-<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-messaging-compat.js"></script>
 <script>
-const FIREBASE_CONFIG = {
-  apiKey: "AIzaSyA-9UIg0i_b3EDwQ4SLW09LKGVSkJozWKc",
-  authDomain: "panel-de-control-ac0d8.firebaseapp.com",
-  projectId: "panel-de-control-ac0d8",
-  storageBucket: "panel-de-control-ac0d8.firebasestorage.app",
-  messagingSenderId: "477303833717",
-  appId: "1:477303833717:web:436eda13e40968b6c7a43c",
-  measurementId: "G-035YETY4B2"
-};
-const FCM_VAPID_KEY = "BPro6KLDM4GXdFoAc05jhvMe6fsvWvzd1KMyJyQSGl8nb25xy-ZbwwF5UFKOxPjfBYAkStfFsZDPhepK20qgjDE";
-
-let firebaseApp = null;
-let firebaseMessaging = null;
-let firebaseServiceWorkerRegistration = null;
-let fcmTokenActual = null;
-
-function mostrarAvisoPush(texto, tipo="info") {
-  let el = document.getElementById("fcmStatusAviso");
-  if (!el) {
-    el = document.createElement("div");
-    el.id = "fcmStatusAviso";
-    el.style.cssText = "position:fixed;left:14px;right:14px;bottom:88px;z-index:99999;padding:12px 14px;border-radius:12px;background:#073d2b;color:#fff;font-size:14px;font-weight:600;box-shadow:0 10px 28px rgba(0,0,0,.22);text-align:center";
-    document.body.appendChild(el);
-  }
-  el.textContent = texto;
-  el.dataset.tipo = tipo;
-  clearTimeout(window.__fcmAvisoTimer);
-  window.__fcmAvisoTimer = setTimeout(()=>el.remove(), 5000);
-}
-
-async function inicializarNotificacionesPush(pedirPermiso=true) {
-  if (!session?.idChofer) return {ok:false,error:"Sin chofer autenticado"};
-  if (!('serviceWorker' in navigator) || !('Notification' in window)) {
-    mostrarAvisoPush("Este navegador no admite notificaciones push.", "error");
-    return {ok:false,error:"Push no soportado"};
-  }
-
-  try {
-    if (Notification.permission === 'denied') {
-      mostrarAvisoPush("Las notificaciones están bloqueadas en este navegador. Habilitalas en los permisos del sitio.", "error");
-      return {ok:false,error:"Permiso de notificaciones bloqueado"};
-    }
-
-    // Se ejecuta inmediatamente después del login, que es un gesto del usuario.
-    if (Notification.permission === 'default' && pedirPermiso) {
-      const permiso = await Notification.requestPermission();
-      if (permiso !== 'granted') {
-        mostrarAvisoPush("Necesitamos permiso de notificaciones para avisarte cuando te asignen un servicio.", "error");
-        return {ok:false,error:"Permiso no concedido"};
-      }
-    } else if (Notification.permission === 'default') {
-      return {ok:false,error:'Permiso pendiente'};
-    }
-
-    firebaseApp = firebaseApp || firebase.initializeApp(FIREBASE_CONFIG);
-    firebaseMessaging = firebaseMessaging || firebase.messaging(firebaseApp);
-
-    firebaseServiceWorkerRegistration = await navigator.serviceWorker.register('./firebase-messaging-sw.js', {scope:'./'});
-    await navigator.serviceWorker.ready;
-
-    const token = await firebaseMessaging.getToken({
-      vapidKey: FCM_VAPID_KEY,
-      serviceWorkerRegistration: firebaseServiceWorkerRegistration
-    });
-
-    if (!token) throw new Error('Firebase no devolvió un token FCM.');
-    fcmTokenActual = token;
-
-    const appUrl = window.location.href.split('#')[0];
-    const res = await postJson({
-      accion:'registrarTokenPush',
-      idChofer:session.idChofer,
-      token:token,
-      plataforma:'WEB',
-      appUrl:appUrl,
-      userAgent:navigator.userAgent
-    });
-
-    if (firebaseMessaging.onMessage) {
-      firebaseMessaging.onMessage((payload)=>{
-        const n = payload?.notification || {};
-        const title = n.title || '🔔 Nueva notificación';
-        const body = n.body || 'Tenés una novedad en la App Choferes.';
-        mostrarAvisoPush(title + ' — ' + body);
-      });
-    }
-
-    console.info('FCM listo para chofer:', session.idChofer, token.slice(0,12)+'…', res);
-    mostrarAvisoPush("🔔 Notificaciones activadas");
-    return {ok:true,token:token};
-  } catch (err) {
-    console.error('FCM:', err);
-    mostrarAvisoPush('No se pudieron activar las notificaciones: '+(err.message||err), 'error');
-    return {ok:false,error:err.message||String(err)};
-  }
-}
-
-async function desactivarNotificacionesPush() {
-  try {
-    if (fcmTokenActual) {
-      await postJson({accion:'desregistrarTokenPush',token:fcmTokenActual});
-    }
-  } catch (err) {
-    console.warn('No se pudo desactivar el token FCM:', err);
-  }
-  fcmTokenActual = null;
-}
-
+/* ============================================================
+   APP CHOFERES — WEB DE PRUEBA
+   Firebase/FCM NO ACTIVO en esta etapa.
+   La estructura de notificaciones queda para una futura APK.
+   ============================================================ */
 </script>
 <script>
 const BACKEND_URL = "https://script.google.com/macros/s/AKfycbz0n4ZlW2p--nP2Wx0SnytyCRt_pL6RFxliEan0j1vUdSSrBrVNCbsTI7VC0JQWl5k9/exec";
@@ -1009,6 +904,25 @@ const $ = id => document.getElementById(id);
 let session = null;
 let dashboardTimer = null;
 let ultimaInspeccionCargada = null;
+
+/* ============================================================
+   SERVICE WORKER WEB
+   No usa Firebase. Se deja preparado para Background Sync.
+   ============================================================ */
+let appServiceWorkerRegistration = null;
+
+async function registrarServiceWorkerWeb(){
+  if(!('serviceWorker' in navigator)) return null;
+  try{
+    appServiceWorkerRegistration = await navigator.serviceWorker.register('./service-worker.js',{scope:'./'});
+    await navigator.serviceWorker.ready;
+    return appServiceWorkerRegistration;
+  }catch(err){
+    console.warn('Service Worker WEB no disponible:',err);
+    return null;
+  }
+}
+
 
 /* V24 TURBO — cache local + deduplicación de consultas */
 const API_CACHE_TTL = 12000;
@@ -1122,6 +1036,88 @@ async function postJson(payload){
   if(['registrarReporteAdmin','registrarReporteVehiculo'].includes(accion)) limpiarCacheAPI('listarReportes','listarInspecciones');
   return data;
 }
+
+/* V27 — COLA DE SALIDA EN SEGUNDO PLANO
+   La salida se guarda primero en IndexedDB y el Service Worker la envía.
+   Así la pantalla no queda bloqueada en "GUARDANDO SALIDA…" y el usuario
+   puede volver al inicio o cerrar la app. */
+const BG_DB_NAME='DiaVerdeChoferBG';
+const BG_DB_VERSION=1;
+const BG_STORE='salidas';
+
+function abrirDBSegundoPlano(){
+  return new Promise((resolve,reject)=>{
+    if(!('indexedDB' in window)){ reject(new Error('IndexedDB no disponible')); return; }
+    const req=indexedDB.open(BG_DB_NAME,BG_DB_VERSION);
+    req.onupgradeneeded=()=>{
+      const db=req.result;
+      if(!db.objectStoreNames.contains(BG_STORE)) db.createObjectStore(BG_STORE,{keyPath:'opId'});
+    };
+    req.onsuccess=()=>resolve(req.result);
+    req.onerror=()=>reject(req.error||new Error('No se pudo abrir la cola local.'));
+  });
+}
+
+async function encolarSalidaSegundoPlano(payload){
+  const opId='SALIDA-'+String(payload.idServicio||'')+'-'+String(payload.idAsignacion||'')+'-'+Date.now();
+  const item={opId,payload,createdAt:Date.now(),estado:'PENDIENTE'};
+  const db=await abrirDBSegundoPlano();
+  await new Promise((resolve,reject)=>{
+    const tx=db.transaction(BG_STORE,'readwrite');
+    tx.objectStore(BG_STORE).put(item);
+    tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error||new Error('No se pudo guardar la salida localmente.'));
+  });
+  try{
+    const reg=appServiceWorkerRegistration || await registrarServiceWorkerWeb() || await navigator.serviceWorker.ready;
+    if(reg.sync && 'register' in reg.sync){
+      await reg.sync.register('dia-verde-salidas');
+    }
+  }catch(e){
+    console.warn('Background Sync no disponible:',e);
+  }
+  // Si la plataforma no soporta Background Sync, intentamos enviar mientras
+  // la app sigue abierta. La cola permanece hasta recibir confirmación.
+  if(!('serviceWorker' in navigator) || !('SyncManager' in window)) {
+    intentarEnviarSalidaDirecta(opId).catch(()=>{});
+  }
+  return {ok:true,opId,pendiente:true};
+}
+
+async function intentarEnviarSalidaDirecta(opId){
+  try{
+    const db=await abrirDBSegundoPlano();
+    const item=await new Promise((resolve,reject)=>{
+      const tx=db.transaction(BG_STORE,'readonly');
+      const req=tx.objectStore(BG_STORE).get(opId);
+      req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);
+    });
+    if(!item)return;
+    const r=await fetch(BACKEND_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(item.payload),cache:'no-store',keepalive:true});
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    const txt=await r.text();
+    const data=JSON.parse(txt);
+    if(data?.ok===false)throw new Error(data.error||'Backend rechazó la operación');
+    await new Promise((resolve,reject)=>{
+      const tx=db.transaction(BG_STORE,'readwrite');
+      tx.objectStore(BG_STORE).delete(opId);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);
+    });
+    window.dispatchEvent(new CustomEvent('salidaGuardadaSegundoPlano',{detail:{opId,data}}));
+  }catch(e){ console.warn('Salida pendiente:',e); }
+}
+
+window.addEventListener('load',()=>{
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.addEventListener('message',ev=>{
+      if(ev.data?.type==='SALIDA_GUARDADA'){
+        limpiarCacheAPI('listarViajes','listarAsignaciones','listarServicios');
+        console.info('Salida guardada en segundo plano:',ev.data.opId);
+        try{
+          if(typeof cargarDashboard==='function') cargarDashboard().catch(()=>{});
+        }catch(e){}
+      }
+    });
+  }
+});
 
 async function getJson(action, params={}, options={}){
   const key=cacheKeyAPI(action,params);
@@ -1901,41 +1897,56 @@ async function iniciarViaje(){
   if(km===null){a.textContent='Ingresá el kilometraje actual para poder iniciar el viaje.';a.style.display='block';$('currentKm').focus();return;}
   if(!servicioEnInspeccion?.idAsignacion){a.textContent='La asignación del servicio no está disponible. Actualizá la aplicación e intentá nuevamente.';a.style.display='block';return;}
 
-  btn.disabled=true;btn.textContent='GUARDANDO SALIDA…';
+  btn.disabled=true;btn.textContent='GUARDANDO…';
+
+  const payload={
+    accion:'iniciarViaje',
+    idServicio:servicioEnInspeccion.idServicio,
+    idAsignacion:servicioEnInspeccion.idAsignacion,
+    idChofer:session.idChofer,
+    idVehiculo:servicioEnInspeccion.idUnidad||'',
+    idUnidad:servicioEnInspeccion.idUnidad||'',
+    dominio:servicioEnInspeccion.dominio||'',
+    kmInicial:km,
+    kilometraje:km,
+    horaInicio:new Date().toISOString(),
+    observaciones:observacion,
+    observacion:observacion,
+    fotos:{
+      frente:fotos.frente?.dataUrl||'',trasera:fotos.trasera?.dataUrl||'',
+      lateral_derecho:fotos.lateral_derecho?.dataUrl||'',lateral_izquierdo:fotos.lateral_izquierdo?.dataUrl||'',
+      frente_capturedAt:fotos.frente?.capturedAt||'',
+      trasera_capturedAt:fotos.trasera?.capturedAt||'',
+      lateral_derecho_capturedAt:fotos.lateral_derecho?.capturedAt||'',
+      lateral_izquierdo_capturedAt:fotos.lateral_izquierdo?.capturedAt||'',
+      source:'LIVE_CAMERA'
+    }
+  };
+
   try{
-    const res=await postJson({
-      accion:'iniciarViaje',
-      idServicio:servicioEnInspeccion.idServicio,
-      idAsignacion:servicioEnInspeccion.idAsignacion,
-      idChofer:session.idChofer,
-      idVehiculo:servicioEnInspeccion.idUnidad||'',
-      idUnidad:servicioEnInspeccion.idUnidad||'',
-      dominio:servicioEnInspeccion.dominio||'',
-      kmInicial:km,
-      kilometraje:km,
-      horaInicio:new Date().toISOString(),
-      observaciones:observacion,
-      observacion:observacion,
-      fotos:{
-        frente:fotos.frente?.dataUrl||'',trasera:fotos.trasera?.dataUrl||'',
-        lateral_derecho:fotos.lateral_derecho?.dataUrl||'',lateral_izquierdo:fotos.lateral_izquierdo?.dataUrl||'',
-        frente_capturedAt:fotos.frente?.capturedAt||'',
-        trasera_capturedAt:fotos.trasera?.capturedAt||'',
-        lateral_derecho_capturedAt:fotos.lateral_derecho?.capturedAt||'',
-        lateral_izquierdo_capturedAt:fotos.lateral_izquierdo?.capturedAt||'',
-        source:'LIVE_CAMERA'
-      }
-    });
-    if(!res?.ok) throw new Error(res?.error||'No se pudo iniciar el viaje.');
-    const viaje=res.resultado||res.viaje||{};
+    // PRIMERO: guardar toda la salida localmente. Esto es rápido y no depende
+    // de cuánto tarde Google Apps Script en procesar las 4 fotos.
+    const cola=await encolarSalidaSegundoPlano(payload);
+
+    // Marcamos el servicio como activo inmediatamente. El envío real continúa
+    // en el Service Worker aunque el usuario vuelva al inicio o cierre la app.
     servicioEnInspeccion.estado='EN VIAJE';
-    servicioEnInspeccion.idViaje=viaje.ID_VIAJE||viaje.idViaje||'';
     servicioEnInspeccion.kmInicial=km;
+    servicioEnInspeccion.idViaje='';
     window.__servicioActual=servicioEnInspeccion;
-    try{ localStorage.setItem('diaVerdeServicioActivo',JSON.stringify({idServicio:servicioEnInspeccion.idServicio,idViaje:servicioEnInspeccion.idViaje||''})); }catch(e){}
-    configurarPantallaViajeRecuperado('Viaje iniciado correctamente. KM y 4 fotos registrados.');
+    try{ localStorage.setItem('diaVerdeServicioActivo',JSON.stringify({idServicio:servicioEnInspeccion.idServicio,idViaje:'',pendienteGuardado:true,opId:cola.opId})); }catch(e){}
+
+    configurarPantallaViajeRecuperado('Salida guardada. Se está enviando en segundo plano. Podés continuar o cerrar la app.');
+    btn.disabled=false;
+
+    // Si el Service Worker está activo, forzamos también un intento inmediato
+    // mientras la app está abierta. No esperamos su resultado.
+    try{
+      const reg=await navigator.serviceWorker.ready;
+      if(reg.active) reg.active.postMessage({type:'PROCESAR_SALIDAS_AHORA'});
+    }catch(e){}
   }catch(err){
-    a.textContent=err.message||'No se pudo iniciar el viaje.';a.style.display='block';
+    a.textContent=err.message||'No se pudo guardar la salida localmente.';a.style.display='block';
     btn.disabled=false;btn.textContent='▶ INICIAR VIAJE';btn.onclick=iniciarViaje;
   }
 }
@@ -2226,21 +2237,14 @@ async function guardarReporteAdmin(){
 
 $('loginForm').addEventListener('submit',async e=>{
   e.preventDefault();$('loginError').style.display='none';$('loginBtn').disabled=true;$('loginLoading').style.display='block';
-  // Pedimos el permiso mientras el evento de usuario sigue activo.
-  // Luego del login usamos ese permiso para obtener/registrar el token FCM.
   try{
-    if ('Notification' in window && Notification.permission === 'default') {
-      try { await Notification.requestPermission(); } catch (permErr) { console.warn('Permiso push:', permErr); }
-    }
     const res=await postJson({accion:'login',usuario:$('usuario').value,contrasena:$('contrasena').value,aplicacion:'CHOFERES'});
     const data=res?.resultado||res;
     const u=data?.usuario;
     if(!res?.ok || !data?.ok || !u?.ID_CHOFER) throw new Error(res?.error||data?.error||'Usuario o contraseña incorrectos.');
     limpiarCacheAPI();
     session={idChofer:u.ID_CHOFER,nombre:u.NOMBRE,usuario:u.USUARIO,estado:u.ESTADO,rol:u.ROL,aplicacion:u.APLICACION};
-    if (Notification.permission === 'granted') {
-      inicializarNotificacionesPush(false).catch(err => console.warn('FCM:', err));
-    }
+    registrarServiceWorkerWeb().catch(()=>{});
     sessionStorage.setItem('diaVerdeChofer',JSON.stringify(session));guardarSesionLocal();
     $('driverName').textContent=session.nombre;$('topUserName').textContent=session.nombre;$('avatar').textContent=initials(session.nombre);
     $('topUser').classList.remove('hidden');$('loginScreen').classList.add('hidden');
@@ -2271,7 +2275,7 @@ $('loginForm').addEventListener('submit',async e=>{
     }else{
       $('dashboardScreen').classList.remove('hidden');
       cargarDashboard();
-      if (Notification.permission === 'granted') inicializarNotificacionesPush(false);
+      registrarServiceWorkerWeb().catch(()=>{});
       iniciarActualizacionAutomatica();
     }
   }catch(e){}
