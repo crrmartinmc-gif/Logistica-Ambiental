@@ -1083,6 +1083,53 @@ async function encolarSalidaSegundoPlano(payload){
   return {ok:true,opId,pendiente:true};
 }
 
+async function intentarEnviarPayloadDirecto(payload,opId=''){
+  const controller=new AbortController();
+  const timeout=setTimeout(()=>controller.abort(),25000);
+  try{
+    const r=await fetch(BACKEND_URL,{
+      method:'POST',
+      headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body:JSON.stringify(payload),
+      cache:'no-store',
+      signal:controller.signal
+    });
+    const txt=await r.text();
+    if(!r.ok) throw new Error('Backend HTTP '+r.status);
+    let data;
+    try{data=JSON.parse(txt);}catch(e){throw new Error('El backend no devolvió JSON válido: '+String(txt).slice(0,160));}
+    if(data?.ok===false) throw new Error(data.error||data.resultado?.error||'El backend rechazó la salida.');
+
+    // Si llegó correctamente, eliminamos la copia pendiente de IndexedDB.
+    if(opId){
+      try{
+        const db=await abrirDBSegundoPlano();
+        await new Promise((resolve,reject)=>{
+          const tx=db.transaction(BG_STORE,'readwrite');
+          tx.objectStore(BG_STORE).delete(opId);
+          tx.oncomplete=resolve; tx.onerror=()=>reject(tx.error);
+        });
+      }catch(e){ console.warn('No se pudo limpiar la cola local:',e); }
+    }
+
+    limpiarCacheAPI('listarViajes','listarAsignaciones','listarServicios');
+    const viaje=data?.resultado||data?.viaje||{};
+    if(viaje?.ID_VIAJE || viaje?.idViaje){
+      servicioEnInspeccion.idViaje=viaje.ID_VIAJE||viaje.idViaje||'';
+      try{ localStorage.setItem('diaVerdeServicioActivo',JSON.stringify({idServicio:servicioEnInspeccion.idServicio,idViaje:servicioEnInspeccion.idViaje,pendienteGuardado:false})); }catch(e){}
+    }
+    const aviso=$('inspectionAlert');
+    if(aviso){ aviso.textContent='✅ Viaje iniciado y enviado al Panel de Control.'; aviso.style.display='block'; }
+    window.dispatchEvent(new CustomEvent('salidaGuardadaSegundoPlano',{detail:{opId,data}}));
+    return data;
+  }catch(err){
+    if(err?.name==='AbortError') throw new Error('El Panel está tardando demasiado en responder. La salida quedó pendiente y se reintentará.');
+    throw err;
+  }finally{
+    clearTimeout(timeout);
+  }
+}
+
 async function intentarEnviarSalidaDirecta(opId){
   try{
     const db=await abrirDBSegundoPlano();
@@ -1924,27 +1971,36 @@ async function iniciarViaje(){
   };
 
   try{
-    // PRIMERO: guardar toda la salida localmente. Esto es rápido y no depende
-    // de cuánto tarde Google Apps Script en procesar las 4 fotos.
-    const cola=await encolarSalidaSegundoPlano(payload);
+    // Guardamos una copia local, pero NO esperamos al Service Worker ni a
+    // Background Sync para liberar la pantalla. Chrome puede tener SyncManager
+    // disponible aunque el Service Worker no esté instalado/activo.
+    let cola=null;
+    try{ cola=await encolarSalidaSegundoPlano(payload); }catch(e){
+      console.warn('No se pudo guardar la cola local; se intentará envío directo.',e);
+    }
 
-    // Marcamos el servicio como activo inmediatamente. El envío real continúa
-    // en el Service Worker aunque el usuario vuelva al inicio o cierre la app.
+    // La interfaz pasa inmediatamente a EN VIAJE. El backend se intenta en
+    // paralelo y ya no puede dejar el botón clavado en GUARDANDO.
     servicioEnInspeccion.estado='EN VIAJE';
     servicioEnInspeccion.kmInicial=km;
     servicioEnInspeccion.idViaje='';
     window.__servicioActual=servicioEnInspeccion;
-    try{ localStorage.setItem('diaVerdeServicioActivo',JSON.stringify({idServicio:servicioEnInspeccion.idServicio,idViaje:'',pendienteGuardado:true,opId:cola.opId})); }catch(e){}
+    try{ localStorage.setItem('diaVerdeServicioActivo',JSON.stringify({idServicio:servicioEnInspeccion.idServicio,idViaje:'',pendienteGuardado:true,opId:cola?.opId||''})); }catch(e){}
 
-    configurarPantallaViajeRecuperado('Salida guardada. Se está enviando en segundo plano. Podés continuar o cerrar la app.');
+    configurarPantallaViajeRecuperado('Salida registrada localmente. Enviando al Panel de Control…');
     btn.disabled=false;
 
-    // Si el Service Worker está activo, forzamos también un intento inmediato
-    // mientras la app está abierta. No esperamos su resultado.
-    try{
-      const reg=await navigator.serviceWorker.ready;
-      if(reg.active) reg.active.postMessage({type:'PROCESAR_SALIDAS_AHORA'});
-    }catch(e){}
+    // ENVÍO DIRECTO INMEDIATO. No se espera antes de cambiar de pantalla.
+    intentarEnviarPayloadDirecto(payload,cola?.opId||'').catch(err=>{
+      console.warn('La salida quedó pendiente de sincronización:',err);
+      const aviso=$('inspectionAlert');
+      if(aviso){ aviso.textContent='⚠️ El viaje quedó guardado en este dispositivo. Se reintentará enviar al Panel cuando haya conexión.'; aviso.style.display='block'; }
+    });
+
+    // Además, si existe Service Worker activo, pedimos procesamiento de la cola.
+    navigator.serviceWorker?.ready.then(reg=>{
+      if(reg?.active) reg.active.postMessage({type:'PROCESAR_SALIDAS_AHORA'});
+    }).catch(()=>{});
   }catch(err){
     a.textContent=err.message||'No se pudo guardar la salida localmente.';a.style.display='block';
     btn.disabled=false;btn.textContent='▶ INICIAR VIAJE';btn.onclick=iniciarViaje;
