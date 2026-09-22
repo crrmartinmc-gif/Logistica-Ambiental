@@ -1362,10 +1362,12 @@ let camaraStream=null;
 let camaraKeyActual=null;
 let camaraLabelActual='';
 let camaraAbriendo=false;
+let camaraDestino='SALIDA';
 
 async function abrirCamaraSalida(key,label){
   if(camaraAbriendo) return;
   camaraAbriendo=true;
+  camaraDestino='SALIDA';
   camaraKeyActual=key;
   camaraLabelActual=label;
 
@@ -1391,7 +1393,7 @@ async function abrirCamaraSalida(key,label){
     // Nunca usamos <input type=file>: la imagen nace del stream de cámara.
     camaraStream=await navigator.mediaDevices.getUserMedia({
       video:{
-        facingMode:{ideal:'environment'},
+        facingMode:{exact:'environment'},
         width:{ideal:1280},
         height:{ideal:960}
       },
@@ -1403,6 +1405,48 @@ async function abrirCamaraSalida(key,label){
     btn.disabled=false;
   }catch(err){
     console.error('Cámara:',err);
+    error.textContent='No se pudo abrir la cámara. Verificá el permiso de cámara del sitio y volvé a intentar.';
+    error.style.display='block';
+    detenerCamara();
+  }finally{
+    camaraAbriendo=false;
+  }
+}
+
+async function abrirCamaraReporte(){
+  if(camaraAbriendo) return;
+  camaraAbriendo=true;
+  camaraDestino='REPORTE';
+  camaraKeyActual='reporte';
+  camaraLabelActual='Foto de la falla';
+
+  const modal=$('cameraModal');
+  const video=$('cameraVideo');
+  const error=$('cameraError');
+  const btn=$('cameraCaptureBtn');
+
+  $('cameraTitle').textContent='📷 Foto de la falla';
+  $('cameraSubtitle').textContent='La foto se toma directamente con la cámara';
+  $('cameraLabel').textContent='Falla · cámara trasera';
+  error.style.display='none';
+  error.textContent='';
+  btn.disabled=true;
+  modal.style.display='flex';
+  document.body.style.overflow='hidden';
+
+  try{
+    if(!navigator.mediaDevices?.getUserMedia){
+      throw new Error('Este dispositivo/navegador no permite acceder a la cámara en vivo.');
+    }
+    camaraStream=await navigator.mediaDevices.getUserMedia({
+      video:{facingMode:{exact:'environment'},width:{ideal:1280},height:{ideal:960}},
+      audio:false
+    });
+    video.srcObject=camaraStream;
+    await video.play();
+    btn.disabled=false;
+  }catch(err){
+    console.error('Cámara de reporte:',err);
     error.textContent='No se pudo abrir la cámara. Verificá el permiso de cámara del sitio y volvé a intentar.';
     error.style.display='block';
     detenerCamara();
@@ -1433,10 +1477,9 @@ function cerrarCamara(){
 
 function capturarFotoEnVivo(){
   const key=camaraKeyActual;
-  const label=camaraLabelActual;
   const video=$('cameraVideo');
   const canvas=$('cameraCanvas');
-  if(!key || !video || !video.videoWidth || !video.videoHeight) return;
+  if(!video || !video.videoWidth || !video.videoHeight) return;
 
   const maxW=1280;
   const scale=Math.min(1,maxW/video.videoWidth);
@@ -1446,27 +1489,43 @@ function capturarFotoEnVivo(){
   const ctx=canvas.getContext('2d',{alpha:false});
   ctx.drawImage(video,0,0,canvas.width,canvas.height);
 
-  // La captura se genera en este instante desde el frame vivo.
   const capturedAt=new Date().toISOString();
   const dataUrl=canvas.toDataURL('image/jpeg',0.88);
 
-  window.__salidaFotos[key]={
-    dataUrl,
-    name:key+'_'+Date.now()+'.jpg',
-    type:'image/jpeg',
-    capturedAt,
-    source:'LIVE_CAMERA'
-  };
-
-  const img=$('photoPreview_'+key);
-  if(img) img.src=dataUrl;
-  const ok=$('photoOk_'+key);
-  if(ok){
-    ok.style.display='block';
-    ok.textContent='✓ Foto tomada ahora';
+  if(camaraDestino==='REPORTE'){
+    controlDraft.foto={
+      dataUrl,
+      name:'reporte_'+Date.now()+'.jpg',
+      type:'image/jpeg',
+      capturedAt,
+      source:'LIVE_CAMERA'
+    };
+    const preview=$('controlFotoPreview');
+    if(preview) preview.src=dataUrl;
+    const ok=$('controlFotoOk');
+    if(ok){ok.style.display='block';ok.textContent='✓ Foto tomada ahora';}
+  }else{
+    window.__salidaFotos[key]={
+      dataUrl,
+      name:key+'_'+Date.now()+'.jpg',
+      type:'image/jpeg',
+      capturedAt,
+      source:'LIVE_CAMERA'
+    };
+    const img=$('photoPreview_'+key);
+    if(img) img.src=dataUrl;
+    const ok=$('photoOk_'+key);
+    if(ok){
+      ok.style.display='block';
+      ok.textContent='✓ Foto tomada ahora';
+    }
   }
 
   cerrarCamara();
+  if(camaraDestino==='REPORTE'){
+    // No se toca el progreso de las 4 fotos cuando la foto pertenece a un reporte.
+    return;
+  }
   actualizarEstadoInicio();
 }
 
@@ -1550,7 +1609,7 @@ function colorModal(categoria){
 }
 function abrirControlVehiculo(categoria){
   controlVehiculoActual=categoria;
-  controlDraft={};
+  controlDraft={foto:null};
   const head=$('vehicleModalHead');
   head.className='vehicle-modal-head '+colorModal(categoria);
   $('vehicleModalTitle').textContent=categoria==='VTV'?'VERIFICACIÓN TÉCNICA (VTV)':'CONTROL · '+categoria;
@@ -1611,7 +1670,7 @@ function renderControlFormulario(categoria){
 }
 function renderCampoElemento(){return `<div class="modal-field"><label class="modal-label">Sistema / elemento</label><input id="controlElementoInput" maxlength="120" placeholder="Ej.: Motor, caja, dirección…"></div>`}
 function renderObservacion(){return `<div class="modal-field"><label class="modal-label">Observación (opcional)</label><textarea id="controlObs" maxlength="500" placeholder="Describí la novedad…"></textarea></div>`}
-function renderFoto(){return `<div class="modal-field"><label class="modal-label">Foto (opcional)</label><div class="report-photo">📷 Adjuntar foto de la falla<input id="controlFoto" type="file" accept="image/*" capture="environment"></div></div>`}
+function renderFoto(){return `<div class="modal-field"><label class="modal-label">Foto (opcional)</label><div class="report-photo"><button type="button" class="vehicle-photo-btn" onclick="abrirCamaraReporte()">📷 SACAR FOTO</button><img id="controlFotoPreview" style="display:block;width:100%;margin-top:8px;border-radius:10px;aspect-ratio:4/3;object-fit:cover;background:#e9f1ed" alt="Vista previa de la foto"><span id="controlFotoOk" class="vehicle-photo-ok" style="display:none">✓ Foto tomada ahora</span></div></div>`}
 function renderModalActions(){return `<div class="modal-actions"><button type="button" class="modal-cancel" onclick="cerrarControlVehiculo()">CANCELAR</button><button type="button" class="modal-save" onclick="registrarControlVehiculo()">REGISTRAR</button></div>`}
 function seleccionarElemento(btn,valor){
   if(!btn) return;
@@ -1644,7 +1703,7 @@ function seleccionarRueda(btn,index,estado){
 async function registrarControlVehiculo(){
   const categoria=controlVehiculoActual;
   const obs=$('controlObs')?.value.trim()||'';
-  const foto=$('controlFoto')?.files?.[0]||null;
+  const foto=controlDraft.foto||null;
   let elemento=controlDraft.elemento||'';
   if(categoria==='FALLA MECÁNICA'||categoria==='FALLA ESTRUCTURAL') elemento=$('controlElementoInput')?.value.trim()||'';
   if(categoria==='RUEDAS'){
@@ -1662,8 +1721,7 @@ async function registrarControlVehiculo(){
   }
   const btns=$('vehicleModalBody').querySelectorAll('button'); btns.forEach(b=>b.disabled=true);
   try{
-    let fotoData=null;
-    if(foto) fotoData=await leerArchivoDataUrl(foto);
+    const fotoData=foto||null;
     const payload={
       accion:'registrarReporteVehiculo',
       idServicio:servicioEnInspeccion?.idServicio||'',
