@@ -904,6 +904,21 @@ let session = null;
 let dashboardTimer = null;
 let ultimaInspeccionCargada = null;
 
+/* V24 TURBO — cache local + deduplicación de consultas */
+const API_CACHE_TTL = 12000;
+const apiCache = new Map();
+const apiInFlight = new Map();
+let dashboardCargando = false;
+
+function limpiarCacheAPI(...acciones){
+  if(!acciones.length){ apiCache.clear(); return; }
+  acciones.forEach(a=>apiCache.delete(a));
+}
+
+function cacheKeyAPI(action, params){
+  return action+'|'+JSON.stringify(params||{});
+}
+
 function escapeHtml(v){
   return String(v ?? '').replace(/[&<>"']/g, c => ({
     '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'
@@ -993,34 +1008,55 @@ async function postJson(payload){
   let data;
   try{data=JSON.parse(text);}catch(e){throw new Error('El backend no devolvió JSON válido: '+String(text).slice(0,120));}
   if(data && data.ok===false) throw new Error(data.error||data.resultado?.error||'El backend rechazó la operación.');
+
+  // Una escritura invalida solamente las lecturas que pueden haber cambiado.
+  const accion=String(payload?.accion||'');
+  if(['iniciarViaje','finalizarViaje'].includes(accion)) limpiarCacheAPI('listarViajes','listarAsignaciones','listarServicios');
+  if(accion==='actualizarKmAdmin') limpiarCacheAPI('listarVehiculos');
+  if(['registrarReporteAdmin','registrarReporteVehiculo'].includes(accion)) limpiarCacheAPI('listarReportes','listarInspecciones');
   return data;
 }
 
-async function getJson(action, params={}){
-  const qs = new URLSearchParams({accion:action,...params,_:Date.now()});
-  const r = await fetch(BACKEND_URL+'?'+qs.toString(),{cache:'no-store'});
-  const text=await r.text();
-  if(!r.ok) throw new Error('Backend HTTP '+r.status);
-  let data;
-  try{data=JSON.parse(text);}catch(e){throw new Error('El backend no devolvió JSON válido: '+String(text).slice(0,160));}
-  if(data && data.ok===false) throw new Error(data.error||'El backend rechazó la consulta.');
+async function getJson(action, params={}, options={}){
+  const key=cacheKeyAPI(action,params);
+  const now=Date.now();
+  const cached=apiCache.get(key);
+  const force=options.force===true;
+  const ttl=Number(options.ttl ?? API_CACHE_TTL);
 
-  // El Backend Maestro devuelve las lecturas generales dentro de "datos".
-  // Adaptamos ese contrato a la estructura que usa la app para no duplicar backends.
-  const datos = data?.datos;
-  if(Array.isArray(datos)){
-    if(action==='listarChoferes') return {ok:true,choferes:datos};
-    if(action==='listarVehiculos') return {ok:true,vehiculos:datos};
-    if(action==='listarServicios') return {ok:true,servicios:datos};
-    if(action==='rutas') return {ok:true,rutas:datos};
-    if(action==='listarRutas') return {ok:true,rutas:datos};
-    if(action==='listarAsignaciones') return {ok:true,asignaciones:datos};
-    if(action==='listarViajes') return {ok:true,viajes:datos};
-    if(action==='listarInspecciones') return {ok:true,inspecciones:datos};
-    if(action==='listarReportes') return {ok:true,reportes:datos};
-    if(action==='listarEvidencias') return {ok:true,evidencias:datos};
-  }
-  return data;
+  if(!force && cached && (now-cached.time)<ttl) return cached.data;
+  if(!force && apiInFlight.has(key)) return apiInFlight.get(key);
+
+  const promise=(async()=>{
+    const qs = new URLSearchParams({accion:action,...params,_:Date.now()});
+    const r = await fetch(BACKEND_URL+'?'+qs.toString(),{cache:'no-store'});
+    const text=await r.text();
+    if(!r.ok) throw new Error('Backend HTTP '+r.status);
+    let data;
+    try{data=JSON.parse(text);}catch(e){throw new Error('El backend no devolvió JSON válido: '+String(text).slice(0,160));}
+    if(data && data.ok===false) throw new Error(data.error||'El backend rechazó la consulta.');
+
+    // El Backend Maestro devuelve las lecturas generales dentro de "datos".
+    const datos = data?.datos;
+    if(Array.isArray(datos)){
+      if(action==='listarChoferes') data={ok:true,choferes:datos};
+      else if(action==='listarVehiculos') data={ok:true,vehiculos:datos};
+      else if(action==='listarServicios') data={ok:true,servicios:datos};
+      else if(action==='rutas') data={ok:true,rutas:datos};
+      else if(action==='listarRutas') data={ok:true,rutas:datos};
+      else if(action==='listarAsignaciones') data={ok:true,asignaciones:datos};
+      else if(action==='listarViajes') data={ok:true,viajes:datos};
+      else if(action==='listarInspecciones') data={ok:true,inspecciones:datos};
+      else if(action==='listarReportes') data={ok:true,reportes:datos};
+      else if(action==='listarEvidencias') data={ok:true,evidencias:datos};
+    }
+    apiCache.set(key,{time:Date.now(),data});
+    return data;
+  })();
+
+  apiInFlight.set(key,promise);
+  try{return await promise;}
+  finally{apiInFlight.delete(key);}
 }
 
 function showError(msg){
@@ -1055,6 +1091,8 @@ function cerrarSesion(){
   window.__salidaFotos={frente:null,trasera:null,lateral_derecho:null,lateral_izquierdo:null};
   if(dashboardTimer) clearInterval(dashboardTimer);
   dashboardTimer=null;
+  limpiarCacheAPI();
+  dashboardCargando=false;
   $('topUser').classList.add('hidden');
   $('dashboardScreen').classList.add('hidden');
   $('adminScreen').classList.add('hidden');
@@ -1066,7 +1104,9 @@ function cerrarSesion(){
   window.scrollTo({top:0,behavior:'smooth'});
 }
 
-async function cargarDashboard(){
+async function cargarDashboard(opciones={}){
+  if(dashboardCargando) return;
+  dashboardCargando=true;
   const idChofer=String(session?.idChofer||'').trim();
   try{
     const [aRes,vRes,sRes,viRes,rRes] = await Promise.all([
@@ -1157,6 +1197,8 @@ async function cargarDashboard(){
   }catch(err){
     $('serviceBox').innerHTML='<div class="empty">No se pudieron consultar los datos operativos.<br>Intentá actualizar en unos segundos.</div>';
     console.error(err);
+  }finally{
+    dashboardCargando=false;
   }
 }
 
@@ -1255,25 +1297,7 @@ async function verServicio(id){
     return;
   }
 
-  // Refrescamos viajes para que el estado EN VIAJE sea el real del backend maestro.
-  try{
-    const [sRes,aRes,vRes,rRes]=await Promise.all([
-      getJson('listarServicios'),
-      getJson('listarAsignaciones'),
-      getJson('listarViajes'),
-      getJson('rutas')
-    ]);
-    const servicio=(sRes.servicios||[]).find(x=>String(x.ID_SERVICIO||'')===String(id));
-    const asignacion=(aRes.asignaciones||[]).find(x=>String(x.ID_SERVICIO||'')===String(id)&&String(x.ID_CHOFER||'')===String(session.idChofer)&&String(x.ESTADO||'').toUpperCase()==='ACTIVA');
-    const vehiculos=(await getJson('listarVehiculos')).vehiculos||[];
-    const rutas=rRes.rutas||[];
-    const vehiculo=asignacion?vehiculos.find(x=>String(x.ID_VEHICULO||'')===String(asignacion.ID_VEHICULO||'')):null;
-    const viaje=(vRes.viajes||[]).find(x=>String(x.ID_SERVICIO||'')===String(id)&&['EN CURSO','ACTIVO','INICIADO'].includes(String(x.ESTADO||'').toUpperCase()));
-    if(servicio){
-      s={...s,fecha:servicio.FECHA,horaProgramada:servicio.HORA_PROGRAMADA,tipo:servicio.TIPO_SERVICIO,nombreServicio:servicio.NOMBRE_SERVICIO,rutaNombre:(rutas.find(x=>String(x.ID_RUTA||'')===String(servicio.ID_RUTA||''))?.NOMBRE_RUTA)||servicio.ID_RUTA||'',estado:viaje?'EN VIAJE':servicio.ESTADO,idAsignacion:asignacion?.ID_ASIGNACION||s.idAsignacion,idUnidad:asignacion?.ID_VEHICULO||s.idUnidad,dominio:vehiculo?.DOMINIO||s.dominio,idViaje:viaje?.ID_VIAJE||s.idViaje,kmInicial:viaje?.KM_INICIAL||s.kmInicial};
-    }
-  }catch(e){ console.warn('No se pudo refrescar el servicio:',e); }
-
+  // V24 TURBO: mostrar la pantalla inmediatamente usando los datos ya cargados.
   servicioEnInspeccion=s;
   ultimaInspeccionCargada=null;
   $('serviceBox').classList.add('hidden');
@@ -1282,9 +1306,10 @@ async function verServicio(id){
   $('inspectionAlert').style.display='none';
 
   if(['EN VIAJE','EN CURSO','ACTIVO','INICIADO'].includes(String(s.estado||'').toUpperCase())){
-    window.__servicioActual=s;
     try{ localStorage.setItem('diaVerdeServicioActivo',JSON.stringify({idServicio:s.idServicio,idViaje:s.idViaje||''})); }catch(e){}
     mostrarModoViajeActivo();
+    // Refresco silencioso: no bloquea la apertura de la pantalla.
+    refrescarServicioEnSegundoPlano(id).catch(e=>console.warn('Refresco servicio:',e));
     return;
   }
 
@@ -1302,6 +1327,35 @@ async function verServicio(id){
   actualizarEstadoInicio();
   $('lastKmHint').textContent='El kilometraje se registrará como KM inicial del viaje.';
   $('inspectionScreen').scrollIntoView({behavior:'smooth',block:'start'});
+
+  // El backend se consulta después de pintar la interfaz.
+  refrescarServicioEnSegundoPlano(id).catch(e=>console.warn('Refresco servicio:',e));
+}
+
+async function refrescarServicioEnSegundoPlano(id){
+  try{
+    const [sRes,aRes,vRes,rRes]=await Promise.all([
+      getJson('listarServicios'),
+      getJson('listarAsignaciones'),
+      getJson('listarViajes'),
+      getJson('rutas')
+    ]);
+    const servicio=(sRes.servicios||[]).find(x=>String(x.ID_SERVICIO||'')===String(id));
+    const asignacion=(aRes.asignaciones||[]).find(x=>String(x.ID_SERVICIO||'')===String(id)&&String(x.ID_CHOFER||'')===String(session.idChofer)&&String(x.ESTADO||'').toUpperCase()==='ACTIVA');
+    const vehiculos=(await getJson('listarVehiculos')).vehiculos||[];
+    const rutas=rRes.rutas||[];
+    const vehiculo=asignacion?vehiculos.find(x=>String(x.ID_VEHICULO||'')===String(asignacion.ID_VEHICULO||'')):null;
+    const viaje=(vRes.viajes||[]).find(x=>String(x.ID_SERVICIO||'')===String(id)&&['EN CURSO','ACTIVO','INICIADO'].includes(String(x.ESTADO||'').toUpperCase()));
+
+    if(!servicio || !servicioEnInspeccion || String(servicioEnInspeccion.idServicio)!==String(id)) return;
+    servicioEnInspeccion={...servicioEnInspeccion,fecha:servicio.FECHA,horaProgramada:servicio.HORA_PROGRAMADA,tipo:servicio.TIPO_SERVICIO,nombreServicio:servicio.NOMBRE_SERVICIO,rutaNombre:(rutas.find(x=>String(x.ID_RUTA||'')===String(servicio.ID_RUTA||''))?.NOMBRE_RUTA)||servicio.ID_RUTA||'',estado:viaje?'EN VIAJE':servicio.ESTADO,idAsignacion:asignacion?.ID_ASIGNACION||servicioEnInspeccion.idAsignacion,idUnidad:asignacion?.ID_VEHICULO||servicioEnInspeccion.idUnidad,dominio:vehiculo?.DOMINIO||servicioEnInspeccion.dominio,idViaje:viaje?.ID_VIAJE||servicioEnInspeccion.idViaje,kmInicial:viaje?.KM_INICIAL||servicioEnInspeccion.kmInicial};
+    window.__servicioActual=servicioEnInspeccion;
+
+    // Si el estado cambió mientras cargábamos, adaptamos la pantalla sin recargarla.
+    if(['EN VIAJE','EN CURSO','ACTIVO','INICIADO'].includes(String(servicioEnInspeccion.estado||'').toUpperCase())) mostrarModoViajeActivo();
+  }catch(e){
+    console.warn('No se pudo actualizar el servicio en segundo plano:',e);
+  }
 }
 
 let camaraStream=null;
@@ -1780,8 +1834,9 @@ async function entrarInterfazAdmin(){
   $('inspectionScreen').classList.add('hidden');
   $('adminScreen').classList.remove('hidden');
   $('adminNameTitle').textContent=session.nombre||'Administrador';
-  await cargarVehiculosAdmin();
+  // Abrimos la interfaz sin esperar al backend.
   if(!adminVehiculoSeleccionado) abrirSelectorVehiculoAdmin();
+  cargarVehiculosAdmin().catch(e=>console.warn('Vehículos admin:',e));
 }
 
 function salirInterfazAdmin(){
@@ -2019,6 +2074,7 @@ $('loginForm').addEventListener('submit',async e=>{
     const data=res?.resultado||res;
     const u=data?.usuario;
     if(!res?.ok || !data?.ok || !u?.ID_CHOFER) throw new Error(res?.error||data?.error||'Usuario o contraseña incorrectos.');
+    limpiarCacheAPI();
     session={idChofer:u.ID_CHOFER,nombre:u.NOMBRE,usuario:u.USUARIO,estado:u.ESTADO,rol:u.ROL,aplicacion:u.APLICACION};
     if (Notification.permission === 'granted') {
       inicializarNotificacionesPush(false).catch(err => console.warn('FCM:', err));
