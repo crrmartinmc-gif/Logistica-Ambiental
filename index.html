@@ -1031,7 +1031,7 @@ async function postJson(payload){
 
   // Una escritura invalida solamente las lecturas que pueden haber cambiado.
   const accion=String(payload?.accion||'');
-  if(['iniciarViaje','finalizarViaje'].includes(accion)) limpiarCacheAPI('listarViajes','listarAsignaciones','listarServicios');
+  if(['iniciarViaje','finalizarViaje'].includes(accion)) limpiarCacheAPI('listarViajes','listarAsignaciones','listarServicios','listarVehiculos');
   if(accion==='actualizarKmAdmin') limpiarCacheAPI('listarVehiculos');
   if(['registrarReporteAdmin','registrarReporteVehiculo'].includes(accion)) limpiarCacheAPI('listarReportes','listarInspecciones');
   return data;
