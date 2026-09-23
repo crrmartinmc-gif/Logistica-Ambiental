@@ -1926,11 +1926,43 @@ function mostrarModoViajeActivo(){
 }
 
 function asegurarCampoKmFinal(){
+  // V27 — KM FINAL siempre visible y editable al finalizar el servicio.
   let box=document.getElementById('finalKmBox');
-  if(box) return box;
-  box=document.createElement('div');box.id='finalKmBox';box.className='check-section';
-  box.innerHTML=`<h3>KM de finalización <span style="color:#c33">*</span></h3><p style="margin:0 0 10px;color:#71807a;font-size:13px">Ingresá el kilometraje que figura en el tablero al finalizar el servicio.</p><div style="display:flex;gap:10px;align-items:center"><input id="finalKm" type="text" inputmode="numeric" placeholder="Ej.: 125.870" style="width:100%;height:56px;border:1px solid #cbdad3;border-radius:13px;padding:0 16px;font-size:20px;font-weight:800;color:#073f2e;background:#fbfdfc"><span style="font-weight:800;color:#557168">km</span></div>`;
-  const actions=document.querySelector('.inspection-actions');actions.parentNode.insertBefore(box,actions);
+  if(!box){
+    box=document.createElement('div');
+    box.id='finalKmBox';
+    box.className='check-section';
+    box.innerHTML=`
+      <h3>2. Kilometraje de finalización <span style="color:#c33">*</span></h3>
+      <p style="margin:0 0 10px;color:#71807a;font-size:13px">Ingresá el kilometraje que figura en el tablero al finalizar el servicio.</p>
+      <div style="display:flex;gap:10px;align-items:center">
+        <input id="finalKm" type="tel" inputmode="numeric" autocomplete="off" enterkeyhint="done"
+          pattern="[0-9. ]*" aria-label="Kilometraje final" placeholder="Ej.: 125.870"
+          style="width:100%;height:56px;box-sizing:border-box;border:2px solid #cbdad3;border-radius:13px;padding:0 16px;font-size:20px;font-weight:800;color:#073f2e;background:#fff;outline:none">
+        <span style="font-weight:800;color:#557168">km</span>
+      </div>
+      <div id="finalKmHelp" style="margin-top:8px;color:#71807a;font-size:11px">Podés escribir, por ejemplo: 125870 o 125.870</div>`;
+    const actions=document.querySelector('#inspectionScreen .inspection-actions');
+    if(actions?.parentNode) actions.parentNode.insertBefore(box,actions);
+    else document.getElementById('inspectionScreen')?.appendChild(box);
+  }
+  const input=document.getElementById('finalKm');
+  if(input){
+    input.disabled=false;
+    input.readOnly=false;
+    input.style.pointerEvents='auto';
+    input.style.userSelect='text';
+    input.oninput=function(){
+      // Solo números, puntos y espacios; se mantiene editable en todo momento.
+      this.value=this.value.replace(/[^0-9. ]/g,'');
+      const limpio=this.value.replace(/[^0-9]/g,'');
+      this.setCustomValidity(limpio ? '' : 'Ingresá el kilometraje final');
+    };
+    input.onfocus=function(){this.style.borderColor='#18a66b';this.style.boxShadow='0 0 0 4px rgba(24,166,107,.10)'};
+    input.onblur=function(){this.style.borderColor='#cbdad3';this.style.boxShadow='none'};
+  }
+  box.classList.remove('hidden');
+  box.style.display='block';
   return box;
 }
 
