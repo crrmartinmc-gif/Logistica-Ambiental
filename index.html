@@ -1232,7 +1232,19 @@ function limpiarSesionLocal(){
 
 function cerrarSesion(){
   if(!confirm('¿Querés cerrar la sesión?')) return;
-  desactivarNotificacionesPush();
+
+  // SALIR debe funcionar aunque el módulo de notificaciones push no esté
+  // disponible en este dispositivo/navegador. Antes una llamada directa a
+  // desactivarNotificacionesPush() podía detener toda la función por un
+  // ReferenceError y dejar la app aparentemente trabada.
+  try{
+    if(typeof desactivarNotificacionesPush === 'function'){
+      desactivarNotificacionesPush();
+    }
+  }catch(e){
+    console.warn('No se pudo desactivar el push al salir:',e);
+  }
+
   limpiarSesionLocal();
   session=null;
   servicioEnInspeccion=null;
