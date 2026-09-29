@@ -1302,10 +1302,61 @@ async function cargarDashboard(opciones={}){
         (f===fechaHoy || f===fechaManana);
     });
 
+    /*
+     * V25 — ORDEN DE SERVICIOS POR HORARIO PROGRAMADO
+     *
+     * Antes la App elegía el primer servicio por HORA_ASIGNACION, es decir,
+     * por el momento en que se creó la asignación en el Panel.
+     * Eso hacía que el orden pudiera ser distinto al horario real del día.
+     *
+     * Ahora cada asignación se vincula con su servicio y se ordena por:
+     *   1) FECHA del servicio
+     *   2) HORA_PROGRAMADA del servicio
+     *   3) HORA_ASIGNACION como desempate
+     *
+     * Así, si al mismo chofer se le asignan 08:00, 10:00 y 09:00,
+     * la App mostrará 08:00 → 09:00 → 10:00.
+     */
     propias.sort((a,b)=>{
-      const ah=normalizarFecha(a.FECHA)===fechaHoy?0:1;
-      const bh=normalizarFecha(b.FECHA)===fechaHoy?0:1;
-      if(ah!==bh) return ah-bh;
+      const servicioA=servicios.find(s =>
+        String(s.ID_SERVICIO||'').trim()===String(a.ID_SERVICIO||'').trim()
+      ) || null;
+
+      const servicioB=servicios.find(s =>
+        String(s.ID_SERVICIO||'').trim()===String(b.ID_SERVICIO||'').trim()
+      ) || null;
+
+      const fechaA=normalizarFecha(servicioA?.FECHA || a.FECHA) || normalizarFecha(a.FECHA) || '';
+      const fechaB=normalizarFecha(servicioB?.FECHA || b.FECHA) || normalizarFecha(b.FECHA) || '';
+
+      if(fechaA!==fechaB){
+        return fechaA.localeCompare(fechaB);
+      }
+
+      const horaA=String(servicioA?.HORA_PROGRAMADA || '').trim();
+      const horaB=String(servicioB?.HORA_PROGRAMADA || '').trim();
+
+      // La hora programada del servicio manda.
+      if(horaA || horaB){
+        if(!horaA) return 1;
+        if(!horaB) return -1;
+
+        const convertirHora=(valor)=>{
+          const m=String(valor).match(/(\d{1,2}):(\d{2})/);
+          if(!m) return Number.MAX_SAFE_INTEGER;
+          return Number(m[1])*60+Number(m[2]);
+        };
+
+        const minutosA=convertirHora(horaA);
+        const minutosB=convertirHora(horaB);
+
+        if(minutosA!==minutosB){
+          return minutosA-minutosB;
+        }
+      }
+
+      // Si dos servicios tienen exactamente la misma hora,
+      // usamos la hora de asignación solamente como desempate.
       return String(a.HORA_ASIGNACION||'').localeCompare(String(b.HORA_ASIGNACION||''));
     });
 
