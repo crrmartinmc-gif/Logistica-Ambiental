@@ -6,6 +6,7 @@
 <meta name="theme-color" content="#073d2b">
 <link rel="manifest" href="./manifest.webmanifest">
 <title>Salida de Servicio · Logística Ambiental</title>
+<!-- V15: exige orientación horizontal para fotos laterales -->
 <style>
 :root{
   --green-950:#062d20;
@@ -225,6 +226,10 @@ button{cursor:pointer}
 .camera-cancel{border:1px solid #d1ded8;background:#fff;color:#356156}
 .camera-capture{border:0;background:linear-gradient(135deg,#08734c,#18a66b);color:#fff}
 .camera-hint{padding:0 15px 14px;color:#71807a;font-size:11px;text-align:center}
+.camera-orientation-warning{display:none;margin:0 14px 12px;padding:11px 12px;border:1px solid #e5b94b;border-radius:12px;background:#fff7dd;color:#7c5900;font-size:12px;font-weight:900;text-align:center;line-height:1.4}
+.camera-orientation-warning.visible{display:block}
+.camera-stage.side-landscape-required{outline:3px solid #dca900;outline-offset:-3px}
+.camera-capture:disabled{opacity:.48;cursor:not-allowed}
 @media(max-width:480px){
   .camera-modal{border-radius:18px}
   .camera-stage{aspect-ratio:3/4}
@@ -781,7 +786,7 @@ body{overflow-x:hidden}
       <div class="check-section">
         <h3>1. Fotos del vehículo <span style="color:#c33">*</span></h3>
         <p style="margin:0 0 14px;color:#71807a;font-size:13px">
-          Sacá las 4 fotos obligatorias: frente, trasera, lateral derecho y lateral izquierdo.
+          Sacá las 4 fotos obligatorias: frente, trasera, lateral derecho y lateral izquierdo. Para los dos laterales, girá el teléfono a horizontal; la app no permitirá tomar la foto hasta que lo hagas.
         </p>
 
         <div id="vehiclePhotosGrid" style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px"></div>
@@ -872,11 +877,12 @@ body{overflow-x:hidden}
       <div class="camera-label" id="cameraLabel">Cámara en vivo</div>
     </div>
     <div class="camera-error" id="cameraError"></div>
+    <div class="camera-orientation-warning" id="cameraOrientationWarning" role="status" aria-live="polite">📱 Para fotografiar el lateral, girá el teléfono a posición HORIZONTAL. El botón se habilitará cuando esté en esa posición.</div>
     <div class="camera-actions">
       <button type="button" class="camera-cancel" onclick="cerrarCamara()">CANCELAR</button>
       <button type="button" class="camera-capture" id="cameraCaptureBtn" onclick="capturarFotoEnVivo()" disabled>● TOMAR FOTO</button>
     </div>
-    <div class="camera-hint">La galería no está disponible para estas 4 fotos. Se captura una imagen nueva desde la cámara del dispositivo.</div>
+    <div class="camera-hint">La galería no está disponible para estas 4 fotos. Para los laterales es obligatorio sostener el teléfono en horizontal antes de tomar la imagen.</div>
   </div>
 </div>
 
@@ -1575,6 +1581,43 @@ let camaraKeyActual=null;
 let camaraLabelActual='';
 let camaraAbriendo=false;
 let camaraDestino='SALIDA';
+let camaraRequiereHorizontal=false;
+let camaraOrientacionHandler=null;
+
+function dispositivoEnHorizontal(){
+  // El viewport refleja la orientación real en los navegadores móviles modernos.
+  // En equipos de escritorio se considera horizontal para no bloquear las pruebas.
+  return window.innerWidth >= window.innerHeight;
+}
+
+function actualizarRequisitoOrientacion(){
+  if(!camaraRequiereHorizontal) return;
+  const horizontal=dispositivoEnHorizontal();
+  const aviso=$('cameraOrientationWarning');
+  const btn=$('cameraCaptureBtn');
+  const stage=document.querySelector('.camera-stage');
+  if(aviso) aviso.classList.toggle('visible',!horizontal);
+  if(stage) stage.classList.toggle('side-landscape-required',!horizontal);
+  if(btn){
+    btn.disabled=!horizontal || !camaraStream || !$('cameraVideo')?.videoWidth;
+    btn.textContent=horizontal?'● TOMAR FOTO':'↔ GIRÁ EL TELÉFONO';
+  }
+}
+
+function quitarControlOrientacion(){
+  if(camaraOrientacionHandler){
+    window.removeEventListener('resize',camaraOrientacionHandler);
+    window.removeEventListener('orientationchange',camaraOrientacionHandler);
+    camaraOrientacionHandler=null;
+  }
+  camaraRequiereHorizontal=false;
+  const aviso=$('cameraOrientationWarning');
+  const stage=document.querySelector('.camera-stage');
+  if(aviso) aviso.classList.remove('visible');
+  if(stage) stage.classList.remove('side-landscape-required');
+  const btn=$('cameraCaptureBtn');
+  if(btn) btn.textContent='● TOMAR FOTO';
+}
 
 async function abrirCamaraSalida(key,label){
   if(camaraAbriendo) return;
@@ -1582,6 +1625,13 @@ async function abrirCamaraSalida(key,label){
   camaraDestino='SALIDA';
   camaraKeyActual=key;
   camaraLabelActual=label;
+  quitarControlOrientacion();
+  camaraRequiereHorizontal=(key==='lateral_derecho'||key==='lateral_izquierdo');
+  if(camaraRequiereHorizontal){
+    camaraOrientacionHandler=()=>actualizarRequisitoOrientacion();
+    window.addEventListener('resize',camaraOrientacionHandler);
+    window.addEventListener('orientationchange',camaraOrientacionHandler);
+  }
 
   const modal=$('cameraModal');
   const video=$('cameraVideo');
@@ -1615,6 +1665,7 @@ async function abrirCamaraSalida(key,label){
     video.srcObject=camaraStream;
     await video.play();
     btn.disabled=false;
+    if(camaraRequiereHorizontal) actualizarRequisitoOrientacion();
   }catch(err){
     console.error('Cámara:',err);
     error.textContent='No se pudo abrir la cámara. Verificá el permiso de cámara del sitio y volvé a intentar.';
@@ -1628,6 +1679,7 @@ async function abrirCamaraSalida(key,label){
 async function abrirCamaraReporte(){
   if(camaraAbriendo) return;
   camaraAbriendo=true;
+  quitarControlOrientacion();
   camaraDestino='REPORTE';
   camaraKeyActual='reporte';
   camaraLabelActual='Foto de la falla';
@@ -1679,6 +1731,7 @@ function detenerCamara(){
 }
 
 function cerrarCamara(){
+  quitarControlOrientacion();
   detenerCamara();
   camaraKeyActual=null;
   camaraLabelActual='';
@@ -1689,6 +1742,12 @@ function cerrarCamara(){
 
 function capturarFotoEnVivo(){
   const key=camaraKeyActual;
+  if(camaraDestino==='SALIDA'&&(key==='lateral_derecho'||key==='lateral_izquierdo')&&!dispositivoEnHorizontal()){
+    actualizarRequisitoOrientacion();
+    const aviso=$('cameraOrientationWarning');
+    if(aviso) aviso.classList.add('visible');
+    return;
+  }
   const video=$('cameraVideo');
   const canvas=$('cameraCanvas');
   if(!video || !video.videoWidth || !video.videoHeight) return;
