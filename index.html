@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#073d2b">
 <link rel="manifest" href="./manifest.webmanifest">
 <title>Salida de Servicio · Logística Ambiental</title>
-<!-- V15: exige orientación horizontal para fotos laterales -->
+<!-- V17: cámara horizontal amplia y controles siempre visibles -->
 <style>
 :root{
   --green-950:#062d20;
@@ -593,83 +593,82 @@ body{overflow-x:hidden}
   .admin-botonera-wrap{max-width:960px}
 }
 
-/* V17 — cámara lateral amplia en horizontal, controles siempre accesibles */
+/* V17 — cámara lateral horizontal amplia, con controles siempre visibles */
 .camera-modal{
   display:flex;
   flex-direction:column;
-  max-height:calc(100dvh - 20px);
   min-height:0;
+  max-height:calc(100dvh - 20px);
 }
 .camera-stage{
-  flex:0 1 auto;
-  min-height:120px;
+  position:relative;
+  flex:1 1 auto;
+  min-height:150px;
+  height:auto;
+  aspect-ratio:auto;
+  background:#000;
+  overflow:hidden;
 }
-.camera-stage video{object-fit:contain}
+.camera-stage video{width:100%;height:100%;object-fit:contain;display:block}
+.camera-stage canvas{display:none}
 .camera-error:empty{display:none!important}
 .camera-orientation-warning{flex:0 0 auto}
 .camera-actions{flex:0 0 auto}
 .camera-hint{flex:0 0 auto}
+
+/* En horizontal, la cámara ocupa toda la pantalla como una cámara móvil */
 @media (orientation:landscape) and (max-height:650px){
-  .camera-modal-backdrop{padding:6px}
-  .camera-modal{
-    width:min(900px,calc(100vw - 12px));
-    max-height:calc(100dvh - 12px);
-    border-radius:14px;
+  .camera-modal-backdrop{
+    position:fixed;
+    inset:0;
+    padding:0;
+    align-items:stretch;
+    justify-content:stretch;
+    background:#000;
   }
-  .camera-head{padding:8px 12px;min-height:48px}
+  .camera-modal{
+    width:100vw;
+    height:100dvh;
+    max-height:100dvh;
+    min-height:0;
+    border-radius:0;
+    display:flex;
+    flex-direction:column;
+    overflow:hidden;
+  }
+  .camera-head{
+    flex:0 0 auto;
+    min-height:44px;
+    padding:6px 12px;
+  }
   .camera-head strong{font-size:14px}
   .camera-head small{font-size:10px}
   .camera-close{width:32px;height:32px;flex:0 0 32px}
   .camera-stage{
+    flex:1 1 auto;
+    width:100%;
+    min-height:0;
+    height:auto;
     aspect-ratio:auto;
-    height:clamp(100px,34dvh,230px);
-    min-height:100px;
-    flex:0 1 auto;
   }
-  .camera-stage video{object-fit:contain}
-  .camera-guide{inset:8% 12%}
-  .camera-label{left:8px;bottom:7px;padding:5px 7px;font-size:10px}
-  .camera-error{padding:6px 10px;font-size:11px}
-  .camera-orientation-warning{margin:0 8px 6px;padding:6px 8px;font-size:11px}
-  .camera-actions{padding:7px 9px;gap:8px}
-  .camera-actions button{height:40px;border-radius:10px}
-  .camera-hint{padding:0 9px 7px;font-size:9px;line-height:1.25}
+  .camera-stage video{width:100%;height:100%;object-fit:contain}
+  .camera-guide{inset:8% 10%;border-radius:12px}
+  .camera-label{left:10px;bottom:8px;padding:5px 7px;font-size:10px}
+  .camera-error{flex:0 0 auto;padding:5px 10px;font-size:11px}
+  .camera-orientation-warning{flex:0 0 auto;margin:0;padding:6px 10px;font-size:11px}
+  .camera-actions{
+    flex:0 0 auto;
+    display:grid;
+    grid-template-columns:0.8fr 1.2fr;
+    gap:8px;
+    padding:8px 10px;
+    background:#fff;
+  }
+  .camera-actions button{height:46px;border-radius:12px;font-size:14px}
+  .camera-hint{flex:0 0 auto;padding:0 10px 7px;background:#fff;font-size:9px;line-height:1.2}
 }
 
 </style>
-
-/* V17 — cámara lateral amplia en horizontal, controles siempre accesibles */
-.camera-modal-backdrop{padding:0;}
-.camera-modal{display:flex;flex-direction:column;min-height:0;max-height:calc(100dvh - 16px);}
-.camera-stage{position:relative;flex:1 1 auto;min-height:150px;aspect-ratio:auto;}
-.camera-stage video{width:100%;height:100%;object-fit:contain;}
-.camera-stage.side-camera-rotated video{
-  position:absolute;left:50%;top:50%;width:100dvh;height:100vw;
-  max-width:none;max-height:none;object-fit:cover;transform:translate(-50%,-50%) rotate(90deg);
-}
-@media (orientation:landscape){
-  .camera-modal-backdrop{padding:0;align-items:stretch;justify-content:stretch;}
-  .camera-modal{width:100vw;max-width:none;height:100dvh;max-height:100dvh;border-radius:0;}
-  .camera-head{flex:0 0 auto;padding:8px 14px;min-height:48px;}
-  .camera-head strong{font-size:14px;}
-  .camera-head small{font-size:10px;}
-  .camera-close{width:34px;height:34px;flex:0 0 34px;}
-  .camera-stage{flex:1 1 auto;width:100%;height:auto;min-height:0;aspect-ratio:auto;}
-  .camera-stage video{object-fit:contain;}
-  .camera-guide{inset:8% 12%;}
-  .camera-label{left:10px;bottom:8px;padding:5px 8px;font-size:11px;}
-  .camera-error{flex:0 0 auto;padding:6px 10px;font-size:11px;}
-  .camera-orientation-warning{flex:0 0 auto;margin:0;padding:5px 10px;font-size:10px;}
-  .camera-actions{flex:0 0 auto;grid-template-columns:0.8fr 1.4fr;padding:8px 10px;gap:10px;}
-  .camera-actions button{height:48px;border-radius:12px;font-size:15px;}
-  .camera-hint{flex:0 0 auto;padding:0 10px 6px;font-size:9px;line-height:1.2;}
-}
-@media (orientation:portrait){
-  .camera-modal{width:min(520px,100%);max-height:calc(100dvh - 16px);}
-  .camera-stage{flex:0 1 auto;aspect-ratio:3/4;min-height:120px;}
-  .camera-stage video{object-fit:contain;}
-}
-
 </head>
 <body>
 <div class="app">
@@ -1673,13 +1672,8 @@ function actualizarRequisitoOrientacion(){
   const aviso=$('cameraOrientationWarning');
   const btn=$('cameraCaptureBtn');
   const stage=document.querySelector('.camera-stage');
-  const video=$('cameraVideo');
   if(aviso) aviso.classList.toggle('visible',!horizontal);
-  if(stage){
-    stage.classList.toggle('side-landscape-required',!horizontal);
-    const needsRotate=horizontal && camaraRequiereHorizontal && video && video.videoHeight>video.videoWidth;
-    stage.classList.toggle('side-camera-rotated',!!needsRotate);
-  }
+  if(stage) stage.classList.toggle('side-landscape-required',!horizontal);
   if(btn){
     btn.disabled=!horizontal || !camaraStream || !$('cameraVideo')?.videoWidth;
     btn.textContent=horizontal?'● TOMAR FOTO':'↔ GIRÁ EL TELÉFONO';
@@ -1835,21 +1829,12 @@ function capturarFotoEnVivo(){
   if(!video || !video.videoWidth || !video.videoHeight) return;
 
   const maxW=1280;
-  const rotateSide = camaraDestino==='SALIDA' && (key==='lateral_derecho'||key==='lateral_izquierdo') && dispositivoEnHorizontal() && video.videoHeight>video.videoWidth;
-  const sourceW=video.videoWidth, sourceH=video.videoHeight;
-  const scale=Math.min(1,maxW/Math.max(sourceW,sourceH));
-  const drawW=Math.round(sourceW*scale), drawH=Math.round(sourceH*scale);
-  canvas.width=rotateSide?drawH:drawW;
-  canvas.height=rotateSide?drawW:drawH;
+  const scale=Math.min(1,maxW/video.videoWidth);
+  canvas.width=Math.round(video.videoWidth*scale);
+  canvas.height=Math.round(video.videoHeight*scale);
 
   const ctx=canvas.getContext('2d',{alpha:false});
-  if(rotateSide){
-    ctx.translate(canvas.width/2,canvas.height/2);
-    ctx.rotate(Math.PI/2);
-    ctx.drawImage(video,-drawW/2,-drawH/2,drawW,drawH);
-  }else{
-    ctx.drawImage(video,0,0,canvas.width,canvas.height);
-  }
+  ctx.drawImage(video,0,0,canvas.width,canvas.height);
 
   const capturedAt=new Date().toISOString();
   const dataUrl=canvas.toDataURL('image/jpeg',0.88);
