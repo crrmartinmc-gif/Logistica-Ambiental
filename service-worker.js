@@ -1,8 +1,8 @@
 /* ============================================================
    DIA VERDE - APP CHOFERES
-   SERVICE WORKER WEB V30
+   SERVICE WORKER WEB V31
    SIN FIREBASE / SIN FCM
-   Solo Background Sync de salidas
+   Background Sync de salidas con confirmación de 4 fotos
    ============================================================ */
 
 const BACKEND_URL = 'https://script.google.com/macros/s/AKfycbz0n4ZlW2p--nP2Wx0SnytyCRt_pL6RFxliEan0j1vUdSSrBrVNCbsTI7VC0JQWl5k9/exec';
@@ -10,100 +10,74 @@ const DB_NAME = 'DiaVerdeChoferBG';
 const DB_VERSION = 1;
 const STORE = 'salidas';
 
-self.addEventListener('install', event => {
-  event.waitUntil(self.skipWaiting());
-});
-
-self.addEventListener('activate', event => {
-  event.waitUntil(self.clients.claim());
-});
+self.addEventListener('install', event => { event.waitUntil(self.skipWaiting()); });
+self.addEventListener('activate', event => { event.waitUntil(self.clients.claim()); });
 
 function abrirDB(){
   return new Promise((resolve,reject)=>{
     const req = indexedDB.open(DB_NAME, DB_VERSION);
     req.onupgradeneeded = () => {
       const db = req.result;
-      if(!db.objectStoreNames.contains(STORE)){
-        db.createObjectStore(STORE,{keyPath:'opId'});
-      }
+      if(!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE,{keyPath:'opId'});
     };
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error || new Error('No se pudo abrir IndexedDB.'));
   });
 }
-
-async function leerPendientes(){
-  const db = await abrirDB();
-  return new Promise((resolve,reject)=>{
-    const tx = db.transaction(STORE,'readonly');
-    const req = tx.objectStore(STORE).getAll();
-    req.onsuccess = () => resolve(req.result || []);
-    req.onerror = () => reject(req.error || new Error('No se pudo leer la cola.'));
-  });
+function leerPendientes(){
+  return abrirDB().then(db=>new Promise((resolve,reject)=>{
+    const tx=db.transaction(STORE,'readonly');
+    const req=tx.objectStore(STORE).getAll();
+    req.onsuccess=()=>resolve(req.result||[]);
+    req.onerror=()=>reject(req.error||new Error('No se pudo leer la cola.'));
+  }));
 }
-
-async function borrarPendiente(opId){
-  const db = await abrirDB();
-  return new Promise((resolve,reject)=>{
-    const tx = db.transaction(STORE,'readwrite');
+function borrarPendiente(opId){
+  return abrirDB().then(db=>new Promise((resolve,reject)=>{
+    const tx=db.transaction(STORE,'readwrite');
     tx.objectStore(STORE).delete(opId);
-    tx.oncomplete = resolve;
-    tx.onerror = () => reject(tx.error || new Error('No se pudo borrar la cola.'));
-  });
+    tx.oncomplete=()=>resolve();
+    tx.onerror=()=>reject(tx.error||new Error('No se pudo borrar la cola.'));
+  }));
 }
-
+function validarConfirmacion(data){
+  if(data?.ok===false) throw new Error(data.error||data.resultado?.error||'El backend rechazó la salida.');
+  const fotos=data?.resultado?.FOTOS_SALIDA;
+  if(!fotos || Number(fotos.registradas)!==4 || (Array.isArray(fotos.errores)&&fotos.errores.length) || (Array.isArray(fotos.faltantes)&&fotos.faltantes.length)){
+    const detalle=[...(Array.isArray(fotos?.errores)?fotos.errores:[]),...(Array.isArray(fotos?.faltantes)?fotos.faltantes:[])].join(' | ');
+    throw new Error('No se confirmaron las cuatro fotos. La salida sigue pendiente.'+(detalle?' '+detalle:''));
+  }
+  return data;
+}
 async function procesarSalidas(){
-  const pendientes = await leerPendientes();
-
+  const pendientes=await leerPendientes();
   for(const item of pendientes){
     try{
-      const response = await fetch(BACKEND_URL,{
-        method:'POST',
-        headers:{'Content-Type':'text/plain;charset=utf-8'},
-        body:JSON.stringify(item.payload),
-        cache:'no-store'
+      const response=await fetch(BACKEND_URL,{
+        method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
+        body:JSON.stringify(item.payload),cache:'no-store'
       });
-
-      const text = await response.text();
+      const text=await response.text();
       if(!response.ok) throw new Error('Backend HTTP '+response.status);
-
       let data;
-      try{
-        data = JSON.parse(text);
-      }catch(e){
-        throw new Error('Respuesta del backend no válida.');
-      }
-
-      if(data?.ok === false){
-        throw new Error(data.error || data.resultado?.error || 'El backend rechazó la salida.');
-      }
-
+      try{data=JSON.parse(text);}catch(e){throw new Error('Respuesta del backend no válida.');}
+      validarConfirmacion(data);
+      // No borrar hasta confirmar cuatro evidencias guardadas.
       await borrarPendiente(item.opId);
-
-      const clientes = await self.clients.matchAll({type:'window',includeUncontrolled:true});
-      clientes.forEach(client=>{
-        client.postMessage({
-          type:'SALIDA_GUARDADA',
-          opId:item.opId,
-          data
-        });
-      });
+      const clientes=await self.clients.matchAll({type:'window',includeUncontrolled:true});
+      clientes.forEach(client=>client.postMessage({type:'SALIDA_GUARDADA',opId:item.opId,data}));
     }catch(error){
-      console.warn('[Dia Verde SW] salida pendiente:',item.opId,error);
-      // No borramos el registro. Background Sync volverá a intentarlo.
+      console.warn('[Dia Verde SW] salida/fotos pendientes:',item.opId,error);
+      const clientes=await self.clients.matchAll({type:'window',includeUncontrolled:true});
+      clientes.forEach(client=>client.postMessage({type:'SALIDA_PENDIENTE',opId:item.opId,error:String(error.message||error)}));
+      // Lanzar error para que Background Sync pueda reintentar. La cola no se borra.
       throw error;
     }
   }
 }
-
 self.addEventListener('sync',event=>{
-  if(event.tag === 'dia-verde-salidas'){
-    event.waitUntil(procesarSalidas().catch(()=>{}));
-  }
+  if(event.tag==='dia-verde-salidas') event.waitUntil(procesarSalidas().catch(()=>{}));
 });
-
 self.addEventListener('message',event=>{
-  if(event.data?.type === 'PROCESAR_SALIDAS_AHORA'){
-    event.waitUntil(procesarSalidas().catch(()=>{}));
-  }
+  if(event.data?.type==='PROCESAR_SALIDAS_AHORA') event.waitUntil(procesarSalidas().catch(()=>{}));
 });
