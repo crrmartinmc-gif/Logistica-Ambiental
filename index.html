@@ -1155,6 +1155,17 @@ async function encolarSalidaSegundoPlano(payload){
   return {ok:true,opId,pendiente:true};
 }
 
+function validarConfirmacionFotosSalida(data){
+  if(data?.ok===false) throw new Error(data.error||data.resultado?.error||'El backend rechazó la salida.');
+  const resultado=data?.resultado||data?.data?.resultado||{};
+  const fotos=resultado?.FOTOS_SALIDA;
+  if(!fotos || Number(fotos.registradas)!==4 || (Array.isArray(fotos.errores)&&fotos.errores.length>0) || (Array.isArray(fotos.faltantes)&&fotos.faltantes.length>0)){
+    const detalle=[...(Array.isArray(fotos?.errores)?fotos.errores:[]),...(Array.isArray(fotos?.faltantes)?fotos.faltantes:[])].join(' | ');
+    throw new Error('El viaje llegó al backend, pero no se confirmaron las 4 fotos. La copia local se conserva para reintentar.'+(detalle?' Detalle: '+detalle:''));
+  }
+  return data;
+}
+
 async function intentarEnviarPayloadDirecto(payload,opId=''){
   const controller=new AbortController();
   const timeout=setTimeout(()=>controller.abort(),25000);
@@ -1170,9 +1181,9 @@ async function intentarEnviarPayloadDirecto(payload,opId=''){
     if(!r.ok) throw new Error('Backend HTTP '+r.status);
     let data;
     try{data=JSON.parse(txt);}catch(e){throw new Error('El backend no devolvió JSON válido: '+String(txt).slice(0,160));}
-    if(data?.ok===false) throw new Error(data.error||data.resultado?.error||'El backend rechazó la salida.');
+    validarConfirmacionFotosSalida(data);
 
-    // Si llegó correctamente, eliminamos la copia pendiente de IndexedDB.
+    // Solo se elimina la copia local cuando el backend confirma las 4 fotos.
     if(opId){
       try{
         const db=await abrirDBSegundoPlano();
@@ -1215,7 +1226,7 @@ async function intentarEnviarSalidaDirecta(opId){
     if(!r.ok)throw new Error('HTTP '+r.status);
     const txt=await r.text();
     const data=JSON.parse(txt);
-    if(data?.ok===false)throw new Error(data.error||'Backend rechazó la operación');
+    validarConfirmacionFotosSalida(data);
     await new Promise((resolve,reject)=>{
       const tx=db.transaction(BG_STORE,'readwrite');
       tx.objectStore(BG_STORE).delete(opId);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);
@@ -2217,10 +2228,8 @@ async function iniciarViaje(){
       if(aviso){ aviso.textContent='⚠️ El viaje quedó guardado en este dispositivo. Se reintentará enviar al Panel cuando haya conexión.'; aviso.style.display='block'; }
     });
 
-    // Además, si existe Service Worker activo, pedimos procesamiento de la cola.
-    navigator.serviceWorker?.ready.then(reg=>{
-      if(reg?.active) reg.active.postMessage({type:'PROCESAR_SALIDAS_AHORA'});
-    }).catch(()=>{});
+    // La cola ya registró Background Sync al guardarse; evitamos disparar
+    // un segundo POST en paralelo al envío directo.
   }catch(err){
     a.textContent=err.message||'No se pudo guardar la salida localmente.';a.style.display='block';
     btn.disabled=false;btn.textContent='▶ INICIAR VIAJE';btn.onclick=iniciarViaje;
