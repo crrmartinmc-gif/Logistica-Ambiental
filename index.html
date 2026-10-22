@@ -2172,14 +2172,17 @@ function asegurarCampoKmFinal(){
 }
 
 async function iniciarViaje(){
+  // Evita doble toque / doble evento mientras se persiste la salida.
+  if(window.__iniciandoViajeDiaVerde===true) return;
+  window.__iniciandoViajeDiaVerde=true;
   const btn=$('finishInspectionBtn'),a=$('inspectionAlert');
   const km=parsearKilometraje($('currentKm').value);
   const fotos=window.__salidaFotos||{};
   const observacion=$('inspectionObs').value.trim();
   a.style.display='none';
-  if(contarFotosSalida()!==4){a.textContent='Tenés que cargar las 4 fotos obligatorias antes de iniciar el viaje.';a.style.display='block';return;}
-  if(km===null){a.textContent='Ingresá el kilometraje actual para poder iniciar el viaje.';a.style.display='block';$('currentKm').focus();return;}
-  if(!servicioEnInspeccion?.idAsignacion){a.textContent='La asignación del servicio no está disponible. Actualizá la aplicación e intentá nuevamente.';a.style.display='block';return;}
+  if(contarFotosSalida()!==4){a.textContent='Tenés que cargar las 4 fotos obligatorias antes de iniciar el viaje.';a.style.display='block';window.__iniciandoViajeDiaVerde=false;return;}
+  if(km===null){a.textContent='Ingresá el kilometraje actual para poder iniciar el viaje.';a.style.display='block';$('currentKm').focus();window.__iniciandoViajeDiaVerde=false;return;}
+  if(!servicioEnInspeccion?.idAsignacion){a.textContent='La asignación del servicio no está disponible. Actualizá la aplicación e intentá nuevamente.';a.style.display='block';window.__iniciandoViajeDiaVerde=false;return;}
 
   btn.disabled=true;btn.textContent='GUARDANDO…';
 
@@ -2225,10 +2228,13 @@ async function iniciarViaje(){
     try{ localStorage.setItem('diaVerdeServicioActivo',JSON.stringify({idServicio:servicioEnInspeccion.idServicio,idViaje:'',pendienteGuardado:true,opId:cola?.opId||''})); }catch(e){}
 
     configurarPantallaViajeRecuperado('Salida registrada localmente. Enviando al Panel de Control…');
-    btn.disabled=false;
+    btn.disabled=true;
 
     // ENVÍO DIRECTO INMEDIATO. No se espera antes de cambiar de pantalla.
-    intentarEnviarPayloadDirecto(payload,cola?.opId||'').catch(err=>{
+    intentarEnviarPayloadDirecto(payload,cola?.opId||'').then(()=>{
+      window.__iniciandoViajeDiaVerde=false;
+    }).catch(err=>{
+      window.__iniciandoViajeDiaVerde=false;
       console.warn('La salida quedó pendiente de sincronización:',err);
       const aviso=$('inspectionAlert');
       if(aviso){ aviso.textContent='⚠️ El viaje quedó guardado en este dispositivo. Se reintentará enviar al Panel cuando haya conexión.'; aviso.style.display='block'; }
@@ -2237,6 +2243,7 @@ async function iniciarViaje(){
     });
   }catch(err){
     a.textContent=err.message||'No se pudo guardar la salida localmente.';a.style.display='block';
+    window.__iniciandoViajeDiaVerde=false;
     btn.disabled=false;btn.textContent='▶ INICIAR VIAJE';btn.onclick=iniciarViaje;
   }
 }
