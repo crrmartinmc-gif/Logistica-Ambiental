@@ -62,7 +62,6 @@ async function procesarSalidas(){
       let data;
       try{data=JSON.parse(text);}catch(e){throw new Error('Respuesta del backend no válida.');}
       validarConfirmacion(data);
-      // No borrar hasta confirmar cuatro evidencias guardadas.
       await borrarPendiente(item.opId);
       const clientes=await self.clients.matchAll({type:'window',includeUncontrolled:true});
       clientes.forEach(client=>client.postMessage({type:'SALIDA_GUARDADA',opId:item.opId,data}));
@@ -70,7 +69,6 @@ async function procesarSalidas(){
       console.warn('[Dia Verde SW] salida/fotos pendientes:',item.opId,error);
       const clientes=await self.clients.matchAll({type:'window',includeUncontrolled:true});
       clientes.forEach(client=>client.postMessage({type:'SALIDA_PENDIENTE',opId:item.opId,error:String(error.message||error)}));
-      // Lanzar error para que Background Sync pueda reintentar. La cola no se borra.
       throw error;
     }
   }
