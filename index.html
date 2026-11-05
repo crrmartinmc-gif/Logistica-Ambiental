@@ -1354,7 +1354,54 @@ function cerrarSesion(){
   window.scrollTo({top:0,behavior:'smooth'});
 }
 
+function esChoferSecretaria(){ return String(session?.rol||'').trim().toUpperCase()==='CHOFER_SECRETARIA'; }
+let vehiculoSecretariaSeleccionado=null;
+let viajeSecretariaActivo=null;
+
+async function cargarDashboardSecretaria(){
+  $('dashboardScreen').classList.remove('hidden');
+  $('inspectionScreen').classList.add('hidden');
+  $('vehicleBox').classList.add('hidden');
+  const box=$('serviceBox'); box.classList.remove('hidden'); box.innerHTML='<div class="empty">Consultando vehículos de SECRETARÍA…</div>';
+  try{
+    const [vr,tr]=await Promise.all([getJson('listarVehiculosSecretaria'),getJson('listarViajesSecretaria')]);
+    const vehiculos=Array.isArray(vr.vehiculos)?vr.vehiculos:[];
+    const viajes=Array.isArray(tr.viajes)?tr.viajes:[];
+    viajeSecretariaActivo=viajes.find(v=>String(v.ID_CHOFER||'')===String(session.idChofer||'') && ['EN CURSO','ACTIVO','INICIADO'].includes(String(v.ESTADO||'').toUpperCase()))||null;
+    if(viajeSecretariaActivo){
+      vehiculoSecretariaSeleccionado=vehiculos.find(v=>String(v.ID_VEHICULO)===String(viajeSecretariaActivo.ID_VEHICULO))||{ID_VEHICULO:viajeSecretariaActivo.ID_VEHICULO,DOMINIO:'Unidad en viaje'};
+      box.innerHTML=`<h3>Tenés un viaje en curso</h3><p>Unidad: <strong>${escapeHtml(vehiculoSecretariaSeleccionado.DOMINIO||vehiculoSecretariaSeleccionado.INTERNO||'—')}</strong></p><button class="primary" type="button" onclick="continuarViajeSecretaria()">CONTINUAR / FINALIZAR VIAJE</button>`;
+      return;
+    }
+    if(!vehiculos.length){box.innerHTML='<div class="empty">No hay vehículos operativos disponibles en el área SECRETARÍA.</div>';return;}
+    box.innerHTML='<h3>Seleccioná la unidad con la que vas a salir</h3><p>Solo se muestran vehículos del área SECRETARÍA.</p><div class="secretaria-vehicles">'+vehiculos.map(v=>`<button class="secondary" style="display:block;width:100%;text-align:left;margin:8px 0;padding:14px" onclick="seleccionarVehiculoSecretaria('${String(v.ID_VEHICULO).replace(/[^a-zA-Z0-9_-]/g,'')}')"><strong>${escapeHtml(v.DOMINIO||'Sin dominio')} · ${escapeHtml(v.INTERNO||'')}</strong><br><small>${escapeHtml([v.MARCA,v.MODELO].filter(Boolean).join(' '))} · KM ${escapeHtml(v.KM_ACTUAL||'—')}</small></button>`).join('')+'</div>';
+    window.__vehiculosSecretaria=vehiculos;
+  }catch(err){box.innerHTML='<div class="empty">No se pudo cargar la flota: '+escapeHtml(err.message||'Error')+'. Actualizá la pantalla.</div>';}
+}
+
+function seleccionarVehiculoSecretaria(id){
+  const v=(window.__vehiculosSecretaria||[]).find(x=>String(x.ID_VEHICULO)===String(id));
+  if(!v)return; vehiculoSecretariaSeleccionado=v; servicioEnInspeccion={idServicio:'',idAsignacion:'',idUnidad:v.ID_VEHICULO,dominio:v.DOMINIO||'',estado:'PENDIENTE',idViaje:''};
+  $('serviceBox').classList.add('hidden'); $('inspectionScreen').classList.remove('hidden');
+  $('inspectionServiceLabel').textContent=(v.DOMINIO||v.INTERNO||'Vehículo')+' · '+[v.MARCA,v.MODELO].filter(Boolean).join(' ');
+  $('inspectionAlert').style.display='none'; window.__salidaFotos={frente:null,trasera:null,lateral_derecho:null,lateral_izquierdo:null};
+  $('inspectionStatus').className='status-banner pending'; $('inspectionStatus').innerHTML='📸 <strong>Preparando salida</strong> · 4 fotos + KM inicial obligatorios';
+  $('finishInspectionBtn').disabled=true; $('finishInspectionBtn').textContent='▶ INICIAR VIAJE'; $('finishInspectionBtn').onclick=iniciarViaje;
+  $('currentKm').value=''; $('currentKm').disabled=false; $('inspectionObs').value='';
+  const finalBox=document.getElementById('finalKmBox');if(finalBox)finalBox.remove(); construirFotosSalida(); actualizarEstadoInicio();
+  $('lastKmHint').textContent='KM registrado de la unidad: '+(v.KM_ACTUAL||'—');
+}
+
+function continuarViajeSecretaria(){
+  if(!viajeSecretariaActivo)return;
+  servicioEnInspeccion={idServicio:'',idAsignacion:'',idUnidad:viajeSecretariaActivo.ID_VEHICULO,idViaje:viajeSecretariaActivo.ID_VIAJE,estado:'EN VIAJE'};
+  $('serviceBox').classList.add('hidden');$('inspectionScreen').classList.remove('hidden');
+  $('inspectionServiceLabel').textContent='Viaje en curso · '+(vehiculoSecretariaSeleccionado?.DOMINIO||'Unidad');
+  mostrarModoViajeActivo(); $('finishInspectionBtn').onclick=finalizarViaje; $('finishInspectionBtn').textContent='FINALIZAR VIAJE';
+}
+
 async function cargarDashboard(opciones={}){
+  if(esChoferSecretaria()){ await cargarDashboardSecretaria(); return; }
   if(dashboardCargando) return;
   dashboardCargando=true;
   const idChofer=String(session?.idChofer||'').trim();
@@ -2172,6 +2219,7 @@ function asegurarCampoKmFinal(){
 }
 
 async function iniciarViaje(){
+  if(esChoferSecretaria()) return iniciarViajeSecretaria();
   // Evita doble toque / doble evento mientras se persiste la salida.
   if(window.__iniciandoViajeDiaVerde===true) return;
   window.__iniciandoViajeDiaVerde=true;
@@ -2248,12 +2296,44 @@ async function iniciarViaje(){
   }
 }
 
+async function iniciarViajeSecretaria(){
+  const btn=$('finishInspectionBtn'),a=$('inspectionAlert'),km=parsearKilometraje($('currentKm').value),f=window.__salidaFotos||{};
+  if(!vehiculoSecretariaSeleccionado?.ID_VEHICULO){a.textContent='Seleccioná un vehículo.';a.style.display='block';return;}
+  if(contarFotosSalida()!==4){a.textContent='Tenés que cargar las 4 fotos obligatorias.';a.style.display='block';return;}
+  if(km===null){a.textContent='Ingresá el kilometraje inicial.';a.style.display='block';return;}
+  btn.disabled=true;btn.textContent='GUARDANDO…';a.style.display='none';
+  try{
+    const res=await postJson({accion:'iniciarViajeSecretaria',idChofer:session.idChofer,idVehiculo:vehiculoSecretariaSeleccionado.ID_VEHICULO,kmInicial:km,observaciones:$('inspectionObs').value.trim(),fotos:{frente:f.frente?.dataUrl||'',trasera:f.trasera?.dataUrl||'',lateral_derecho:f.lateral_derecho?.dataUrl||'',lateral_izquierdo:f.lateral_izquierdo?.dataUrl||'',source:'LIVE_CAMERA'}});
+    const data=res?.resultado||res;if(!res?.ok||!data?.ok)throw new Error(res?.error||data?.error||'No se pudo registrar la salida.');
+    viajeSecretariaActivo=data.viaje||{ID_VIAJE:data.idViaje,ID_VEHICULO:vehiculoSecretariaSeleccionado.ID_VEHICULO,ID_CHOFER:session.idChofer,ESTADO:'EN CURSO'};
+    servicioEnInspeccion.idViaje=viajeSecretariaActivo.ID_VIAJE;servicioEnInspeccion.estado='EN VIAJE';
+    mostrarModoViajeActivo();$('finishInspectionBtn').onclick=finalizarViaje;$('finishInspectionBtn').textContent='FINALIZAR VIAJE';
+    $('inspectionAlert').textContent='Salida registrada correctamente. Al regresar, ingresá el KM final.';$('inspectionAlert').style.display='block';
+  }catch(err){a.textContent=err.message||'No se pudo iniciar el viaje.';a.style.display='block';btn.disabled=false;btn.textContent='▶ INICIAR VIAJE';}
+}
+
+async function finalizarViajeSecretaria(){
+  const btn=$('finishInspectionBtn'),a=$('inspectionAlert'),kmFinal=parsearKilometraje($('finalKm')?.value);
+  if(kmFinal===null){a.textContent='Ingresá el kilometraje final.';a.style.display='block';$('finalKm')?.focus();return;}
+  btn.disabled=true;btn.textContent='FINALIZANDO…';a.style.display='none';
+  try{
+    const idViaje=servicioEnInspeccion?.idViaje||viajeSecretariaActivo?.ID_VIAJE;
+    if(!idViaje)throw new Error('No se encontró el viaje activo.');
+    const res=await postJson({accion:'finalizarViajeSecretaria',idViaje,kmFinal,idChofer:session.idChofer,idVehiculo:vehiculoSecretariaSeleccionado?.ID_VEHICULO||servicioEnInspeccion?.idUnidad});
+    const data=res?.resultado||res;if(!res?.ok||!data?.ok)throw new Error(res?.error||data?.error||'No se pudo finalizar el viaje.');
+    viajeSecretariaActivo=null;a.textContent='Viaje finalizado correctamente. El kilometraje fue actualizado.';a.style.display='block';
+    $('inspectionStatus').className='status-banner ready';$('inspectionStatus').innerHTML='✅ <strong>Viaje finalizado</strong>';
+    btn.disabled=false;btn.textContent='VOLVER AL INICIO';btn.onclick=async()=>{await volverInicio();};
+  }catch(err){a.textContent=err.message||'No se pudo finalizar el viaje.';a.style.display='block';btn.disabled=false;btn.textContent='FINALIZAR VIAJE';}
+}
+
 function configurarPantallaViajeRecuperado(mensaje){
   mostrarModoViajeActivo();
   const a=$('inspectionAlert');a.textContent=mensaje||'El viaje está activo. Podés finalizarlo desde acá.';a.style.display='block';
 }
 
 async function finalizarViaje(){
+  if(esChoferSecretaria()) return finalizarViajeSecretaria();
   const btn=$('finishInspectionBtn'),a=$('inspectionAlert');
   const kmFinal=parsearKilometraje($('finalKm')?.value);
   if(kmFinal===null){a.textContent='Ingresá el kilometraje final para poder cerrar el servicio.';a.style.display='block';$('finalKm')?.focus();return;}
@@ -2547,6 +2627,9 @@ $('loginForm').addEventListener('submit',async e=>{
     $('topUser').classList.remove('hidden');$('loginScreen').classList.add('hidden');
     if(esAdminKmReportes()){
       await entrarInterfazAdmin();
+    }else if(esChoferSecretaria()){
+      await cargarDashboardSecretaria();
+      iniciarActualizacionAutomatica();
     }else{
       $('dashboardScreen').classList.remove('hidden');
       await cargarDashboard();
@@ -2569,6 +2652,10 @@ $('loginForm').addEventListener('submit',async e=>{
     $('loginScreen').classList.add('hidden');
     if(esAdminKmReportes()){
       entrarInterfazAdmin();
+    }else if(esChoferSecretaria()){
+      cargarDashboardSecretaria();
+      registrarServiceWorkerWeb().catch(()=>{});
+      iniciarActualizacionAutomatica();
     }else{
       $('dashboardScreen').classList.remove('hidden');
       cargarDashboard();
