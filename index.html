@@ -1274,8 +1274,12 @@ async function getJson(action, params={}, options={}){
     try{data=JSON.parse(text);}catch(e){throw new Error('El backend no devolvió JSON válido: '+String(text).slice(0,160));}
     if(data && data.ok===false) throw new Error(data.error||'El backend rechazó la consulta.');
 
-    // El Backend Maestro devuelve las lecturas generales dentro de "datos".
+    // El Backend Maestro devuelve las lecturas dentro de "datos".
+    // Para endpoints que devuelven objetos (p.ej. Secretaría), exponemos también sus propiedades.
     const datos = data?.datos;
+    if(datos && typeof datos === 'object' && !Array.isArray(datos)){
+      data = {...data, ...datos};
+    }
     if(Array.isArray(datos)){
       if(action==='listarChoferes') data={ok:true,choferes:datos};
       else if(action==='listarVehiculos') data={ok:true,vehiculos:datos};
@@ -1364,7 +1368,9 @@ async function cargarDashboardSecretaria(){
   $('vehicleBox').classList.add('hidden');
   const box=$('serviceBox'); box.classList.remove('hidden'); box.innerHTML='<div class="empty">Consultando vehículos de SECRETARÍA…</div>';
   try{
-    const [vr,tr]=await Promise.all([getJson('listarVehiculosSecretaria'),getJson('listarViajesSecretaria')]);
+    if(!session?.usuario || !session?.idChofer) throw new Error('La sesión no contiene usuario e ID de chofer. Cerrá sesión e ingresá nuevamente.');
+    const paramsSecretaria={usuario:String(session.usuario).trim(),idChofer:String(session.idChofer).trim()};
+    const [vr,tr]=await Promise.all([getJson('listarVehiculosSecretaria',paramsSecretaria,{force:true}),getJson('listarViajesSecretaria',paramsSecretaria,{force:true})]);
     const vehiculos=Array.isArray(vr.vehiculos)?vr.vehiculos:[];
     const viajes=Array.isArray(tr.viajes)?tr.viajes:[];
     viajeSecretariaActivo=viajes.find(v=>String(v.ID_CHOFER||'')===String(session.idChofer||'') && ['EN CURSO','ACTIVO','INICIADO'].includes(String(v.ESTADO||'').toUpperCase()))||null;
@@ -2303,7 +2309,7 @@ async function iniciarViajeSecretaria(){
   if(km===null){a.textContent='Ingresá el kilometraje inicial.';a.style.display='block';return;}
   btn.disabled=true;btn.textContent='GUARDANDO…';a.style.display='none';
   try{
-    const res=await postJson({accion:'iniciarViajeSecretaria',idChofer:session.idChofer,idVehiculo:vehiculoSecretariaSeleccionado.ID_VEHICULO,kmInicial:km,observaciones:$('inspectionObs').value.trim(),fotos:{frente:f.frente?.dataUrl||'',trasera:f.trasera?.dataUrl||'',lateral_derecho:f.lateral_derecho?.dataUrl||'',lateral_izquierdo:f.lateral_izquierdo?.dataUrl||'',source:'LIVE_CAMERA'}});
+    const res=await postJson({accion:'iniciarViajeSecretaria',usuario:session.usuario,idChofer:session.idChofer,idVehiculo:vehiculoSecretariaSeleccionado.ID_VEHICULO,kmInicial:km,observaciones:$('inspectionObs').value.trim(),fotos:{frente:f.frente?.dataUrl||'',trasera:f.trasera?.dataUrl||'',lateral_derecho:f.lateral_derecho?.dataUrl||'',lateral_izquierdo:f.lateral_izquierdo?.dataUrl||'',source:'LIVE_CAMERA'}});
     const data=res?.resultado||res;if(!res?.ok||!data?.ok)throw new Error(res?.error||data?.error||'No se pudo registrar la salida.');
     viajeSecretariaActivo=data.viaje||{ID_VIAJE:data.idViaje,ID_VEHICULO:vehiculoSecretariaSeleccionado.ID_VEHICULO,ID_CHOFER:session.idChofer,ESTADO:'EN CURSO'};
     servicioEnInspeccion.idViaje=viajeSecretariaActivo.ID_VIAJE;servicioEnInspeccion.estado='EN VIAJE';
@@ -2319,7 +2325,7 @@ async function finalizarViajeSecretaria(){
   try{
     const idViaje=servicioEnInspeccion?.idViaje||viajeSecretariaActivo?.ID_VIAJE;
     if(!idViaje)throw new Error('No se encontró el viaje activo.');
-    const res=await postJson({accion:'finalizarViajeSecretaria',idViaje,kmFinal,idChofer:session.idChofer,idVehiculo:vehiculoSecretariaSeleccionado?.ID_VEHICULO||servicioEnInspeccion?.idUnidad});
+    const res=await postJson({accion:'finalizarViajeSecretaria',usuario:session.usuario,idViaje,kmFinal,idChofer:session.idChofer,idVehiculo:vehiculoSecretariaSeleccionado?.ID_VEHICULO||servicioEnInspeccion?.idUnidad});
     const data=res?.resultado||res;if(!res?.ok||!data?.ok)throw new Error(res?.error||data?.error||'No se pudo finalizar el viaje.');
     viajeSecretariaActivo=null;a.textContent='Viaje finalizado correctamente. El kilometraje fue actualizado.';a.style.display='block';
     $('inspectionStatus').className='status-banner ready';$('inspectionStatus').innerHTML='✅ <strong>Viaje finalizado</strong>';
