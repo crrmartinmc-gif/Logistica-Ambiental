@@ -1386,6 +1386,7 @@ async function cargarDashboardSecretaria(){
 }
 
 function seleccionarVehiculoSecretaria(id){
+  if(dashboardTimer){clearInterval(dashboardTimer);dashboardTimer=null;}
   const v=(window.__vehiculosSecretaria||[]).find(x=>String(x.ID_VEHICULO)===String(id));
   if(!v)return; vehiculoSecretariaSeleccionado=v; servicioEnInspeccion={idServicio:'',idAsignacion:'',idUnidad:v.ID_VEHICULO,dominio:v.DOMINIO||'',estado:'PENDIENTE',idViaje:''};
   $('serviceBox').classList.add('hidden'); $('inspectionScreen').classList.remove('hidden');
@@ -1559,7 +1560,16 @@ async function cargarDashboard(opciones={}){
 function iniciarActualizacionAutomatica(){
   if(dashboardTimer) clearInterval(dashboardTimer);
   dashboardTimer=setInterval(()=>{
-    if(session && !$('dashboardScreen').classList.contains('hidden')) cargarDashboard();
+    if(!session || $('dashboardScreen').classList.contains('hidden')) return;
+    // En CHOFER_SECRETARIA no refrescar mientras el chofer está dentro
+    // de la inspección/salida: volver a consultar el dashboard ocultaba
+    // inspectionScreen y borraba la selección de la unidad.
+    if(esChoferSecretaria()){
+      if(!$('inspectionScreen').classList.contains('hidden')) return;
+      cargarDashboardSecretaria();
+      return;
+    }
+    cargarDashboard();
   },15000);
 }
 
