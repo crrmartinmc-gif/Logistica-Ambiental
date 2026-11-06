@@ -1634,6 +1634,14 @@ function convertirFotoDrive(url){
   return raw;
 }
 
+// Imágenes de unidades: archivos WebP ubicados en ./vehiculos_png/
+// El nombre del archivo coincide con el dominio, normalizado en mayúsculas.
+function fotoUnidadPorDominio(dominio){
+  const limpio=String(dominio||'').trim().toUpperCase().replace(/[^A-Z0-9]/g,'');
+  if(!limpio || limpio==='SINDOMINIO') return '';
+  return './vehiculos_png/'+encodeURIComponent(limpio)+'.webp';
+}
+
 function formatearKm(v){
   const n=String(v??'').trim();
   if(!n || n==='—') return '—';
@@ -1665,9 +1673,11 @@ function renderVehicle(a,v,estadoFlota){
   const dominio=v?.DOMINIO || v?.dominio || a.dominio || 'SIN DOMINIO';
   $('vehicleName').textContent=[v?.MARCA||v?.marca,v?.MODELO||v?.modelo].filter(Boolean).join(' ') || 'Vehículo';
   $('vehiclePlate').textContent=dominio;
-  const foto=convertirFotoDrive(v?.FOTO_URL||v?.fotoUrl);
+  const fotoDominio=fotoUnidadPorDominio(dominio);
+  const fotoRegistrada=convertirFotoDrive(v?.FOTO_URL||v?.fotoUrl);
+  const foto=fotoDominio||fotoRegistrada;
   $('vehiclePhoto').innerHTML=foto
-    ? `<img src="${escapeHtml(foto)}" alt="Foto de ${escapeHtml(dominio)}" onerror="this.parentElement.innerHTML='<span class=\"vehicle-placeholder\">🚛</span>'">`
+    ? `<img src="${escapeHtml(foto)}" alt="Foto de ${escapeHtml(dominio)}" data-fallback="${escapeHtml(fotoRegistrada)}" onerror="if(this.dataset.fallback && this.src!==this.dataset.fallback){this.onerror=null;this.src=this.dataset.fallback;}else{this.parentElement.innerHTML='<span class=\"vehicle-placeholder\">🚛</span>'}">`
     : '<span class="vehicle-placeholder">🚛</span>';
   const kmActual=estadoFlota?.km ?? estadoFlota?.kmActual ?? v?.KM_ACTUAL ?? v?.kmActual ?? '';
   $('vehicleKm').textContent=kmActual!==''?formatearKm(kmActual):'Se registra al iniciar';
