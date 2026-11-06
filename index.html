@@ -1161,6 +1161,53 @@ async function programarReintentoSalida(opId){
   intentarEnviarSalidaDirecta(opId).catch(()=>{});
 }
 
+// V32 — COLA DE FINALIZACIONES. Usa el mismo store para no migrar IndexedDB.
+async function encolarFinalizacionSegundoPlano(payload){
+  const id=String(payload?.idViaje||'').trim();
+  if(!id) throw new Error('No se puede guardar el cierre sin ID de viaje.');
+  const accion=String(payload.accion||'finalizarViaje');
+  const opId='FINALIZACION-'+accion+'-'+id;
+  const item={opId,tipo:'FINALIZACION',payload,createdAt:Date.now(),estado:'PENDIENTE'};
+  const db=await abrirDBSegundoPlano();
+  await new Promise((resolve,reject)=>{
+    const tx=db.transaction(BG_STORE,'readwrite');
+    tx.objectStore(BG_STORE).put(item);
+    tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error||new Error('No se pudo guardar el cierre localmente.'));
+  });
+  return {ok:true,opId,pendiente:true};
+}
+
+async function programarProcesamientoCola(opId){
+  try{
+    const reg=appServiceWorkerRegistration || await registrarServiceWorkerWeb();
+    if(reg?.sync && typeof reg.sync.register==='function'){
+      await reg.sync.register('dia-verde-salidas');
+      return;
+    }
+    const ready=await navigator.serviceWorker?.ready;
+    if(ready?.active){ready.active.postMessage({type:'PROCESAR_SALIDAS_AHORA'});return;}
+  }catch(e){console.warn('No se pudo activar Background Sync:',e);}
+  // Fallback cuando no hay Service Worker/Background Sync.
+  if(opId) intentarEnviarOperacionDirecta(opId).catch(()=>{});
+}
+
+async function intentarEnviarOperacionDirecta(opId){
+  const db=await abrirDBSegundoPlano();
+  const item=await new Promise((resolve,reject)=>{
+    const tx=db.transaction(BG_STORE,'readonly');const req=tx.objectStore(BG_STORE).get(opId);
+    req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);
+  });
+  if(!item)return;
+  const r=await fetch(BACKEND_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(item.payload),cache:'no-store',keepalive:true});
+  const txt=await r.text();if(!r.ok)throw new Error('Backend HTTP '+r.status);
+  let data;try{data=JSON.parse(txt);}catch(e){throw new Error('Respuesta del backend no válida.');}
+  if(data?.ok===false || data?.resultado?.ok===false || data?.data?.ok===false) throw new Error(data.error||data.resultado?.error||'El backend rechazó el cierre.');
+  await new Promise((resolve,reject)=>{const tx=db.transaction(BG_STORE,'readwrite');tx.objectStore(BG_STORE).delete(opId);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);});
+  limpiarCacheAPI('listarViajes','listarAsignaciones','listarServicios','listarVehiculos');
+  window.dispatchEvent(new CustomEvent('finalizacionGuardadaSegundoPlano',{detail:{opId,data}}));
+  return data;
+}
+
 function validarConfirmacionFotosSalida(data){
   if(data?.ok===false) throw new Error(data.error||data.resultado?.error||'El backend rechazó la salida.');
   const resultado=data?.resultado||data?.data?.resultado||{};
@@ -1247,10 +1294,14 @@ window.addEventListener('load',()=>{
       if(ev.data?.type==='SALIDA_GUARDADA'){
         limpiarCacheAPI('listarViajes','listarAsignaciones','listarServicios');
         console.info('Salida guardada en segundo plano:',ev.data.opId);
-        try{
-          if(typeof cargarDashboard==='function') cargarDashboard().catch(()=>{});
-        }catch(e){}
+        try{if(typeof cargarDashboard==='function') cargarDashboard().catch(()=>{});}catch(e){}
       }
+      if(ev.data?.type==='FINALIZACION_GUARDADA'){
+        limpiarCacheAPI('listarViajes','listarAsignaciones','listarServicios','listarVehiculos');
+        console.info('Finalización confirmada por el backend:',ev.data.opId);
+        try{if(typeof cargarDashboard==='function') cargarDashboard().catch(()=>{});}catch(e){}
+      }
+      if(ev.data?.type==='FINALIZACION_PENDIENTE') console.warn('Finalización pendiente:',ev.data.opId,ev.data.error);
     });
   }
 });
@@ -2331,16 +2382,20 @@ async function iniciarViajeSecretaria(){
 async function finalizarViajeSecretaria(){
   const btn=$('finishInspectionBtn'),a=$('inspectionAlert'),kmFinal=parsearKilometraje($('finalKm')?.value);
   if(kmFinal===null){a.textContent='Ingresá el kilometraje final.';a.style.display='block';$('finalKm')?.focus();return;}
-  btn.disabled=true;btn.textContent='FINALIZANDO…';a.style.display='none';
+  const idViaje=servicioEnInspeccion?.idViaje||viajeSecretariaActivo?.ID_VIAJE;
+  if(!idViaje){a.textContent='No se encontró el viaje activo. No se cerró el servicio.';a.style.display='block';return;}
+  const payload={accion:'finalizarViajeSecretaria',usuario:session.usuario,idViaje,kmFinal,idChofer:session.idChofer,idVehiculo:vehiculoSecretariaSeleccionado?.ID_VEHICULO||servicioEnInspeccion?.idUnidad};
+  btn.disabled=true;btn.textContent='GUARDANDO CIERRE…';a.style.display='none';
   try{
-    const idViaje=servicioEnInspeccion?.idViaje||viajeSecretariaActivo?.ID_VIAJE;
-    if(!idViaje)throw new Error('No se encontró el viaje activo.');
-    const res=await postJson({accion:'finalizarViajeSecretaria',usuario:session.usuario,idViaje,kmFinal,idChofer:session.idChofer,idVehiculo:vehiculoSecretariaSeleccionado?.ID_VEHICULO||servicioEnInspeccion?.idUnidad});
-    const data=res?.resultado||res;if(!res?.ok||!data?.ok)throw new Error(res?.error||data?.error||'No se pudo finalizar el viaje.');
-    viajeSecretariaActivo=null;a.textContent='Viaje finalizado correctamente. El kilometraje fue actualizado.';a.style.display='block';
+    const cola=await encolarFinalizacionSegundoPlano(payload);
+    viajeSecretariaActivo=null;
+    if(servicioEnInspeccion){servicioEnInspeccion.estado='FINALIZADO';servicioEnInspeccion.idViaje=idViaje;}
+    try{localStorage.removeItem('diaVerdeServicioActivo');}catch(e){}
     $('inspectionStatus').className='status-banner ready';$('inspectionStatus').innerHTML='✅ <strong>Viaje finalizado</strong>';
-    btn.disabled=false;btn.textContent='VOLVER AL INICIO';btn.onclick=async()=>{await volverInicio();};
-  }catch(err){a.textContent=err.message||'No se pudo finalizar el viaje.';a.style.display='block';btn.disabled=false;btn.textContent='FINALIZAR VIAJE';}
+    a.textContent='Cierre guardado en el dispositivo. El envío al Panel de Control continúa en segundo plano.';a.style.display='block';
+    volverInicioSinEsperar();
+    programarProcesamientoCola(cola.opId).catch(e=>console.warn('Cierre pendiente de sincronización:',e));
+  }catch(err){a.textContent=err.message||'No se pudo guardar el cierre en este dispositivo.';a.style.display='block';btn.disabled=false;btn.textContent='FINALIZAR VIAJE';}
 }
 
 function configurarPantallaViajeRecuperado(mensaje){
@@ -2353,7 +2408,7 @@ async function finalizarViaje(){
   const btn=$('finishInspectionBtn'),a=$('inspectionAlert');
   const kmFinal=parsearKilometraje($('finalKm')?.value);
   if(kmFinal===null){a.textContent='Ingresá el kilometraje final para poder cerrar el servicio.';a.style.display='block';$('finalKm')?.focus();return;}
-  btn.disabled=true;btn.textContent='FINALIZANDO…';a.style.display='none';
+  btn.disabled=true;btn.textContent='GUARDANDO CIERRE…';a.style.display='none';
   try{
     let idViaje=servicioEnInspeccion?.idViaje||'';
     if(!idViaje){
@@ -2362,16 +2417,25 @@ async function finalizarViaje(){
       const viaje=viajes.find(v=>String(v.ID_SERVICIO||'')===String(servicioEnInspeccion.idServicio||'')&&String(v.ID_CHOFER||'')===String(session.idChofer||'')&&['EN CURSO','ACTIVO','INICIADO'].includes(String(v.ESTADO||'').toUpperCase()));
       idViaje=viaje?.ID_VIAJE||'';
     }
-    if(!idViaje) throw new Error('No se encontró el viaje activo para finalizar.');
-    const res=await postJson({accion:'finalizarViaje',idViaje,kmFinal, idServicio:servicioEnInspeccion.idServicio,idChofer:session.idChofer,idVehiculo:servicioEnInspeccion.idUnidad||'',observaciones:''});
-    if(!res?.ok) throw new Error(res?.error||'No se pudo finalizar el viaje.');
+    if(!idViaje) throw new Error('No se encontró el viaje activo para finalizar. No se guardó el cierre.');
+    const payload={accion:'finalizarViaje',idViaje,kmFinal,idServicio:servicioEnInspeccion.idServicio,idChofer:session.idChofer,idVehiculo:servicioEnInspeccion.idUnidad||'',observaciones:''};
+    const cola=await encolarFinalizacionSegundoPlano(payload);
     servicioEnInspeccion.estado='FINALIZADO';servicioEnInspeccion.idViaje=idViaje;window.__servicioActual=servicioEnInspeccion;
     try{localStorage.removeItem('diaVerdeServicioActivo');}catch(e){}
-    $('inspectionStatus').className='status-banner ready';$('inspectionStatus').innerHTML='✅ <strong>Servicio finalizado</strong>';
-    a.innerHTML='¡Excelente trabajo! 👋<br><strong>Viaje finalizado y asignación cerrada.</strong>';a.style.display='block';
-    btn.textContent='VOLVER AL INICIO';btn.disabled=false;btn.onclick=async()=>{ btn.disabled=true; btn.textContent='ACTUALIZANDO…'; await volverInicio(); };
+    $('inspectionStatus').className='status-banner ready';$('inspectionStatus').innerHTML='✅ <strong>Cierre guardado</strong>';
+    a.textContent='¡Excelente trabajo! El cierre quedó guardado en el dispositivo y se enviará al Panel de Control en segundo plano.';a.style.display='block';
     const controlSection=document.querySelector('#inspectionScreen .vehicle-control-section');if(controlSection)controlSection.classList.add('hidden');
-  }catch(err){a.textContent=err.message||'No se pudo finalizar el viaje.';a.style.display='block';btn.disabled=false;btn.textContent='FINALIZAR SERVICIO';}
+    volverInicioSinEsperar();
+    programarProcesamientoCola(cola.opId).catch(e=>console.warn('Cierre pendiente de sincronización:',e));
+  }catch(err){a.textContent=err.message||'No se pudo guardar el cierre localmente.';a.style.display='block';btn.disabled=false;btn.textContent='FINALIZAR SERVICIO';}
+}
+
+function volverInicioSinEsperar(){
+  $('inspectionScreen').classList.add('hidden');
+  $('serviceBox').classList.remove('hidden');
+  window.scrollTo({top:0,behavior:'smooth'});
+  // La actualización visual no bloquea el regreso a la pantalla principal.
+  try{cargarDashboard().catch(err=>console.warn('Dashboard pendiente de actualizar:',err));}catch(e){}
 }
 
 async function volverInicio(){
