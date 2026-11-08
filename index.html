@@ -659,6 +659,97 @@ body{overflow-x:hidden}
 }
 
 </style>
+<style id="dia-verde-dark-command-center">
+/* ============================================================
+   DIA VERDE — REDISEÑO VISUAL DARK COMMAND CENTER
+   Capa visual aditiva. No modifica IDs, funciones ni flujos JS.
+   ============================================================ */
+:root{
+ --green-950:#06111b;--green-900:#091a28;--green-850:#0d2434;--green-800:#103449;
+ --green-700:#087f86;--green-500:#19c5c2;--green-100:#12343e;
+ --cream:#07131e;--white:#0d1e2b;--text:#e7f2f5;--muted:#91a8b4;--line:#203b4b;
+ --danger:#ff6575;--shadow:0 18px 50px rgba(0,0,0,.32);
+}
+html,body{background:radial-gradient(ellipse at 50% -20%,#12364a 0%,#07131e 52%,#050d15 100%);color:var(--text);color-scheme:dark}
+body{background-attachment:fixed}
+.topbar{height:70px;background:rgba(5,16,26,.92);border-bottom:1px solid rgba(56,205,211,.2);box-shadow:0 8px 30px rgba(0,0,0,.28);backdrop-filter:blur(16px)}
+.logo,.login-head .big-logo{background:linear-gradient(145deg,#1ce0d2,#087f86);color:#03151d;border:1px solid rgba(111,255,244,.4);box-shadow:0 0 24px rgba(25,197,194,.2)}
+.brand{letter-spacing:1px}.brand span{font-size:13px}.brand small{color:#9bbbc6;opacity:1;letter-spacing:1.3px;text-transform:uppercase}
+.avatar{background:#123d4b;color:#65eee5;border:1px solid #236273}
+.screen,.inspection-wrap,.admin-wrap,.admin-botonera-wrap{color:var(--text)}
+.welcome h1,.card-title h2,.vehicle h3,.vehicle-km strong,.info-row strong,.service-head h2,.route-point strong,.meta strong,.admin-botonera-head h1,.admin-botonera-title h2,.admin-panel h3,.admin-card h2,.admin-vehicle-selected strong,.admin-picker-item strong{color:#e9f7fa}
+.welcome p,.info-row span:first-child,.route-point small,.vehicle-control-help,.admin-botonera-head p,.admin-botonera-help,.admin-vehicle-selected span,.admin-picker-item small{color:var(--muted)}
+.eyebrow{color:#48d9d3;letter-spacing:1.5px}
+.status-pill,.optional-badge{background:#103b43;color:#6ce9df;border:1px solid #1e6870}
+.card,.login-card,.inspection-card,.admin-botonera-card,.admin-card{background:linear-gradient(155deg,rgba(17,39,54,.97),rgba(9,25,37,.98));border:1px solid #234354;box-shadow:0 14px 38px rgba(0,0,0,.25)}
+.card{border-radius:20px}.login-card{border-radius:24px}
+.login-head,.inspection-head,.service-head,.admin-picker-head{background:linear-gradient(120deg,#071925,#0d4655 62%,#087f86);border-bottom:1px solid rgba(64,226,220,.24)}
+.login-head p,.inspection-head p{color:#b5d1d9;opacity:1}
+.login-body{background:#0d1e2b}.field label,.modal-label,.admin-field label,.admin-report-fields label{color:#9cb5bf}
+.field input,.admin-field input,.admin-field select,.admin-field textarea,.admin-report-fields select,.admin-report-fields textarea,.modal-field input,.modal-field textarea,.admin-picker-search,.admin-km-line input,#currentKm,#inspectionObs{background:#091723!important;color:#e8f5f7!important;border:1px solid #2a4a5c!important}
+.field input::placeholder,input::placeholder,textarea::placeholder{color:#718c99}
+.field input:focus,.modal-field input:focus,.modal-field textarea:focus{border-color:#22d6d0;box-shadow:0 0 0 3px rgba(34,214,208,.12)}
+.primary,.modal-save,.admin-report-save,.admin-km-line button,.admin-picker-item .pick{background:linear-gradient(115deg,#087f86,#20c8c0);color:#03171d;box-shadow:0 8px 22px rgba(13,190,187,.18);font-weight:900}
+.primary:disabled{opacity:.42;filter:saturate(.5)}
+.secondary,.logout-btn,.admin-change-btn,.modal-cancel,.admin-report-cancel{background:#102737;color:#b8dfe3;border:1px solid #2c5365}
+.logout-btn{font-size:11px}.logout-btn:hover,.secondary:hover{background:#17394b}
+.vehicle{background:linear-gradient(145deg,#102c3b,#0b202e);border:1px solid #275365}
+.vehicle-photo{background:#07131e;box-shadow:inset 0 0 0 1px #28485a}
+.vehicle .plate{background:#07131e;border:1px solid #1c7880;color:#72f0e7;box-shadow:0 0 20px rgba(25,197,194,.12)}
+.vehicle-km,.meta,.empty,.admin-panel,.admin-subcat-box,.admin-status-botonera{background:#0a1b28;border:1px solid #203e4f;color:#a9c1ca}
+.vehicle-km span,.meta span{color:#69d9d5}
+.info-row{border-color:#203746}
+.service-card{border-color:#285263;background:#0b1c29}
+.route{background:#0b1c29}.dot{background:#28d4cb;box-shadow:0 0 0 5px rgba(40,212,203,.13)}
+.status-banner{background:#102532;border:1px solid #2b4a5a;color:#b8cbd1;box-shadow:none}
+.status-banner.ready,.status-banner.travel{background:#103a3b;border-color:#1c7774;color:#76eee0}
+.status-banner.pending{background:#142633;border-color:#34505e;color:#a9c1ca}
+.status-banner.warning{background:#3a3018;border-color:#80651f;color:#f2d27a}
+.inspection-card{overflow:hidden}.check-section,.vehicle-control-section{border-color:#203b4b}
+.check-section h3,.vehicle-control-head h3{color:#e4f4f6}
+.vehicle-photo-card{background:#0a1b28;border-color:#2b4a5a}
+.vehicle-photo-label{color:#cde5e9}.vehicle-photo-btn{background:#102b3b;border-color:#2a6170;color:#73e5df}
+.vehicle-photo-ok{color:#6fe4ca}
+.control-btn,.admin-action-btn,.admin-vehicle,.admin-picker-item,.choice-btn,.admin-choice-btn,.wheel-position{background:#0b1d2a;border:1px solid #254657;color:#d9edf0;box-shadow:0 6px 18px rgba(0,0,0,.18)}
+.control-btn:hover,.admin-action-btn:hover{border-color:#28bfc0;box-shadow:0 8px 24px rgba(0,0,0,.28)}
+.control-text strong,.admin-action-text strong,.wheel-position strong{color:#e4f6f7}.control-text span,.admin-action-text span{color:#91aab4}
+.control-chevron,.admin-action-arrow{color:#51d7d1}
+.control-brakes .control-icon{background:#43252e;color:#ff8794}.control-lights .control-icon{background:#413718;color:#f2d36c}.control-wheels .control-icon{background:#17344d;color:#79baff}.control-mechanical .control-icon{background:#30264a;color:#c1a1ff}.control-structural .control-icon{background:#49301f;color:#ffb477}.control-paint .control-icon{background:#153d32;color:#82e6a8}.control-vtv .control-icon{background:#26343d;color:#c5d4dc}
+.admin-action-km .admin-action-icon{background:#153d3c;color:#69e5dc}.admin-action-report .admin-action-icon{background:#49301f;color:#ffb477}.admin-action-vehicle .admin-action-icon{background:#17344d;color:#79baff}.admin-action-close .admin-action-icon{background:#26343d;color:#c5d4dc}
+.choice-btn.active,.admin-choice-btn.selected{background:linear-gradient(120deg,#087f86,#20bcb8);border-color:#35d8d0;color:#03171d;box-shadow:0 0 0 2px rgba(53,216,208,.13)}
+.choice-btn.state-good.active,.choice-btn.vtv-valid.active{background:#10463e;color:#8af0c4}.choice-btn.state-attention.active{background:#473818;color:#ffe08a}.choice-btn.state-critical.active,.choice-btn.vtv-expired.active{background:#4a202b;color:#ff9aa5}
+.wheel-state button{background:#0a1a26;border-color:#294555;color:#bfd2d8}
+.wheel-state button.active.good{background:#10463e;color:#8af0c4}.wheel-state button.active.attention{background:#473818;color:#ffe08a}.wheel-state button.active.critical{background:#4a202b;color:#ff9aa5}
+.vehicle-modal-backdrop,.admin-vehicle-picker{background:rgba(0,7,13,.82);backdrop-filter:blur(8px)}
+.vehicle-modal,.admin-picker-card{background:#0b1c29;border:1px solid #315264;color:#e4f4f6}
+.vehicle-modal-head{border-bottom:1px solid rgba(93,224,219,.18)}
+.modal-close,.admin-picker-head button{background:#163444;border-color:#396273;color:#d8f4f4}
+.modal-field input,.modal-field textarea{background:#081723}.report-photo{background:#0a1b28;border-color:#315363;color:#a9c1ca}
+.admin-badge{background:#103b43;color:#6ce9df}
+.admin-list{scrollbar-color:#285666 #0a1b28}
+.error{background:#421f29;color:#ff9ca7;border:1px solid #793744}
+.loading,.footer-note{color:#7895a2}
+.camera-modal-backdrop{background:rgba(0,5,10,.92);backdrop-filter:blur(8px)}
+.camera-modal{background:#081722;border:1px solid #315363;color:#e8f5f7}
+.camera-head{background:linear-gradient(120deg,#061521,#0b4653)}
+.camera-hint{color:#9bb5bf}.camera-cancel{background:#102737;color:#c4dce2;border-color:#315363}
+.camera-capture{background:linear-gradient(120deg,#087f86,#20c8c0);color:#03171d}
+.camera-orientation-warning{background:#3d3218;border-color:#8a6c20;color:#ffe08a}
+.inspection-alert{color:#cde7e9}
+.footer-note{letter-spacing:.5px}
+button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:2px solid #39d9d2;outline-offset:2px}
+@media(max-width:760px){
+ .topbar{height:62px}.screen{padding-top:18px}.welcome h1{font-size:24px}
+ .card,.admin-botonera-card{border-radius:17px}
+ .vehicle-photo{min-height:170px}.vehicle-photo img{height:170px}
+ .inspection-head h2{font-size:21px}
+ .check-section,.vehicle-control-section{padding:15px 12px}
+ .vehicle-photo-btn,.control-btn,.admin-action-btn{touch-action:manipulation}
+ .primary,.secondary,.vehicle-photo-btn,.admin-km-line button{min-height:48px}
+}
+@media(prefers-reduced-motion:no-preference){.card,.control-btn,.admin-action-btn,.primary,.secondary{transition:background .2s,border-color .2s,box-shadow .2s,transform .2s}}
+
+</style>
 </head>
 <body>
 <div class="app">
