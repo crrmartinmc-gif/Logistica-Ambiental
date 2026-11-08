@@ -750,6 +750,44 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
 @media(prefers-reduced-motion:no-preference){.card,.control-btn,.admin-action-btn,.primary,.secondary{transition:background .2s,border-color .2s,box-shadow .2s,transform .2s}}
 
 </style>
+\n
+<style id="fix-foto-vehiculo-v3">
+/* Foto de unidad: encuadre completo, centrado y fondo integrado */
+#vehiclePhoto.vehicle-photo{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  overflow:hidden!important;
+  height:280px!important;
+  min-height:280px!important;
+  padding:10px!important;
+  box-sizing:border-box!important;
+  background:#07131e!important;
+  border-radius:16px!important;
+}
+#vehiclePhoto.vehicle-photo img{
+  display:block!important;
+  flex:0 0 auto!important;
+  width:100%!important;
+  height:100%!important;
+  max-width:100%!important;
+  max-height:100%!important;
+  object-fit:contain!important;
+  object-position:center center!important;
+  margin:0 auto!important;
+  padding:0!important;
+  border:0!important;
+  background:transparent!important;
+}
+#vehiclePhoto .vehicle-placeholder{
+  display:flex;align-items:center;justify-content:center;
+  width:100%;height:100%;font-size:48px;color:#7ddbd6;
+}
+@media(max-width:760px){
+  #vehiclePhoto.vehicle-photo{height:230px!important;min-height:230px!important}
+}
+</style>
+
 </head>
 <body>
 <div class="app">
@@ -1730,7 +1768,34 @@ function convertirFotoDrive(url){
 function fotoUnidadPorDominio(dominio){
   const limpio=String(dominio||'').trim().toUpperCase().replace(/[^A-Z0-9]/g,'');
   if(!limpio || limpio==='SINDOMINIO') return '';
-  return './vehiculos_png/'+encodeURIComponent(limpio)+'.webp';
+  return './vehiculos_png/'+encodeURIComponent(limpio)+'.png';
+}
+
+// Elimina el blanco de las fotos PNG para integrarlas al fondo oscuro.
+function quitarFondoBlancoVehiculo(img){
+  try{
+    if(img.dataset.fondoProcesado==='1') return;
+    const w=img.naturalWidth,h=img.naturalHeight;
+    if(!w||!h) return;
+    const canvas=document.createElement('canvas');
+    canvas.width=w;canvas.height=h;
+    const ctx=canvas.getContext('2d',{willReadFrequently:true});
+    ctx.drawImage(img,0,0,w,h);
+    const frame=ctx.getImageData(0,0,w,h);
+    const px=frame.data;
+    for(let i=0;i<px.length;i+=4){
+      const r=px[i],g=px[i+1],bl=px[i+2];
+      const min=Math.min(r,g,bl),avg=(r+g+bl)/3;
+      if(min>242 && avg>248) px[i+3]=0;
+      else if(min>232 && avg>242) px[i+3]=Math.round(px[i+3]*Math.max(0,(248-avg)/6));
+    }
+    ctx.putImageData(frame,0,0);
+    img.dataset.fondoProcesado='1';
+    img.removeAttribute('onload');
+    img.src=canvas.toDataURL('image/png');
+  }catch(e){
+    // Si la imagen proviene de un origen que bloquea canvas, se conserva sin procesar.
+  }
 }
 
 function formatearKm(v){
@@ -1767,9 +1832,27 @@ function renderVehicle(a,v,estadoFlota){
   const fotoDominio=fotoUnidadPorDominio(dominio);
   const fotoRegistrada=convertirFotoDrive(v?.FOTO_URL||v?.fotoUrl);
   const foto=fotoDominio||fotoRegistrada;
-  $('vehiclePhoto').innerHTML=foto
-    ? `<img src="${escapeHtml(foto)}" alt="Foto de ${escapeHtml(dominio)}" data-fallback="${escapeHtml(fotoRegistrada)}" onerror="if(this.dataset.fallback && this.src!==this.dataset.fallback){this.onerror=null;this.src=this.dataset.fallback;}else{this.parentElement.innerHTML='<span class=\"vehicle-placeholder\">🚛</span>'}">`
-    : '<span class="vehicle-placeholder">🚛</span>';
+  const photoBox=$('vehiclePhoto');
+  photoBox.replaceChildren();
+  if(foto){
+    const img=document.createElement('img');
+    img.alt='Foto de '+dominio;
+    img.onload=()=>quitarFondoBlancoVehiculo(img);
+    img.onerror=()=>{
+      photoBox.replaceChildren();
+      const placeholder=document.createElement('span');
+      placeholder.className='vehicle-placeholder';
+      placeholder.textContent='🚛';
+      photoBox.appendChild(placeholder);
+    };
+    img.src=foto;
+    photoBox.appendChild(img);
+  }else{
+    const placeholder=document.createElement('span');
+    placeholder.className='vehicle-placeholder';
+    placeholder.textContent='🚛';
+    photoBox.appendChild(placeholder);
+  }
   const kmActual=estadoFlota?.km ?? estadoFlota?.kmActual ?? v?.KM_ACTUAL ?? v?.kmActual ?? '';
   $('vehicleKm').textContent=kmActual!==''?formatearKm(kmActual):'Se registra al iniciar';
 }
