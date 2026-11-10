@@ -788,6 +788,83 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
 }
 </style>
 
+
+<style id="secretaria-selector-layout">
+/* Ajustes exclusivos del selector de unidades para CHOFER_SECRETARIA */
+#dashboardScreen.secretaria-mode .welcome{align-items:center;margin-bottom:20px}
+#dashboardScreen.secretaria-mode .welcome h1{font-size:clamp(25px,3vw,32px)}
+#dashboardScreen.secretaria-mode .grid{
+  display:grid;grid-template-columns:minmax(0,1fr);gap:0;max-width:850px;margin:0 auto;
+}
+#dashboardScreen.secretaria-mode .grid>.card:first-child{display:none!important}
+#dashboardScreen.secretaria-mode .grid>.card:last-child{
+  width:100%;padding:clamp(16px,2.5vw,26px);border-radius:20px;
+}
+#dashboardScreen.secretaria-mode .grid>.card:last-child .card-title{margin-bottom:14px}
+#dashboardScreen.secretaria-mode .grid>.card:last-child .card-title h2{font-size:17px}
+#serviceBox.secretaria-content{
+  display:block;width:100%;padding:0;background:transparent;border:0;
+  color:var(--text);text-align:left;
+}
+.secretaria-selector-head{
+  display:flex;align-items:center;justify-content:space-between;gap:14px;
+  padding:5px 2px 17px;
+}
+.secretaria-kicker{display:block;color:#48d9d3;font-size:9px;font-weight:900;letter-spacing:1.5px;margin-bottom:6px}
+.secretaria-selector-head h3{margin:0;color:#e9f7fa;font-size:20px;line-height:1.2}
+.secretaria-selector-head p{margin:6px 0 0;color:#91a8b4;font-size:12px}
+.secretaria-count{
+  flex:0 0 auto;padding:8px 11px;border:1px solid #245866;border-radius:999px;
+  background:#10313e;color:#70e8e1;font-size:9px;font-weight:900;letter-spacing:.6px;
+}
+.secretaria-vehicles{
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;
+}
+.secretaria-vehicle-btn{
+  width:100%;min-width:0;min-height:86px;display:flex;align-items:center;gap:11px;
+  padding:13px;text-align:left;border:1px solid #294c5d;border-radius:14px;
+  background:linear-gradient(145deg,#112b3a,#0b1e2c);color:#e7f2f5;
+  cursor:pointer;transition:border-color .16s,transform .16s,background .16s;
+}
+.secretaria-vehicle-btn:hover{border-color:#28c9c5;background:linear-gradient(145deg,#153747,#102637);transform:translateY(-1px)}
+.secretaria-vehicle-btn:active{transform:scale(.99)}
+.secretaria-vehicle-symbol{
+  width:38px;height:38px;flex:0 0 38px;display:grid;place-items:center;
+  border-radius:11px;background:#103b46;border:1px solid #1c6870;
+  color:#6ce9df;font-size:18px;
+}
+.secretaria-vehicle-data{display:flex;flex:1;min-width:0;flex-direction:column;gap:3px}
+.secretaria-vehicle-data>strong{color:#e8f7f8;font-size:14px;line-height:1.15;letter-spacing:.3px;overflow-wrap:anywhere}
+.secretaria-vehicle-internal{color:#5fe0d9;font-size:9px;font-weight:900;letter-spacing:.55px}
+.secretaria-vehicle-data>small{color:#9ab1bb;font-size:10px;line-height:1.25;overflow-wrap:anywhere}
+.secretaria-vehicle-km{display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex:0 0 auto}
+.secretaria-vehicle-km small{font-size:8px;color:#7896a3;font-weight:800;letter-spacing:.4px}
+.secretaria-vehicle-km strong{font-size:10px;color:#c4dce1;white-space:nowrap}
+.secretaria-vehicle-arrow{color:#4bd8d2;font-size:24px;font-weight:500;line-height:1}
+.secretaria-loading{padding:24px;text-align:center;color:#9ab1bb;border:1px dashed #294c5d;border-radius:14px;background:#0a1b28;font-size:12px}
+#serviceBox.secretaria-content>.empty{
+  padding:24px;text-align:center;color:#a9c1ca;background:#0a1b28;border:1px dashed #294c5d;border-radius:14px;
+}
+#serviceBox.secretaria-content h3{color:#e9f7fa}
+#serviceBox.secretaria-content p{color:#91a8b4}
+@media(max-width:650px){
+  #dashboardScreen.secretaria-mode .welcome{display:flex;align-items:flex-start;gap:10px}
+  #dashboardScreen.secretaria-mode .welcome h1{font-size:23px}
+  #dashboardScreen.secretaria-mode .welcome p{max-width:330px}
+  #dashboardScreen.secretaria-mode .grid>.card:last-child{padding:15px;border-radius:17px}
+  .secretaria-vehicles{grid-template-columns:1fr;gap:8px}
+  .secretaria-vehicle-btn{min-height:78px;padding:11px}
+  .secretaria-selector-head h3{font-size:18px}
+  .secretaria-count{font-size:8px;padding:7px 9px}
+}
+@media(max-width:380px){
+  .secretaria-vehicle-btn{gap:8px;padding:9px}
+  .secretaria-vehicle-symbol{width:33px;height:33px;flex-basis:33px}
+  .secretaria-vehicle-data>strong{font-size:12px}
+  .secretaria-vehicle-km strong{font-size:9px}
+}
+</style>
+
 </head>
 <body>
 <div class="app">
@@ -1543,10 +1620,14 @@ let vehiculoSecretariaSeleccionado=null;
 let viajeSecretariaActivo=null;
 
 async function cargarDashboardSecretaria(){
+  $('dashboardScreen').classList.add('secretaria-mode');
   $('dashboardScreen').classList.remove('hidden');
   $('inspectionScreen').classList.add('hidden');
   $('vehicleBox').classList.add('hidden');
-  const box=$('serviceBox'); box.classList.remove('hidden'); box.innerHTML='<div class="empty">Consultando vehículos de SECRETARÍA…</div>';
+  const box=$('serviceBox');
+  box.classList.add('secretaria-content');
+  box.classList.remove('hidden');
+  box.innerHTML='<div class="secretaria-loading">Consultando vehículos de Secretaría…</div>';
   try{
     if(!session?.usuario || !session?.idChofer) throw new Error('La sesión no contiene usuario e ID de chofer. Cerrá sesión e ingresá nuevamente.');
     const paramsSecretaria={usuario:String(session.usuario).trim(),idChofer:String(session.idChofer).trim()};
@@ -1560,7 +1641,7 @@ async function cargarDashboardSecretaria(){
       return;
     }
     if(!vehiculos.length){box.innerHTML='<div class="empty">No hay vehículos operativos disponibles en el área SECRETARÍA.</div>';return;}
-    box.innerHTML='<h3>Seleccioná la unidad con la que vas a salir</h3><p>Solo se muestran vehículos del área SECRETARÍA.</p><div class="secretaria-vehicles">'+vehiculos.map(v=>`<button class="secondary" style="display:block;width:100%;text-align:left;margin:8px 0;padding:14px" onclick="seleccionarVehiculoSecretaria('${String(v.ID_VEHICULO).replace(/[^a-zA-Z0-9_-]/g,'')}')"><strong>${escapeHtml(v.DOMINIO||'Sin dominio')} · ${escapeHtml(v.INTERNO||'')}</strong><br><small>${escapeHtml([v.MARCA,v.MODELO].filter(Boolean).join(' '))} · KM ${escapeHtml(v.KM_ACTUAL||'—')}</small></button>`).join('')+'</div>';
+    box.innerHTML='<div class="secretaria-selector-head"><div><span class="secretaria-kicker">UNIDADES DISPONIBLES</span><h3>Seleccioná tu vehículo</h3><p>Unidades habilitadas para el área Secretaría.</p></div><span class="secretaria-count">'+vehiculos.length+' '+(vehiculos.length===1?'UNIDAD':'UNIDADES')+'</span></div><div class="secretaria-vehicles">'+vehiculos.map(v=>`<button class="secretaria-vehicle-btn" type="button" onclick="seleccionarVehiculoSecretaria('${String(v.ID_VEHICULO).replace(/[^a-zA-Z0-9_-]/g,'')}')"><span class="secretaria-vehicle-symbol">▰</span><span class="secretaria-vehicle-data"><strong>${escapeHtml(v.DOMINIO||'SIN DOMINIO')}</strong><span class="secretaria-vehicle-internal">INTERNO ${escapeHtml(v.INTERNO||'—')}</span><small>${escapeHtml([v.MARCA,v.MODELO].filter(Boolean).join(' ')||'Modelo no informado')}</small></span><span class="secretaria-vehicle-km"><small>KM ACTUAL</small><strong>${escapeHtml(formatearKm(v.KM_ACTUAL||'—'))}</strong></span><span class="secretaria-vehicle-arrow">›</span></button>`).join('')+'</div>';
     window.__vehiculosSecretaria=vehiculos;
   }catch(err){box.innerHTML='<div class="empty">No se pudo cargar la flota: '+escapeHtml(err.message||'Error')+'. Actualizá la pantalla.</div>';}
 }
@@ -1589,6 +1670,8 @@ function continuarViajeSecretaria(){
 
 async function cargarDashboard(opciones={}){
   if(esChoferSecretaria()){ await cargarDashboardSecretaria(); return; }
+  $('dashboardScreen').classList.remove('secretaria-mode');
+  $('serviceBox').classList.remove('secretaria-content');
   if(dashboardCargando) return;
   dashboardCargando=true;
   const idChofer=String(session?.idChofer||'').trim();
@@ -1745,8 +1828,9 @@ function iniciarActualizacionAutomatica(){
     // de la inspección/salida: volver a consultar el dashboard ocultaba
     // inspectionScreen y borraba la selección de la unidad.
     if(esChoferSecretaria()){
-      if(!$('inspectionScreen').classList.contains('hidden')) return;
-      cargarDashboardSecretaria();
+      // Secretaría no necesita repintar el selector cada 15 segundos:
+      // eso reiniciaba visualmente la lista mientras el chofer la consultaba.
+      // La consulta inicial y el flujo de inicio/finalización siguen intactos.
       return;
     }
     cargarDashboard();
