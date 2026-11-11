@@ -821,7 +821,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
   display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;
 }
 .secretaria-vehicle-btn{
-  width:100%;min-width:0;min-height:86px;display:flex;align-items:center;gap:11px;
+  width:100%;min-width:0;min-height:86px;display:flex;flex-wrap:wrap;align-items:center;gap:11px;
   padding:13px;text-align:left;border:1px solid #294c5d;border-radius:14px;
   background:linear-gradient(145deg,#112b3a,#0b1e2c);color:#e7f2f5;
   cursor:pointer;transition:border-color .16s,transform .16s,background .16s;
@@ -833,6 +833,14 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
   border-radius:11px;background:#103b46;border:1px solid #1c6870;
   color:#6ce9df;font-size:18px;
 }
+.secretaria-vehicle-photo{
+  display:flex;align-items:center;justify-content:center;flex:0 0 100%;height:130px;
+  border-radius:10px;background:radial-gradient(ellipse at center,#183d4b,transparent 75%);
+  overflow:hidden;
+}
+.secretaria-vehicle-photo img{display:block;width:100%;height:100%;object-fit:contain}
+.secretaria-vehicle-photo-fallback{display:flex;align-items:center;gap:8px;color:#91a8b4;font-size:11px}
+.secretaria-vehicle-photo-fallback[hidden]{display:none}
 .secretaria-vehicle-data{display:flex;flex:1;min-width:0;flex-direction:column;gap:3px}
 .secretaria-vehicle-data>strong{color:#e8f7f8;font-size:14px;line-height:1.15;letter-spacing:.3px;overflow-wrap:anywhere}
 .secretaria-vehicle-internal{color:#5fe0d9;font-size:9px;font-weight:900;letter-spacing:.55px}
@@ -1641,9 +1649,39 @@ async function cargarDashboardSecretaria(){
       return;
     }
     if(!vehiculos.length){box.innerHTML='<div class="empty">No hay vehículos operativos disponibles en el área SECRETARÍA.</div>';return;}
-    box.innerHTML='<div class="secretaria-selector-head"><div><span class="secretaria-kicker">UNIDADES DISPONIBLES</span><h3>Seleccioná tu vehículo</h3><p>Unidades habilitadas para el área Secretaría.</p></div><span class="secretaria-count">'+vehiculos.length+' '+(vehiculos.length===1?'UNIDAD':'UNIDADES')+'</span></div><div class="secretaria-vehicles">'+vehiculos.map(v=>`<button class="secretaria-vehicle-btn" type="button" onclick="seleccionarVehiculoSecretaria('${String(v.ID_VEHICULO).replace(/[^a-zA-Z0-9_-]/g,'')}')"><span class="secretaria-vehicle-symbol">▰</span><span class="secretaria-vehicle-data"><strong>${escapeHtml(v.DOMINIO||'SIN DOMINIO')}</strong><span class="secretaria-vehicle-internal">INTERNO ${escapeHtml(v.INTERNO||'—')}</span><small>${escapeHtml([v.MARCA,v.MODELO].filter(Boolean).join(' ')||'Modelo no informado')}</small></span><span class="secretaria-vehicle-km"><small>KM ACTUAL</small><strong>${escapeHtml(formatearKm(v.KM_ACTUAL||'—'))}</strong></span><span class="secretaria-vehicle-arrow">›</span></button>`).join('')+'</div>';
+    box.innerHTML='<div class="secretaria-selector-head"><div><span class="secretaria-kicker">UNIDADES DISPONIBLES</span><h3>Seleccioná tu vehículo</h3><p>Unidades habilitadas para el área Secretaría.</p></div><span class="secretaria-count">'+vehiculos.length+' '+(vehiculos.length===1?'UNIDAD':'UNIDADES')+'</span></div><div class="secretaria-vehicles">'+vehiculos.map(v=>`<button class="secretaria-vehicle-btn" type="button" onclick="seleccionarVehiculoSecretaria('${String(v.ID_VEHICULO).replace(/[^a-zA-Z0-9_-]/g,'')}')"><span class="secretaria-vehicle-photo" data-vehicle-photo></span><span class="secretaria-vehicle-data"><strong>${escapeHtml(v.DOMINIO||'SIN DOMINIO')}</strong><span class="secretaria-vehicle-internal">INTERNO ${escapeHtml(v.INTERNO||'—')}</span><small>${escapeHtml([v.MARCA,v.MODELO].filter(Boolean).join(' ')||'Modelo no informado')}</small></span><span class="secretaria-vehicle-km"><small>KM ACTUAL</small><strong>${escapeHtml(formatearKm(v.KM_ACTUAL||'—'))}</strong></span><span class="secretaria-vehicle-arrow">›</span></button>`).join('')+'</div>';
+    box.querySelectorAll('[data-vehicle-photo]').forEach((photoBox,index)=>{
+      mostrarFotoSecretaria(photoBox,vehiculos[index]);
+    });
     window.__vehiculosSecretaria=vehiculos;
   }catch(err){box.innerHTML='<div class="empty">No se pudo cargar la flota: '+escapeHtml(err.message||'Error')+'. Actualizá la pantalla.</div>';}
+}
+
+function mostrarFotoSecretaria(photoBox,vehiculo){
+  const dominio=vehiculo.DOMINIO||'';
+  const fotoLocal=fotoUnidadPorDominio(dominio);
+  const fotoRegistrada=convertirFotoDrive(vehiculo.FOTO_URL||vehiculo.fotoUrl);
+  const placeholder=document.createElement('span');
+  placeholder.className='secretaria-vehicle-photo-fallback';
+  placeholder.textContent='▰ Foto no disponible';
+  photoBox.appendChild(placeholder);
+  if(!fotoLocal && !fotoRegistrada) return;
+  const img=document.createElement('img');
+  img.alt='Foto de la unidad '+(dominio||vehiculo.INTERNO||'sin dominio');
+  img.loading='lazy';
+  img.decoding='async';
+  placeholder.hidden=true;
+  img.onload=()=>quitarFondoBlancoVehiculo(img);
+  img.onerror=()=>{
+    if(fotoRegistrada && img.getAttribute('src')!==fotoRegistrada){
+      img.src=fotoRegistrada;
+      return;
+    }
+    img.remove();
+    placeholder.hidden=false;
+  };
+  img.src=fotoLocal||fotoRegistrada;
+  photoBox.appendChild(img);
 }
 
 function seleccionarVehiculoSecretaria(id){
