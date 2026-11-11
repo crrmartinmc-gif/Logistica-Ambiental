@@ -877,13 +877,23 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
 .brand .municipal-brand span{white-space:normal;overflow:visible;text-overflow:clip;max-width:none;font-size:clamp(10px,2.5vw,13px);line-height:1.35}
 .brand .municipal-brand small{font-size:clamp(9px,2.2vw,11px);line-height:1.35}
 </style>
+<style>
+.topbar{height:auto;min-height:70px;gap:12px;flex-wrap:wrap;padding-top:10px;padding-bottom:10px}
+.municipal-logo{position:relative;overflow:hidden;background:white;border-radius:7px;width:160px;aspect-ratio:1860/510;flex:0 0 auto}
+.municipal-logo img{position:absolute;width:107.527%;height:auto;max-width:none;left:-3.226%;top:-76.471%}
+@media(max-width:600px){
+  .topbar .brand{flex-wrap:wrap;gap:8px 12px}
+  .municipal-logo{width:120px}
+  .topbar .userbar{margin-left:auto}
+}
+</style>
 </head>
 <body>
 <div class="app">
 
 <header class="topbar">
   <div class="brand">
-    <div class="logo">♻</div>
+    <div class="municipal-logo"><img src="./ambiente-lomas.png" alt="Ambiente Lomas" width="2000" height="2000"></div>
     <div class="municipal-brand"><span>DIRECCION MUNICIPAL DE</span><small>LOGISTICA AMBIENTAL</small></div>
   </div>
   <div class="userbar hidden" id="topUser">
