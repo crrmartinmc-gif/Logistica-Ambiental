@@ -840,6 +840,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
   overflow:hidden;
 }
 .secretaria-vehicle-photo img{display:block;width:100%;height:100%;object-fit:contain;transform:scale(1.4)}
+.secretaria-vehicle-photo img.secretaria-photo-cronos{transform:scale(1.08)}
 .secretaria-vehicle-photo-fallback{display:flex;align-items:center;gap:8px;color:#91b4a0;font-size:11px}
 .secretaria-vehicle-photo-fallback[hidden]{display:none}
 .secretaria-vehicle-data{display:flex;flex:1;min-width:0;flex-direction:column;gap:3px}
@@ -1745,6 +1746,7 @@ function mostrarFotoSecretaria(photoBox,vehiculo){
   photoBox.appendChild(placeholder);
   if(!fotoLocal && !fotoRegistrada) return;
   const img=document.createElement('img');
+  if(dominioUnidad(dominio).replace(/[^A-Z0-9]/g,'')==='AE807UI')img.classList.add('secretaria-photo-cronos');
   img.alt='Foto de la unidad '+(dominio||vehiculo.INTERNO||'sin dominio');
   img.loading='lazy';
   img.decoding='async';
