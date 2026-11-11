@@ -873,6 +873,10 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
 }
 </style>
 
+<style>
+.brand .municipal-brand span{white-space:normal;overflow:visible;text-overflow:clip;max-width:none;font-size:clamp(10px,2.5vw,13px);line-height:1.35}
+.brand .municipal-brand small{font-size:clamp(9px,2.2vw,11px);line-height:1.35}
+</style>
 </head>
 <body>
 <div class="app">
@@ -880,7 +884,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
 <header class="topbar">
   <div class="brand">
     <div class="logo">♻</div>
-    <div><span>SALIDA DE SERVICIO</span><small>Logística Ambiental</small></div>
+    <div class="municipal-brand"><span>DIRECCION MUNICIPAL DE</span><small>LOGISTICA AMBIENTAL</small></div>
   </div>
   <div class="userbar hidden" id="topUser">
     <span id="topUserName"></span><button class="logout-btn" type="button" onclick="cerrarSesion()">SALIR</button><div class="avatar" id="avatar">C</div>
