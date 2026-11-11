@@ -20,3 +20,8 @@
 @media(max-width:420px){.vehicle-id-row{gap:12px}.unit-documents-button{justify-content:center;width:100%}.unit-documents-head,.unit-documents-body{padding:16px}.unit-documents-head h2{font-size:18px}}
 
 .unit-documents-links strong{display:flex;align-items:center;justify-content:space-between;gap:12px}.unit-documents-links strong svg{width:18px;height:18px;flex:0 0 18px}
+.secretaria-vehicle-card{display:flex;flex-direction:column;min-width:0;overflow:hidden;border:1px solid #c4e1d0;border-radius:14px;background:linear-gradient(135deg,#fff,#e7f6ee)}
+.secretaria-vehicle-card>.secretaria-vehicle-btn{border:0;border-radius:0;flex:1 1 auto;background:transparent}
+.secretaria-vehicle-card>.secretaria-vehicle-btn:hover{transform:none;box-shadow:none}
+.secretaria-vehicle-card:hover{border-color:#56af7b}
+.secretaria-vehicle-card>.secretaria-documents-button{margin:0 12px 12px;width:calc(100% - 24px);justify-content:center;font-size:11px}

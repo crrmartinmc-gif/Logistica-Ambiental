@@ -2,6 +2,7 @@
    Actualizar documentos-unidad.json cuando se agreguen o reemplacen archivos. */
 (function(){
   let unidadActual='';
+  let dominioAbierto='';
   let indice=null;
   let dialogo=null;
   let focoAnterior=null;
@@ -36,9 +37,10 @@
       .catch(error=>{indice=null;throw error;});
     return indice;
   }
-  boton.addEventListener('click',async()=>{
-    if(!unidadActual)return;
-    const dominio=unidadActual;
+  window.abrirDocumentosUnidad=async function(valor){
+    const dominio=patente(valor);
+    if(!dominio || dominio==='SINDOMINIO')return;
+    dominioAbierto=dominio;
     const modal=crearDialogo();
     focoAnterior=document.activeElement;
     document.getElementById('unitDocumentsPlate').textContent='Unidad '+dominio;
@@ -47,7 +49,7 @@
     if(!modal.open)modal.showModal();
     try{
       const unidades=await cargarIndice();
-      if(!modal.open || unidadActual!==dominio)return;
+      if(!modal.open || dominioAbierto!==dominio)return;
       const documentos=(Array.isArray(unidades[dominio])?unidades[dominio]:[])
         .filter(d=>['cedula','poliza','titulo'].includes(d.tipo)&&/^[a-zA-Z0-9_-]+$/.test(d.id));
       const tipos={cedula:'Cédula',poliza:'Póliza de seguro',titulo:'Título de la unidad'};
@@ -68,7 +70,12 @@
         faltantes.length?'Disponible en Drive. Falta vincular: '+faltantes.map(tipo=>tipos[tipo].toLowerCase()).join(' y ')+'.':
         'Abrí el documento que necesitás consultar.';
     }catch(e){
-      if(modal.open && unidadActual===dominio)estado.textContent='No se pudieron cargar los documentos. Revisá la conexión y volvé a intentar.';
+      if(modal.open && dominioAbierto===dominio)estado.textContent='No se pudieron cargar los documentos. Revisá la conexión y volvé a intentar.';
     }
+  };
+  boton.addEventListener('click',()=>window.abrirDocumentosUnidad(unidadActual));
+  document.addEventListener('click',event=>{
+    const acceso=event.target.closest?.('[data-unit-documents]');
+    if(acceso){event.preventDefault();window.abrirDocumentosUnidad(acceso.dataset.unitDocuments);}
   });
 })();

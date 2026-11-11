@@ -959,7 +959,7 @@ html,body{color-scheme:light;color:var(--text);background:linear-gradient(135deg
 button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline-color:#25834f}
 </style>
 
-<link rel="stylesheet" href="./documentos-unidad.css?v=1">
+<link rel="stylesheet" href="./documentos-unidad.css?v=2">
 </head>
 <body>
 <div class="app">
@@ -1277,7 +1277,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
    La estructura de notificaciones queda para una futura APK.
    ============================================================ */
 </script>
-<script src="./documentos-unidad.js?v=1"></script>
+<script src="./documentos-unidad.js?v=2"></script>
 <script src="./operaciones-viaje.js?v=1"></script>
 <script>
 const BACKEND_URL = "https://script.google.com/macros/s/AKfycbz0n4ZlW2p--nP2Wx0SnytyCRt_pL6RFxliEan0j1vUdSSrBrVNCbsTI7VC0JQWl5k9/exec";
@@ -1706,7 +1706,7 @@ async function cargarDashboardSecretaria(){
       return;
     }
     if(!vehiculos.length){box.innerHTML='<div class="empty">No hay vehículos operativos disponibles en el área SECRETARÍA.</div>';return;}
-    box.innerHTML='<div class="secretaria-selector-head"><div><span class="secretaria-kicker">UNIDADES DISPONIBLES</span><h3>Seleccioná tu vehículo</h3><p>Unidades habilitadas para el área Secretaría.</p></div><span class="secretaria-count">'+vehiculos.length+' '+(vehiculos.length===1?'UNIDAD':'UNIDADES')+'</span></div><div class="secretaria-vehicles">'+vehiculos.map(v=>`<button class="secretaria-vehicle-btn" type="button" onclick="seleccionarVehiculoSecretaria('${String(v.ID_VEHICULO).replace(/[^a-zA-Z0-9_-]/g,'')}')"><span class="secretaria-vehicle-photo" data-vehicle-photo></span><span class="secretaria-vehicle-data"><strong>${escapeHtml(v.DOMINIO||'SIN DOMINIO')}</strong><span class="secretaria-vehicle-internal">INTERNO ${escapeHtml(v.INTERNO||'—')}</span><small>${escapeHtml([v.MARCA,v.MODELO].filter(Boolean).join(' ')||'Modelo no informado')}</small></span><span class="secretaria-vehicle-km"><small>KM ACTUAL</small><strong>${escapeHtml(formatearKm(v.KM_ACTUAL||'—'))}</strong></span><span class="secretaria-vehicle-arrow">›</span></button>`).join('')+'</div>';
+    box.innerHTML='<div class="secretaria-selector-head"><div><span class="secretaria-kicker">UNIDADES DISPONIBLES</span><h3>Seleccioná tu vehículo</h3><p>Unidades habilitadas para el área Secretaría.</p></div><span class="secretaria-count">'+vehiculos.length+' '+(vehiculos.length===1?'UNIDAD':'UNIDADES')+'</span></div><div class="secretaria-vehicles">'+vehiculos.map(v=>`<div class="secretaria-vehicle-card"><button class="secretaria-vehicle-btn" type="button" onclick="seleccionarVehiculoSecretaria('${String(v.ID_VEHICULO).replace(/[^a-zA-Z0-9_-]/g,'')}')"><span class="secretaria-vehicle-photo" data-vehicle-photo></span><span class="secretaria-vehicle-data"><strong>${escapeHtml(v.DOMINIO||'SIN DOMINIO')}</strong><span class="secretaria-vehicle-internal">INTERNO ${escapeHtml(v.INTERNO||'—')}</span><small>${escapeHtml([v.MARCA,v.MODELO].filter(Boolean).join(' ')||'Modelo no informado')}</small></span><span class="secretaria-vehicle-km"><small>KM ACTUAL</small><strong>${escapeHtml(formatearKm(v.KM_ACTUAL||'—'))}</strong></span><span class="secretaria-vehicle-arrow">›</span></button><button type="button" class="unit-documents-button secretaria-documents-button" data-unit-documents="${escapeHtml(dominioUnidad(v.DOMINIO||''))}" aria-label="Documentos de la unidad ${escapeHtml(dominioUnidad(v.DOMINIO||''))}">Documentos de la unidad</button></div>`).join('')+'</div>';
     box.querySelectorAll('[data-vehicle-photo]').forEach((photoBox,index)=>{
       mostrarFotoSecretaria(photoBox,vehiculos[index]);
     });
