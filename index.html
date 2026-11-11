@@ -1268,6 +1268,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
    La estructura de notificaciones queda para una futura APK.
    ============================================================ */
 </script>
+<script src="./operaciones-viaje.js?v=1"></script>
 <script>
 const BACKEND_URL = "https://script.google.com/macros/s/AKfycbz0n4ZlW2p--nP2Wx0SnytyCRt_pL6RFxliEan0j1vUdSSrBrVNCbsTI7VC0JQWl5k9/exec";
 
@@ -1285,8 +1286,7 @@ let appServiceWorkerRegistration = null;
 async function registrarServiceWorkerWeb(){
   if(!('serviceWorker' in navigator)) return null;
   try{
-    appServiceWorkerRegistration = await navigator.serviceWorker.register('./service-worker.js',{scope:'./'});
-    await navigator.serviceWorker.ready;
+    appServiceWorkerRegistration = await navigator.serviceWorker.register('./service-worker.js',{scope:'./',updateViaCache:'none'});
     return appServiceWorkerRegistration;
   }catch(err){
     console.warn('Service Worker WEB no disponible:',err);
@@ -1303,7 +1303,9 @@ let dashboardCargando = false;
 
 function limpiarCacheAPI(...acciones){
   if(!acciones.length){ apiCache.clear(); return; }
-  acciones.forEach(a=>apiCache.delete(a));
+  for(const key of apiCache.keys()){
+    if(acciones.some(a=>key.startsWith(a+'|'))) apiCache.delete(key);
+  }
 }
 
 function cacheKeyAPI(action, params){
@@ -1398,11 +1400,12 @@ async function postJson(payload){
   if(!r.ok) throw new Error('Backend HTTP '+r.status);
   let data;
   try{data=JSON.parse(text);}catch(e){throw new Error('El backend no devolvió JSON válido: '+String(text).slice(0,120));}
-  if(data && data.ok===false) throw new Error(data.error||data.resultado?.error||'El backend rechazó la operación.');
+  const rechazo=[data,data?.resultado,data?.datos,data?.data].find(c=>c?.ok===false);
+  if(rechazo) throw new Error(rechazo.error||'El backend rechazó la operación.');
 
   // Una escritura invalida solamente las lecturas que pueden haber cambiado.
   const accion=String(payload?.accion||'');
-  if(['iniciarViaje','finalizarViaje'].includes(accion)) limpiarCacheAPI('listarViajes','listarAsignaciones','listarServicios','listarVehiculos');
+  if(['iniciarViaje','finalizarViaje','iniciarViajeSecretaria','finalizarViajeSecretaria'].includes(accion)) limpiarCacheAPI('listarViajes','listarAsignaciones','listarServicios','listarVehiculos','listarVehiculosSecretaria','listarViajesSecretaria');
   if(accion==='actualizarKmAdmin') limpiarCacheAPI('listarVehiculos');
   if(['registrarReporteAdmin','registrarReporteVehiculo'].includes(accion)) limpiarCacheAPI('listarReportes','listarInspecciones');
   return data;
@@ -1444,21 +1447,7 @@ async function encolarSalidaSegundoPlano(payload){
   return {ok:true,opId,pendiente:true};
 }
 
-async function programarReintentoSalida(opId){
-  if(!opId) return;
-  try{
-    if('serviceWorker' in navigator && 'SyncManager' in window){
-      const reg=appServiceWorkerRegistration || await registrarServiceWorkerWeb() || await navigator.serviceWorker.ready;
-      if(reg && reg.sync && typeof reg.sync.register==='function'){
-        await reg.sync.register('dia-verde-salidas');
-        return;
-      }
-    }
-  }catch(e){ console.warn('No se pudo programar Background Sync:',e); }
-  // Sin Background Sync se intenta una sola vez después del fallo inicial,
-  // nunca en paralelo con el envío directo.
-  intentarEnviarSalidaDirecta(opId).catch(()=>{});
-}
+async function programarReintentoSalida(opId){return programarProcesamientoCola(opId);}
 
 // V32 — COLA DE FINALIZACIONES. Usa el mismo store para no migrar IndexedDB.
 async function encolarFinalizacionSegundoPlano(payload){
@@ -1478,114 +1467,82 @@ async function encolarFinalizacionSegundoPlano(payload){
 
 async function programarProcesamientoCola(opId){
   try{
-    const reg=appServiceWorkerRegistration || await registrarServiceWorkerWeb();
+    const reg=appServiceWorkerRegistration;
     if(reg?.sync && typeof reg.sync.register==='function'){
-      await reg.sync.register('dia-verde-salidas');
-      return;
+      await reg.sync.register('dia-verde-salidas');return;
     }
-    const ready=await navigator.serviceWorker?.ready;
-    if(ready?.active){ready.active.postMessage({type:'PROCESAR_SALIDAS_AHORA'});return;}
-  }catch(e){console.warn('No se pudo activar Background Sync:',e);}
-  // Fallback cuando no hay Service Worker/Background Sync.
-  if(opId) intentarEnviarOperacionDirecta(opId).catch(()=>{});
+    if(reg?.active){reg.active.postMessage({type:'PROCESAR_SALIDAS_AHORA'});return;}
+  }catch(e){console.warn('Reintento en segundo plano no disponible:',e);}
+  if(opId) return intentarEnviarOperacionDirecta(opId);
+}
+
+function mostrarAvisoOperacion(mensaje,pendiente=false){
+  let aviso=$('operationNotice');
+  if(!aviso){
+    aviso=document.createElement('div');aviso.id='operationNotice';
+    aviso.setAttribute('role','status');aviso.setAttribute('aria-live','polite');
+    aviso.style.cssText='max-width:1064px;margin:16px auto;padding:14px 18px;border-radius:12px;border:1px solid #a8d8bb;background:#e5f6ec;color:#185739;';
+    document.querySelector('.topbar').after(aviso);
+  }
+  aviso.textContent=mensaje;
+  aviso.dataset.pendiente=String(pendiente);
 }
 
 async function intentarEnviarOperacionDirecta(opId){
-  const db=await abrirDBSegundoPlano();
-  const item=await new Promise((resolve,reject)=>{
-    const tx=db.transaction(BG_STORE,'readonly');const req=tx.objectStore(BG_STORE).get(opId);
-    req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);
-  });
-  if(!item)return;
-  const r=await fetch(BACKEND_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(item.payload),cache:'no-store',keepalive:true});
-  const txt=await r.text();if(!r.ok)throw new Error('Backend HTTP '+r.status);
-  let data;try{data=JSON.parse(txt);}catch(e){throw new Error('Respuesta del backend no válida.');}
-  if(data?.ok===false || data?.resultado?.ok===false || data?.data?.ok===false) throw new Error(data.error||data.resultado?.error||'El backend rechazó el cierre.');
-  await new Promise((resolve,reject)=>{const tx=db.transaction(BG_STORE,'readwrite');tx.objectStore(BG_STORE).delete(opId);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);});
-  limpiarCacheAPI('listarViajes','listarAsignaciones','listarServicios','listarVehiculos');
-  window.dispatchEvent(new CustomEvent('finalizacionGuardadaSegundoPlano',{detail:{opId,data}}));
-  return data;
-}
-
-function validarConfirmacionFotosSalida(data){
-  if(data?.ok===false) throw new Error(data.error||data.resultado?.error||'El backend rechazó la salida.');
-  const resultado=data?.resultado||data?.data?.resultado||{};
-  const fotos=resultado?.FOTOS_SALIDA;
-  if(!fotos || Number(fotos.registradas)!==4 || (Array.isArray(fotos.errores)&&fotos.errores.length>0) || (Array.isArray(fotos.faltantes)&&fotos.faltantes.length>0)){
-    const detalle=[...(Array.isArray(fotos?.errores)?fotos.errores:[]),...(Array.isArray(fotos?.faltantes)?fotos.faltantes:[])].join(' | ');
-    throw new Error('El viaje llegó al backend, pero no se confirmaron las 4 fotos. La copia local se conserva para reintentar.'+(detalle?' Detalle: '+detalle:''));
-  }
-  return data;
-}
-
-async function intentarEnviarPayloadDirecto(payload,opId=''){
-  const controller=new AbortController();
-  const timeout=setTimeout(()=>controller.abort(),25000);
-  try{
-    const r=await fetch(BACKEND_URL,{
-      method:'POST',
-      headers:{'Content-Type':'text/plain;charset=utf-8'},
-      body:JSON.stringify(payload),
-      cache:'no-store',
-      signal:controller.signal
-    });
-    const txt=await r.text();
-    if(!r.ok) throw new Error('Backend HTTP '+r.status);
-    let data;
-    try{data=JSON.parse(txt);}catch(e){throw new Error('El backend no devolvió JSON válido: '+String(txt).slice(0,160));}
-    validarConfirmacionFotosSalida(data);
-
-    // Solo se elimina la copia local cuando el backend confirma las 4 fotos.
-    if(opId){
-      try{
-        const db=await abrirDBSegundoPlano();
-        await new Promise((resolve,reject)=>{
-          const tx=db.transaction(BG_STORE,'readwrite');
-          tx.objectStore(BG_STORE).delete(opId);
-          tx.oncomplete=resolve; tx.onerror=()=>reject(tx.error);
-        });
-      }catch(e){ console.warn('No se pudo limpiar la cola local:',e); }
-    }
-
-    limpiarCacheAPI('listarViajes','listarAsignaciones','listarServicios');
-    const viaje=data?.resultado||data?.viaje||{};
-    if(viaje?.ID_VIAJE || viaje?.idViaje){
-      servicioEnInspeccion.idViaje=viaje.ID_VIAJE||viaje.idViaje||'';
-      try{ localStorage.setItem('diaVerdeServicioActivo',JSON.stringify({idServicio:servicioEnInspeccion.idServicio,idViaje:servicioEnInspeccion.idViaje,pendienteGuardado:false})); }catch(e){}
-    }
-    const aviso=$('inspectionAlert');
-    if(aviso){ aviso.textContent='✅ Viaje iniciado y enviado al Panel de Control.'; aviso.style.display='block'; }
-    window.dispatchEvent(new CustomEvent('salidaGuardadaSegundoPlano',{detail:{opId,data}}));
-    return data;
-  }catch(err){
-    if(err?.name==='AbortError') throw new Error('El Panel está tardando demasiado en responder. La salida quedó pendiente y se reintentará.');
-    throw err;
-  }finally{
-    clearTimeout(timeout);
-  }
-}
-
-async function intentarEnviarSalidaDirecta(opId){
-  try{
+  return conBloqueoColaViajes(async()=>{
     const db=await abrirDBSegundoPlano();
     const item=await new Promise((resolve,reject)=>{
-      const tx=db.transaction(BG_STORE,'readonly');
-      const req=tx.objectStore(BG_STORE).get(opId);
+      const req=db.transaction(BG_STORE,'readonly').objectStore(BG_STORE).get(opId);
       req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);
     });
     if(!item)return;
-    const r=await fetch(BACKEND_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(item.payload),cache:'no-store',keepalive:true});
-    if(!r.ok)throw new Error('HTTP '+r.status);
-    const txt=await r.text();
-    const data=JSON.parse(txt);
-    validarConfirmacionFotosSalida(data);
-    await new Promise((resolve,reject)=>{
-      const tx=db.transaction(BG_STORE,'readwrite');
-      tx.objectStore(BG_STORE).delete(opId);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);
-    });
-    window.dispatchEvent(new CustomEvent('salidaGuardadaSegundoPlano',{detail:{opId,data}}));
-  }catch(e){ console.warn('Salida pendiente:',e); }
+    const data=await enviarOperacionViaje(item.payload);
+    await new Promise((resolve,reject)=>{const tx=db.transaction(BG_STORE,'readwrite');tx.objectStore(BG_STORE).delete(opId);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);});
+    limpiarCacheAPI('listarViajes','listarAsignaciones','listarServicios','listarVehiculos');
+    confirmarOperacionEnPantalla(item.payload,data);
+    return data;
+  });
 }
+
+function confirmarOperacionEnPantalla(payload,data){
+  const finalizacion=String(payload.accion||'').startsWith('finalizarViaje');
+  if(!finalizacion){
+    const resultado=resultadoOperacionViaje(data),viaje=resultado?.viaje||resultado;
+    if(servicioEnInspeccion && String(servicioEnInspeccion.idServicio||'')===String(payload.idServicio||'')){
+      servicioEnInspeccion.idViaje=viaje?.ID_VIAJE||viaje?.idViaje||servicioEnInspeccion.idViaje||'';
+    }
+  }
+  mostrarAvisoOperacion(finalizacion?'✅ Viaje finalizado y confirmado por el Panel de Control.':'✅ Viaje iniciado y confirmado por el Panel de Control.');
+}
+
+function validarConfirmacionFotosSalida(data){return validarRespuestaViaje(data,true);}
+
+async function intentarEnviarPayloadDirecto(payload,opId=''){
+  if(opId)return intentarEnviarOperacionDirecta(opId);
+  const data=await enviarOperacionViaje(payload);
+  limpiarCacheAPI('listarViajes','listarAsignaciones','listarServicios','listarVehiculos');
+  confirmarOperacionEnPantalla(payload,data);
+  return data;
+}
+
+async function intentarEnviarSalidaDirecta(opId){return intentarEnviarOperacionDirecta(opId);}
+
+async function reintentarOperacionesPendientes(){
+  if(!session || window.__iniciandoViajeDiaVerde) return;
+  try{
+    const db=await abrirDBSegundoPlano();
+    const items=await new Promise((resolve,reject)=>{
+      const req=db.transaction(BG_STORE,'readonly').objectStore(BG_STORE).getAll();
+      req.onsuccess=()=>resolve(req.result||[]);req.onerror=()=>reject(req.error);
+    });
+    for(const item of items.sort((a,b)=>a.createdAt-b.createdAt)){
+      if(item.payload?.idChofer && String(item.payload.idChofer)!==String(session.idChofer))continue;
+      try{await intentarEnviarOperacionDirecta(item.opId);}catch(e){mostrarAvisoOperacion('⚠️ Envío pendiente: '+e.message,true);break;}
+    }
+  }catch(e){console.warn('No se pudo revisar la cola local:',e);}
+}
+window.addEventListener('online',reintentarOperacionesPendientes);
+window.addEventListener('load',reintentarOperacionesPendientes);
 
 window.addEventListener('load',()=>{
   if('serviceWorker' in navigator){
@@ -1593,14 +1550,16 @@ window.addEventListener('load',()=>{
       if(ev.data?.type==='SALIDA_GUARDADA'){
         limpiarCacheAPI('listarViajes','listarAsignaciones','listarServicios');
         console.info('Salida guardada en segundo plano:',ev.data.opId);
+        mostrarAvisoOperacion('✅ Viaje iniciado y confirmado por el Panel de Control.');
         try{if(typeof cargarDashboard==='function') cargarDashboard().catch(()=>{});}catch(e){}
       }
       if(ev.data?.type==='FINALIZACION_GUARDADA'){
         limpiarCacheAPI('listarViajes','listarAsignaciones','listarServicios','listarVehiculos');
         console.info('Finalización confirmada por el backend:',ev.data.opId);
+        mostrarAvisoOperacion('✅ Viaje finalizado y confirmado por el Panel de Control.');
         try{if(typeof cargarDashboard==='function') cargarDashboard().catch(()=>{});}catch(e){}
       }
-      if(ev.data?.type==='FINALIZACION_PENDIENTE') console.warn('Finalización pendiente:',ev.data.opId,ev.data.error);
+      if(['SALIDA_PENDIENTE','FINALIZACION_PENDIENTE'].includes(ev.data?.type)) mostrarAvisoOperacion('⚠️ Envío pendiente: '+ev.data.error,true);
     });
   }
 });
@@ -2727,28 +2686,21 @@ async function iniciarViaje(){
       console.warn('No se pudo guardar la cola local; se intentará envío directo.',e);
     }
 
-    // La interfaz pasa inmediatamente a EN VIAJE. El backend se intenta en
-    // paralelo y ya no puede dejar el botón clavado en GUARDANDO.
+    mostrarAvisoOperacion('Enviando salida y fotos al Panel de Control…',true);
+    try{
+      await intentarEnviarPayloadDirecto(payload,cola?.opId||'');
+    }catch(err){
+      mostrarAvisoOperacion('⚠️ Salida pendiente: '+err.message,true);
+      if(cola?.opId) programarReintentoSalida(cola.opId).catch(e=>console.warn('Reintento pendiente:',e));
+      throw err;
+    }
     servicioEnInspeccion.estado='EN VIAJE';
     servicioEnInspeccion.kmInicial=km;
-    servicioEnInspeccion.idViaje='';
     window.__servicioActual=servicioEnInspeccion;
-    try{ localStorage.setItem('diaVerdeServicioActivo',JSON.stringify({idServicio:servicioEnInspeccion.idServicio,idViaje:'',pendienteGuardado:true,opId:cola?.opId||''})); }catch(e){}
-
-    configurarPantallaViajeRecuperado('Salida registrada localmente. Enviando al Panel de Control…');
-    btn.disabled=true;
-
-    // ENVÍO DIRECTO INMEDIATO. No se espera antes de cambiar de pantalla.
-    intentarEnviarPayloadDirecto(payload,cola?.opId||'').then(()=>{
-      window.__iniciandoViajeDiaVerde=false;
-    }).catch(err=>{
-      window.__iniciandoViajeDiaVerde=false;
-      console.warn('La salida quedó pendiente de sincronización:',err);
-      const aviso=$('inspectionAlert');
-      if(aviso){ aviso.textContent='⚠️ El viaje quedó guardado en este dispositivo. Se reintentará enviar al Panel cuando haya conexión.'; aviso.style.display='block'; }
-      // El reintento se agenda SOLO tras fallar el envío inicial.
-      if(cola?.opId) programarReintentoSalida(cola.opId).catch(e=>console.warn('No se pudo programar el reintento:',e));
-    });
+    try{localStorage.setItem('diaVerdeServicioActivo',JSON.stringify({idServicio:servicioEnInspeccion.idServicio,idViaje:servicioEnInspeccion.idViaje||'',pendienteGuardado:false}));}catch(e){}
+    configurarPantallaViajeRecuperado('✅ Viaje iniciado y confirmado por el Panel de Control.');
+    renderService(servicioEnInspeccion);
+    window.__iniciandoViajeDiaVerde=false;
   }catch(err){
     a.textContent=err.message||'No se pudo guardar la salida localmente.';a.style.display='block';
     window.__iniciandoViajeDiaVerde=false;
@@ -2768,6 +2720,7 @@ async function iniciarViajeSecretaria(){
     viajeSecretariaActivo=data.viaje||{ID_VIAJE:data.idViaje,ID_VEHICULO:vehiculoSecretariaSeleccionado.ID_VEHICULO,ID_CHOFER:session.idChofer,ESTADO:'EN CURSO'};
     servicioEnInspeccion.idViaje=viajeSecretariaActivo.ID_VIAJE;servicioEnInspeccion.estado='EN VIAJE';
     mostrarModoViajeActivo();$('finishInspectionBtn').onclick=finalizarViaje;$('finishInspectionBtn').textContent='FINALIZAR VIAJE';
+    mostrarAvisoOperacion('✅ Viaje iniciado y confirmado por el Panel de Control.');
     $('inspectionAlert').textContent='Salida registrada correctamente. Al regresar, ingresá el KM final.';$('inspectionAlert').style.display='block';
   }catch(err){a.textContent=err.message||'No se pudo iniciar el viaje.';a.style.display='block';btn.disabled=false;btn.textContent='▶ INICIAR VIAJE';}
 }
@@ -2780,14 +2733,24 @@ async function finalizarViajeSecretaria(){
   const payload={accion:'finalizarViajeSecretaria',usuario:session.usuario,idViaje,kmFinal,idChofer:session.idChofer,idVehiculo:vehiculoSecretariaSeleccionado?.ID_VEHICULO||servicioEnInspeccion?.idUnidad};
   btn.disabled=true;btn.textContent='GUARDANDO CIERRE…';a.style.display='none';
   try{
-    const cola=await encolarFinalizacionSegundoPlano(payload);
+    let cola=null;
+    try{cola=await encolarFinalizacionSegundoPlano(payload);}catch(e){console.warn('Cola local no disponible:',e);}
+    mostrarAvisoOperacion('Enviando cierre al Panel de Control…',true);
+    try{
+      if(cola?.opId) await intentarEnviarOperacionDirecta(cola.opId);
+      else{const confirmacion=await enviarOperacionViaje(payload);confirmarOperacionEnPantalla(payload,confirmacion);limpiarCacheAPI('listarViajes','listarAsignaciones','listarServicios','listarVehiculos');}
+    }catch(e){
+      mostrarAvisoOperacion('⚠️ Cierre pendiente: '+e.message,true);
+      if(cola?.opId)programarProcesamientoCola(cola.opId).catch(()=>{});
+      throw e;
+    }
     viajeSecretariaActivo=null;
     if(servicioEnInspeccion){servicioEnInspeccion.estado='FINALIZADO';servicioEnInspeccion.idViaje=idViaje;}
     try{localStorage.removeItem('diaVerdeServicioActivo');}catch(e){}
     $('inspectionStatus').className='status-banner ready';$('inspectionStatus').innerHTML='✅ <strong>Viaje finalizado</strong>';
-    a.textContent='Cierre guardado en el dispositivo. El envío al Panel de Control continúa en segundo plano.';a.style.display='block';
+    a.textContent='✅ Viaje finalizado y confirmado por el Panel de Control.';a.style.display='block';
     volverInicioSinEsperar();
-    programarProcesamientoCola(cola.opId).catch(e=>console.warn('Cierre pendiente de sincronización:',e));
+
   }catch(err){a.textContent=err.message||'No se pudo guardar el cierre en este dispositivo.';a.style.display='block';btn.disabled=false;btn.textContent='FINALIZAR VIAJE';}
 }
 
@@ -2805,21 +2768,31 @@ async function finalizarViaje(){
   try{
     let idViaje=servicioEnInspeccion?.idViaje||'';
     if(!idViaje){
-      const r=await getJson('listarViajes');
+      const r=await getJson('listarViajes',{}, {force:true});
       const viajes=Array.isArray(r.viajes)?r.viajes:[];
       const viaje=viajes.find(v=>String(v.ID_SERVICIO||'')===String(servicioEnInspeccion.idServicio||'')&&String(v.ID_CHOFER||'')===String(session.idChofer||'')&&['EN CURSO','ACTIVO','INICIADO'].includes(String(v.ESTADO||'').toUpperCase()));
       idViaje=viaje?.ID_VIAJE||'';
     }
     if(!idViaje) throw new Error('No se encontró el viaje activo para finalizar. No se guardó el cierre.');
     const payload={accion:'finalizarViaje',idViaje,kmFinal,idServicio:servicioEnInspeccion.idServicio,idChofer:session.idChofer,idVehiculo:servicioEnInspeccion.idUnidad||'',observaciones:''};
-    const cola=await encolarFinalizacionSegundoPlano(payload);
+    let cola=null;
+    try{cola=await encolarFinalizacionSegundoPlano(payload);}catch(e){console.warn('Cola local no disponible:',e);}
+    mostrarAvisoOperacion('Enviando cierre al Panel de Control…',true);
+    try{
+      if(cola?.opId) await intentarEnviarOperacionDirecta(cola.opId);
+      else{const confirmacion=await enviarOperacionViaje(payload);confirmarOperacionEnPantalla(payload,confirmacion);limpiarCacheAPI('listarViajes','listarAsignaciones','listarServicios','listarVehiculos');}
+    }catch(e){
+      mostrarAvisoOperacion('⚠️ Cierre pendiente: '+e.message,true);
+      if(cola?.opId)programarProcesamientoCola(cola.opId).catch(()=>{});
+      throw e;
+    }
     servicioEnInspeccion.estado='FINALIZADO';servicioEnInspeccion.idViaje=idViaje;window.__servicioActual=servicioEnInspeccion;
     try{localStorage.removeItem('diaVerdeServicioActivo');}catch(e){}
     $('inspectionStatus').className='status-banner ready';$('inspectionStatus').innerHTML='✅ <strong>Cierre guardado</strong>';
-    a.textContent='¡Excelente trabajo! El cierre quedó guardado en el dispositivo y se enviará al Panel de Control en segundo plano.';a.style.display='block';
+    a.textContent='✅ Viaje finalizado y confirmado por el Panel de Control.';a.style.display='block';
     const controlSection=document.querySelector('#inspectionScreen .vehicle-control-section');if(controlSection)controlSection.classList.add('hidden');
     volverInicioSinEsperar();
-    programarProcesamientoCola(cola.opId).catch(e=>console.warn('Cierre pendiente de sincronización:',e));
+
   }catch(err){a.textContent=err.message||'No se pudo guardar el cierre localmente.';a.style.display='block';btn.disabled=false;btn.textContent='FINALIZAR SERVICIO';}
 }
 

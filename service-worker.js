@@ -1,3 +1,4 @@
+importScripts('./operaciones-viaje.js');
 /* ============================================================
    DIA VERDE - APP CHOFERES
    SERVICE WORKER WEB V32
@@ -34,37 +35,18 @@ function borrarPendiente(opId){
     tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error||new Error('No se pudo borrar la cola.'));
   }));
 }
-function validarConfirmacionInicio(data){
-  if(data?.ok===false||data?.resultado?.ok===false)throw new Error(data.error||data.resultado?.error||'El backend rechazó la salida.');
-  const fotos=data?.resultado?.FOTOS_SALIDA;
-  if(!fotos||Number(fotos.registradas)!==4||(Array.isArray(fotos.errores)&&fotos.errores.length)||(Array.isArray(fotos.faltantes)&&fotos.faltantes.length)){
-    const detalle=[...(Array.isArray(fotos?.errores)?fotos.errores:[]),...(Array.isArray(fotos?.faltantes)?fotos.faltantes:[])].join(' | ');
-    throw new Error('No se confirmaron las cuatro fotos. La salida sigue pendiente.'+(detalle?' '+detalle:''));
-  }
-  return data;
-}
-function validarConfirmacionFinalizacion(data){
-  if(data?.ok===false||data?.resultado?.ok===false||data?.data?.ok===false){
-    throw new Error(data.error||data.resultado?.error||data.data?.error||'El backend rechazó la finalización.');
-  }
-  return data;
-}
+function validarConfirmacionInicio(data){return validarRespuestaViaje(data,true);}
+function validarConfirmacionFinalizacion(data){return validarRespuestaViaje(data,false);}
 async function avisarClientes(mensaje){
   const clientes=await self.clients.matchAll({type:'window',includeUncontrolled:true});
   clientes.forEach(client=>client.postMessage(mensaje));
 }
 async function procesarSalidasInterno(){
-  const pendientes=await leerPendientes();
+  const pendientes=(await leerPendientes()).sort((a,b)=>a.createdAt-b.createdAt);
   // Se mantiene el orden de persistencia: cada operación se confirma antes de borrar.
   for(const item of pendientes){
     try{
-      const response=await fetch(BACKEND_URL,{
-        method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
-        body:JSON.stringify(item.payload),cache:'no-store'
-      });
-      const text=await response.text();
-      if(!response.ok)throw new Error('Backend HTTP '+response.status);
-      let data;try{data=JSON.parse(text);}catch(e){throw new Error('Respuesta del backend no válida.');}
+      const data=await enviarOperacionViaje(item.payload);
       const esFinalizacion=item.tipo==='FINALIZACION'||String(item.payload?.accion||'').startsWith('finalizarViaje');
       if(esFinalizacion){
         validarConfirmacionFinalizacion(data);
@@ -85,7 +67,7 @@ async function procesarSalidasInterno(){
 }
 function procesarSalidas(){
   if(procesoEnCurso)return procesoEnCurso;
-  procesoEnCurso=procesarSalidasInterno().finally(()=>{procesoEnCurso=null;});
+  procesoEnCurso=conBloqueoColaViajes(procesarSalidasInterno).finally(()=>{procesoEnCurso=null;});
   return procesoEnCurso;
 }
 self.addEventListener('sync',event=>{
