@@ -959,7 +959,7 @@ html,body{color-scheme:light;color:var(--text);background:linear-gradient(135deg
 button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline-color:#25834f}
 </style>
 
-<link rel="stylesheet" href="./documentos-unidad.css?v=2">
+<link rel="stylesheet" href="./documentos-unidad.css?v=3">
 </head>
 <body>
 <div class="app">
@@ -1701,8 +1701,29 @@ async function cargarDashboardSecretaria(){
     const viajes=Array.isArray(tr.viajes)?tr.viajes:[];
     viajeSecretariaActivo=viajes.find(v=>String(v.ID_CHOFER||'')===String(session.idChofer||'') && ['EN CURSO','ACTIVO','INICIADO'].includes(String(v.ESTADO||'').toUpperCase()))||null;
     if(viajeSecretariaActivo){
-      vehiculoSecretariaSeleccionado=vehiculos.find(v=>String(v.ID_VEHICULO)===String(viajeSecretariaActivo.ID_VEHICULO))||{ID_VEHICULO:viajeSecretariaActivo.ID_VEHICULO,DOMINIO:'Unidad en viaje'};
-      box.innerHTML=`<h3>Tenés un viaje en curso</h3><p>Unidad: <strong>${escapeHtml(vehiculoSecretariaSeleccionado.DOMINIO||vehiculoSecretariaSeleccionado.INTERNO||'—')}</strong></p><button class="primary" type="button" onclick="continuarViajeSecretaria()">CONTINUAR / FINALIZAR VIAJE</button>`;
+      let unidad=vehiculos.find(v=>String(v.ID_VEHICULO)===String(viajeSecretariaActivo.ID_VEHICULO));
+      // La unidad en uso puede dejar de aparecer entre los vehículos disponibles.
+      if(!unidad){
+        try{
+          const ficha=await getJson('listarVehiculos',paramsSecretaria,{force:true});
+          unidad=(Array.isArray(ficha.vehiculos)?ficha.vehiculos:[]).find(v=>String(v.ID_VEHICULO)===String(viajeSecretariaActivo.ID_VEHICULO));
+        }catch(e){console.warn('No se pudo consultar la ficha de la unidad en viaje:',e);}
+      }
+      vehiculoSecretariaSeleccionado=unidad||{ID_VEHICULO:viajeSecretariaActivo.ID_VEHICULO,DOMINIO:viajeSecretariaActivo.DOMINIO||viajeSecretariaActivo.dominio||''};
+      const dominio=dominioUnidad(vehiculoSecretariaSeleccionado.DOMINIO||vehiculoSecretariaSeleccionado.dominio||'');
+      vehiculoSecretariaSeleccionado={...vehiculoSecretariaSeleccionado,DOMINIO:dominio};
+      box.innerHTML=`<h3>Tenés un viaje en curso</h3>
+        <div class="secretaria-active-unit">
+          <div class="secretaria-vehicle-photo secretaria-active-photo" id="secretariaActivePhoto"></div>
+          <div class="secretaria-active-details">
+            <span class="secretaria-kicker">UNIDAD SELECCIONADA</span>
+            <strong class="secretaria-active-plate">${escapeHtml(dominio||'Unidad en viaje')}</strong>
+            <span class="secretaria-active-model">${escapeHtml([vehiculoSecretariaSeleccionado.MARCA,vehiculoSecretariaSeleccionado.MODELO].filter(Boolean).join(' '))}</span>
+            <button type="button" class="unit-documents-button" data-unit-documents="${escapeHtml(dominio)}" aria-label="Documentos de la unidad ${escapeHtml(dominio)}" ${dominio?'':'hidden'}>Documentos de la unidad</button>
+          </div>
+        </div>
+        <button class="primary" type="button" onclick="continuarViajeSecretaria()">CONTINUAR / FINALIZAR VIAJE</button>`;
+      mostrarFotoSecretaria($('secretariaActivePhoto'),vehiculoSecretariaSeleccionado);
       return;
     }
     if(!vehiculos.length){box.innerHTML='<div class="empty">No hay vehículos operativos disponibles en el área SECRETARÍA.</div>';return;}
