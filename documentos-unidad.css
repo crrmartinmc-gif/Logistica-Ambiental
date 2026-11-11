@@ -1,0 +1,22 @@
+.vehicle-details{width:100%}
+.vehicle-id-row{order:1;display:flex;align-items:center;justify-content:center;gap:16px;flex-wrap:wrap;width:100%;margin-top:10px}
+.vehicle-identity{display:flex;flex-direction:column;align-items:center;min-width:0;max-width:100%}
+.unit-documents-button{display:inline-flex;align-items:center;justify-content:center;gap:9px;min-height:46px;max-width:100%;padding:11px 14px;border:1px solid #b5dac5;border-radius:12px;background:linear-gradient(135deg,#fff,#e4f5eb);color:#246b41;font:inherit;font-size:12px;font-weight:800;cursor:pointer;text-align:left;white-space:normal}
+.unit-documents-button svg{flex:0 0 22px;width:22px;height:22px}
+.unit-documents-button:hover{background:#e0f4e8;border-color:#25834f}
+.unit-documents-button[hidden]{display:none}
+.unit-documents-dialog{width:min(540px,calc(100vw - 24px));max-width:calc(100vw - 24px);max-height:calc(100dvh - 24px);padding:0;overflow:auto;border:1px solid #bfdfca;border-radius:18px;background:#fff;color:#163b2a;box-shadow:0 20px 70px rgba(10,50,30,.2)}
+.unit-documents-dialog::backdrop{background:rgba(5,25,16,.5);backdrop-filter:blur(4px)}
+.unit-documents-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding:20px;background:linear-gradient(135deg,#fff,#e6f6ec);border-bottom:1px solid #d2e8da}
+.unit-documents-head h2{margin:0;font-size:20px;line-height:1.3}
+.unit-documents-head p{margin:5px 0 0;color:#52735f;font-size:13px;font-weight:700}
+.unit-documents-close{flex:0 0 44px;min-height:44px;background:#fff;color:#246b41;border:1px solid #bfdfca;border-radius:10px;font-size:26px;cursor:pointer}
+.unit-documents-body{padding:20px}
+.unit-documents-body>p{margin:0 0 14px;color:#52735f;font-size:13px;line-height:1.5}
+.unit-documents-links{display:grid;gap:10px}
+.unit-documents-links a{display:flex;flex-direction:column;gap:5px;padding:16px;border:1px solid #c4e1d0;border-radius:12px;background:linear-gradient(135deg,#fff,#f0faf4);color:#246b41;text-decoration:none;min-height:64px}
+.unit-documents-links a:hover{border-color:#25834f;background:#eaf7ef}
+.unit-documents-links span{font-size:12px;color:#5c7768;overflow-wrap:anywhere}
+@media(max-width:420px){.vehicle-id-row{gap:12px}.unit-documents-button{justify-content:center;width:100%}.unit-documents-head,.unit-documents-body{padding:16px}.unit-documents-head h2{font-size:18px}}
+
+.unit-documents-links strong{display:flex;align-items:center;justify-content:space-between;gap:12px}.unit-documents-links strong svg{width:18px;height:18px;flex:0 0 18px}

@@ -959,6 +959,7 @@ html,body{color-scheme:light;color:var(--text);background:linear-gradient(135deg
 button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline-color:#25834f}
 </style>
 
+<link rel="stylesheet" href="./documentos-unidad.css?v=1">
 </head>
 <body>
 <div class="app">
@@ -1123,8 +1124,16 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
       <div id="vehicleBox" class="vehicle">
         <div class="vehicle-photo" id="vehiclePhoto"><span class="vehicle-placeholder">🚛</span></div>
         <div class="vehicle-details">
-          <span class="plate" id="vehiclePlate">—</span>
-          <h3 id="vehicleName">Consultando…</h3>
+          <div class="vehicle-id-row">
+            <div class="vehicle-identity">
+              <span class="plate" id="vehiclePlate">—</span>
+              <h3 id="vehicleName">Consultando…</h3>
+            </div>
+            <button type="button" class="unit-documents-button" id="unitDocumentsButton" hidden>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h6"/></svg>
+              <span>Documentos de la unidad</span>
+            </button>
+          </div>
           <div class="vehicle-km"><span>KM actual</span><strong id="vehicleKm">—</strong></div>
         </div>
       </div>
@@ -1268,6 +1277,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
    La estructura de notificaciones queda para una futura APK.
    ============================================================ */
 </script>
+<script src="./documentos-unidad.js?v=1"></script>
 <script src="./operaciones-viaje.js?v=1"></script>
 <script>
 const BACKEND_URL = "https://script.google.com/macros/s/AKfycbz0n4ZlW2p--nP2Wx0SnytyCRt_pL6RFxliEan0j1vUdSSrBrVNCbsTI7VC0JQWl5k9/exec";
@@ -1601,6 +1611,9 @@ async function getJson(action, params={}, options={}){
       else if(action==='listarReportes') data={ok:true,reportes:datos};
       else if(action==='listarEvidencias') data={ok:true,evidencias:datos};
     }
+    if(['listarVehiculos','listarVehiculosSecretaria'].includes(action) && Array.isArray(data.vehiculos)){
+      data.vehiculos=data.vehiculos.map(v=>({...v,DOMINIO:dominioUnidad(v.DOMINIO||v.dominio||'')}));
+    }
     apiCache.set(key,{time:Date.now(),data});
     return data;
   })();
@@ -1931,10 +1944,16 @@ function convertirFotoDrive(url){
 
 // Imágenes de unidades: archivos WebP ubicados en ./vehiculos_png/
 // El nombre del archivo coincide con el dominio, normalizado en mayúsculas.
+// Compatibilidad con el dominio anterior del Cronos en las lecturas del servidor.
+function dominioUnidad(dominio){
+  const valor=String(dominio||'').trim().toUpperCase();
+  return valor.replace(/[^A-Z0-9]/g,'')==='AF807UI'?'AE807UI':valor;
+}
+
 function fotoUnidadPorDominio(dominio){
-  const limpio=String(dominio||'').trim().toUpperCase().replace(/[^A-Z0-9]/g,'');
+  const limpio=dominioUnidad(dominio).replace(/[^A-Z0-9]/g,'');
   if(!limpio || limpio==='SINDOMINIO') return '';
-  const revisionFoto=['AF807UI','AG213WY','AG213WS'].includes(limpio)?'?v=20261111':'';
+  const revisionFoto=['AE807UI','AG213WY','AG213WS'].includes(limpio)?'?v=20261111':'';
   return './vehiculos_png/'+encodeURIComponent(limpio)+'.webp'+revisionFoto;
 }
 
@@ -1987,13 +2006,15 @@ function formatearKm(v){
 
 function renderVehicle(a,v,estadoFlota){
   if(!a){
+    configurarDocumentosUnidad('');
     $('vehicleName').textContent='Sin asignación activa';
     $('vehiclePlate').textContent='—';
     $('vehicleKm').textContent='—';
     $('vehiclePhoto').innerHTML='<span class="vehicle-placeholder">🚛</span>';
     return;
   }
-  const dominio=v?.DOMINIO || v?.dominio || a.dominio || 'SIN DOMINIO';
+  const dominio=dominioUnidad(v?.DOMINIO || v?.dominio || a.dominio || 'SIN DOMINIO');
+  configurarDocumentosUnidad(dominio);
   $('vehicleName').textContent=[v?.MARCA||v?.marca,v?.MODELO||v?.modelo].filter(Boolean).join(' ') || 'Vehículo';
   $('vehiclePlate').textContent=dominio;
   const fotoDominio=fotoUnidadPorDominio(dominio);
