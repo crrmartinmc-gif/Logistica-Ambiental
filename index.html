@@ -1974,7 +1974,8 @@ function convertirFotoDrive(url){
 function fotoUnidadPorDominio(dominio){
   const limpio=String(dominio||'').trim().toUpperCase().replace(/[^A-Z0-9]/g,'');
   if(!limpio || limpio==='SINDOMINIO') return '';
-  return './vehiculos_png/'+encodeURIComponent(limpio)+'.webp';
+  const revisionFoto=['AF807UI','AG213WY','AG213WS'].includes(limpio)?'?v=20261111':'';
+  return './vehiculos_png/'+encodeURIComponent(limpio)+'.webp'+revisionFoto;
 }
 
 // Elimina el blanco de las fotos WebP para integrarlas al fondo oscuro.
