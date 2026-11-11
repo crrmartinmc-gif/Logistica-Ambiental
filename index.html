@@ -2064,6 +2064,7 @@ function renderVehicle(a,v,estadoFlota){
 }
 
 function renderService(s){
+  $('serviceBox').classList.remove('hidden');
   window.__servicioActual=s||null;
   if(!s){
     $('serviceBox').innerHTML='<div class="empty"><strong>No tenés servicios pendientes.</strong><br><span>Cuando administración te asigne uno, aparecerá acá.</span></div>';
@@ -2105,7 +2106,7 @@ async function verServicio(id){
   // V24 TURBO: mostrar la pantalla inmediatamente usando los datos ya cargados.
   servicioEnInspeccion=s;
   ultimaInspeccionCargada=null;
-  $('serviceBox').classList.add('hidden');
+  $('serviceBox').classList.remove('hidden');
   $('inspectionScreen').classList.remove('hidden');
   $('inspectionServiceLabel').textContent=(s.nombreServicio||'Servicio')+' · '+formatearHora(s.horaProgramada);
   $('inspectionAlert').style.display='none';
@@ -2154,7 +2155,7 @@ async function refrescarServicioEnSegundoPlano(id){
 
     if(!servicio || !servicioEnInspeccion || String(servicioEnInspeccion.idServicio)!==String(id)) return;
     servicioEnInspeccion={...servicioEnInspeccion,fecha:servicio.FECHA,horaProgramada:servicio.HORA_PROGRAMADA,tipo:servicio.TIPO_SERVICIO,nombreServicio:servicio.NOMBRE_SERVICIO,rutaNombre:(rutas.find(x=>String(x.ID_RUTA||'')===String(servicio.ID_RUTA||''))?.NOMBRE_RUTA)||servicio.ID_RUTA||'',estado:viaje?'EN VIAJE':servicio.ESTADO,idAsignacion:asignacion?.ID_ASIGNACION||servicioEnInspeccion.idAsignacion,idUnidad:asignacion?.ID_VEHICULO||servicioEnInspeccion.idUnidad,dominio:vehiculo?.DOMINIO||servicioEnInspeccion.dominio,idViaje:viaje?.ID_VIAJE||servicioEnInspeccion.idViaje,kmInicial:viaje?.KM_INICIAL||servicioEnInspeccion.kmInicial};
-    window.__servicioActual=servicioEnInspeccion;
+    renderService(servicioEnInspeccion);
 
     // Si el estado cambió mientras cargábamos, adaptamos la pantalla sin recargarla.
     if(['EN VIAJE','EN CURSO','ACTIVO','INICIADO'].includes(String(servicioEnInspeccion.estado||'').toUpperCase())) mostrarModoViajeActivo();
