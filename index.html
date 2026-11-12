@@ -1748,7 +1748,7 @@ function mostrarFotoSecretaria(photoBox,vehiculo){
   if(!fotoLocal && !fotoRegistrada) return;
   const img=document.createElement('img');
   if(dominioUnidad(dominio).replace(/[^A-Z0-9]/g,'')==='AE807UI')img.classList.add('secretaria-photo-cronos');
-  if(['AD614FO','AD614FN','AI583WW'].includes(dominioUnidad(dominio).replace(/[^A-Z0-9]/g,'')))img.classList.add('secretaria-photo-recortada');
+  if(['AD614FO','AD614FN','AI583WW','MIR051'].includes(dominioUnidad(dominio).replace(/[^A-Z0-9]/g,'')))img.classList.add('secretaria-photo-recortada');
   img.alt='Foto de la unidad '+(dominio||vehiculo.INTERNO||'sin dominio');
   img.loading='lazy';
   img.decoding='async';
