@@ -1978,14 +1978,14 @@ function dominioUnidad(dominio){
 function fotoUnidadPorDominio(dominio){
   const limpio=dominioUnidad(dominio).replace(/[^A-Z0-9]/g,'');
   if(!limpio || limpio==='SINDOMINIO') return '';
-  const revisionFoto=['AD614FO','AD614FN','AI583WW'].includes(limpio)?'?v=20261112':
+  const revisionFoto=['AD614FO','AD614FN','AI583WW','MIR051'].includes(limpio)?'?v=20261112':
     ['AE807UI','AG213WY','AG213WS'].includes(limpio)?'?v=20261111':'';
   return './vehiculos_png/'+encodeURIComponent(limpio)+'.webp'+revisionFoto;
 }
 
 // Elimina el blanco de las fotos WebP para integrarlas al fondo oscuro.
 function quitarFondoBlancoVehiculo(img){
-  if(/\/(AD614FO|AD614FN|AI583WW)\.webp(?:\?|$)/i.test(img.getAttribute('src')||'')) return;
+  if(/\/(AD614FO|AD614FN|AI583WW|MIR051)\.webp(?:\?|$)/i.test(img.getAttribute('src')||'')) return;
   try{
     if(img.dataset.fondoProcesado==='1') return;
     const w=img.naturalWidth,h=img.naturalHeight;
