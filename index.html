@@ -841,6 +841,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
 }
 .secretaria-vehicle-photo img{display:block;width:100%;height:100%;object-fit:contain;transform:scale(1.4)}
 .secretaria-vehicle-photo img.secretaria-photo-cronos{transform:scale(1.08)}
+.secretaria-vehicle-photo img.secretaria-photo-recortada{transform:scale(1)}
 .secretaria-vehicle-photo-fallback{display:flex;align-items:center;gap:8px;color:#91b4a0;font-size:11px}
 .secretaria-vehicle-photo-fallback[hidden]{display:none}
 .secretaria-vehicle-data{display:flex;flex:1;min-width:0;flex-direction:column;gap:3px}
@@ -1747,6 +1748,7 @@ function mostrarFotoSecretaria(photoBox,vehiculo){
   if(!fotoLocal && !fotoRegistrada) return;
   const img=document.createElement('img');
   if(dominioUnidad(dominio).replace(/[^A-Z0-9]/g,'')==='AE807UI')img.classList.add('secretaria-photo-cronos');
+  if(['AD614FO','AI583WW'].includes(dominioUnidad(dominio).replace(/[^A-Z0-9]/g,'')))img.classList.add('secretaria-photo-recortada');
   img.alt='Foto de la unidad '+(dominio||vehiculo.INTERNO||'sin dominio');
   img.loading='lazy';
   img.decoding='async';
@@ -1976,12 +1978,14 @@ function dominioUnidad(dominio){
 function fotoUnidadPorDominio(dominio){
   const limpio=dominioUnidad(dominio).replace(/[^A-Z0-9]/g,'');
   if(!limpio || limpio==='SINDOMINIO') return '';
-  const revisionFoto=['AE807UI','AG213WY','AG213WS'].includes(limpio)?'?v=20261111':'';
+  const revisionFoto=['AD614FO','AI583WW'].includes(limpio)?'?v=20261112':
+    ['AE807UI','AG213WY','AG213WS'].includes(limpio)?'?v=20261111':'';
   return './vehiculos_png/'+encodeURIComponent(limpio)+'.webp'+revisionFoto;
 }
 
 // Elimina el blanco de las fotos WebP para integrarlas al fondo oscuro.
 function quitarFondoBlancoVehiculo(img){
+  if(/\/(AD614FO|AI583WW)\.webp(?:\?|$)/i.test(img.getAttribute('src')||'')) return;
   try{
     if(img.dataset.fondoProcesado==='1') return;
     const w=img.naturalWidth,h=img.naturalHeight;
