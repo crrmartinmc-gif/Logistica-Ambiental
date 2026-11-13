@@ -71,3 +71,24 @@ async function finalizarViaje(cerrarRecorrido=false){
   try{return await finalizarViajeInterno(cerrarRecorrido===true);}
   finally{window.__cerrandoRecorridoOperacion=false;botones.forEach(b=>{if(b.isConnected)b.disabled=false;});}
 }
+
+async function verificarFotosDeViajeActivo(){
+  if(!servicioEnInspeccion||servicioEnInspeccion.completandoInspeccion)return;
+  const id=servicioEnInspeccion.idServicio||'',unidad=servicioEnInspeccion.idUnidad,sesion=recSesionActual();
+  try{
+    const r=await consultarRecorridoActual(unidad),v=r?.viajeActivo;
+    if(sesion!==recSesionActual()||!v||v.inspeccionCompleta!==false||String(servicioEnInspeccion?.idUnidad)!==String(unidad)||String(v.ID_SERVICIO||'')!==String(id)||servicioEnInspeccion.completandoInspeccion)return;
+    servicioEnInspeccion.completandoInspeccion=true;
+    servicioEnInspeccion.idViaje=v.ID_VIAJE;
+    servicioEnInspeccion.salidaId=v.ID_VIAJE;
+    servicioEnInspeccion.idAsignacion=v.ID_ASIGNACION||servicioEnInspeccion.idAsignacion;
+    restablecerPreparacionRecorrido();
+    window.__salidaFotos={frente:null,trasera:null,lateral_derecho:null,lateral_izquierdo:null};
+    $('finalKmBox')?.remove();construirFotosSalida();
+    $('currentKm').value=String(v.KM_INICIAL??'');$('currentKm').disabled=true;
+    $('finishInspectionBtn').textContent='GUARDAR INSPECCIÓN';
+    document.querySelector('#inspectionScreen .inspection-head h2').textContent='Completar inspección';
+    $('inspectionAlert').textContent='El servicio ya está iniciado desde el panel. Faltan sus cuatro fotos de hoy; al guardarlas se conservará el horario de inicio.';
+    $('inspectionAlert').style.display='block';actualizarEstadoInicio();
+  }catch(e){console.warn('Inspección del viaje activo:',e.message);}
+}

@@ -1282,7 +1282,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
    ============================================================ */
 </script>
 <script src="./documentos-unidad.js?v=2"></script>
-<script src="./recorridos-chofer.js?v=20261113-1"></script>
+<script src="./recorridos-chofer.js?v=20261113-2"></script>
 <script src="./operaciones-viaje.js?v=1"></script>
 <script>
 const BACKEND_URL = "https://script.google.com/macros/s/AKfycbz0n4ZlW2p--nP2Wx0SnytyCRt_pL6RFxliEan0j1vUdSSrBrVNCbsTI7VC0JQWl5k9/exec";
@@ -2451,7 +2451,7 @@ function actualizarEstadoInicio(){
   }
   if(listo){
     $('inspectionStatus').className='status-banner ready';
-    $('inspectionStatus').innerHTML='🟢 <strong>Listo para iniciar</strong> · fotos y kilometraje completos';
+    $('inspectionStatus').innerHTML=servicioEnInspeccion?.completandoInspeccion?'🟢 <strong>Listo para guardar la inspección</strong> · se conserva el servicio en curso':'🟢 <strong>Listo para iniciar</strong> · fotos y kilometraje completos';
   }else if(fotos<4 && km===null){
     $('inspectionStatus').className='status-banner pending';
     $('inspectionStatus').innerHTML='📸 <strong>Preparando salida</strong> · faltan 4 fotos y el kilometraje';
@@ -2642,6 +2642,7 @@ function mostrarResumenControl(categoria,estado){
 }
 
 function mostrarModoViajeActivo(){
+  if(servicioEnInspeccion?.completandoInspeccion)return;
   const nombre=escapeHtml(session?.nombre||'Chofer');
   $('inspectionServiceLabel').textContent='Servicio activo · '+(servicioEnInspeccion?.nombreServicio||'En viaje');
   $('inspectionStatus').className='status-banner travel';
@@ -2660,6 +2661,7 @@ function mostrarModoViajeActivo(){
   const info=$('inspectionScreen').querySelector('.inspection-head p'); if(info) info.innerHTML='Buen viaje, <strong>'+nombre+'</strong> 👋';
   const nota=$('inspectionScreen').querySelector('.inspection-card > div:last-child'); if(nota && nota.textContent.includes('Las 4 fotos')) nota.classList.add('hidden');
   $('inspectionScreen').scrollIntoView({behavior:'smooth',block:'start'});
+  verificarFotosDeViajeActivo();
 }
 
 function asegurarCampoKmFinal(){
@@ -2762,6 +2764,7 @@ async function iniciarViaje(){
       throw err;
     }
     servicioEnInspeccion.estado='EN VIAJE';
+    servicioEnInspeccion.completandoInspeccion=false;
     servicioEnInspeccion.kmInicial=km;
     window.__servicioActual=servicioEnInspeccion;
     try{localStorage.setItem('diaVerdeServicioActivo',JSON.stringify({idServicio:servicioEnInspeccion.idServicio,idViaje:servicioEnInspeccion.idViaje||'',pendienteGuardado:false}));}catch(e){}
@@ -2787,7 +2790,7 @@ async function iniciarViajeSecretaria(){
     const res=await postJson({accion:'iniciarViajeSecretaria',idViaje:servicioEnInspeccion.salidaId,idRecorrido:recPuedeReutilizar()?inspeccionReutilizable.ID_RECORRIDO:'',usuario:session.usuario,idChofer:session.idChofer,idVehiculo:vehiculoSecretariaSeleccionado.ID_VEHICULO,kmInicial:km,horaInicio:new Date().toISOString(),observaciones:$('inspectionObs').value.trim(),fotos:{frente:f.frente?.dataUrl||'',trasera:f.trasera?.dataUrl||'',lateral_derecho:f.lateral_derecho?.dataUrl||'',lateral_izquierdo:f.lateral_izquierdo?.dataUrl||'',source:'LIVE_CAMERA'}});
     const data=res?.resultado||res;if(!res?.ok||!data?.ok)throw new Error(res?.error||data?.error||'No se pudo registrar la salida.');
     viajeSecretariaActivo=data.viaje||{ID_VIAJE:data.idViaje,ID_VEHICULO:vehiculoSecretariaSeleccionado.ID_VEHICULO,ID_CHOFER:session.idChofer,ESTADO:'EN CURSO'};
-    servicioEnInspeccion.idViaje=viajeSecretariaActivo.ID_VIAJE;servicioEnInspeccion.estado='EN VIAJE';
+    servicioEnInspeccion.idViaje=viajeSecretariaActivo.ID_VIAJE;servicioEnInspeccion.estado='EN VIAJE';servicioEnInspeccion.completandoInspeccion=false;
     mostrarModoViajeActivo();$('finishInspectionBtn').onclick=finalizarViaje;$('finishInspectionBtn').textContent='FINALIZAR VIAJE';
     mostrarAvisoOperacion('✅ Viaje iniciado y confirmado por el Panel de Control.');
     $('inspectionAlert').textContent='Salida registrada correctamente. Al regresar, ingresá el KM final.';$('inspectionAlert').style.display='block';
