@@ -1491,7 +1491,27 @@ async function programarProcesamientoCola(opId){
   if(opId) return intentarEnviarOperacionDirecta(opId);
 }
 
+function puedeVerDiagnosticosOperacion(){
+  return ['ADMIN','ADMINISTRADOR','SUPERADMIN'].includes(String(session?.rol||'').trim().toUpperCase());
+}
+function mensajeErrorOperacion(error,operacion){
+  const detalle=String(error?.message||error||'');
+  if(puedeVerDiagnosticosOperacion())return detalle;
+  console.warn('Diagnóstico de operación:',detalle);
+  if(/^(KM_FINAL|El KM final|El KM inicial).*menor/i.test(detalle))return 'Revisá el kilometraje: no puede ser menor al registrado.';
+  return operacion==='cierre'
+    ? 'El cierre todavía no está confirmado. Volvé a intentar con conexión.'
+    : operacion==='reporte'
+    ? 'No se pudo confirmar el reporte. Volvé a intentar con conexión.'
+    : 'La salida todavía no está confirmada. Volvé a intentar con conexión.';
+}
 function mostrarAvisoOperacion(mensaje,pendiente=false){
+  // Los reintentos y sus detalles técnicos no generan alertas al chofer.
+  // La cola conserva los archivos y solo se muestra éxito tras confirmación real.
+  if(pendiente&&!puedeVerDiagnosticosOperacion()){
+    $('operationNotice')?.remove();
+    return;
+  }
   let aviso=$('operationNotice');
   if(!aviso){
     aviso=document.createElement('div');aviso.id='operationNotice';
@@ -1739,7 +1759,7 @@ async function cargarDashboardSecretaria(){
       mostrarFotoSecretaria(photoBox,vehiculos[index]);
     });
     window.__vehiculosSecretaria=vehiculos;
-  }catch(err){box.innerHTML='<div class="empty">No se pudo cargar la flota: '+escapeHtml(err.message||'Error')+'. Actualizá la pantalla.</div>';}
+  }catch(err){console.warn('Carga de flota:',err);box.innerHTML='<div class="empty">No se pudo cargar la flota. Actualizá la pantalla.</div>';}
 }
 
 function mostrarFotoSecretaria(photoBox,vehiculo){
@@ -2647,7 +2667,7 @@ async function registrarControlVehiculo(){
     mostrarResumenControl(categoria,controlDraft.estado||'REPORTADO');
     cerrarControlVehiculo();
   }catch(err){
-    alert(err.message||'No se pudo registrar el reporte.');
+    alert(mensajeErrorOperacion(err,'reporte'));
   }finally{btns.forEach(b=>b.disabled=false)}
 }
 function leerArchivoDataUrl(file){return new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve({dataUrl:r.result,name:file.name||'reporte.jpg',type:file.type||'image/jpeg'});r.onerror=reject;r.readAsDataURL(file)})}
@@ -2788,7 +2808,7 @@ async function iniciarViaje(){
     window.__iniciandoViajeDiaVerde=false;
   }catch(err){
     invalidarInspeccionReutilizada(err);
-    a.textContent=err.message||'No se pudo guardar la salida localmente.';a.style.display='block';
+    a.textContent=mensajeErrorOperacion(err,'salida');a.style.display='block';
     window.__iniciandoViajeDiaVerde=false;
     btn.disabled=false;btn.textContent='▶ INICIAR VIAJE';btn.onclick=iniciarViaje;
   }
@@ -2809,7 +2829,7 @@ async function iniciarViajeSecretaria(){
     mostrarModoViajeActivo();$('finishInspectionBtn').onclick=finalizarViaje;$('finishInspectionBtn').textContent='FINALIZAR VIAJE';
     mostrarAvisoOperacion('✅ Viaje iniciado y confirmado por el Panel de Control.');
     $('inspectionAlert').textContent='Salida registrada correctamente. Al regresar, ingresá el KM final.';$('inspectionAlert').style.display='block';
-  }catch(err){invalidarInspeccionReutilizada(err);a.textContent=err.message||'No se pudo iniciar el viaje.';a.style.display='block';btn.disabled=false;btn.textContent='▶ INICIAR VIAJE';}
+  }catch(err){invalidarInspeccionReutilizada(err);a.textContent=mensajeErrorOperacion(err,'salida');a.style.display='block';btn.disabled=false;btn.textContent='▶ INICIAR VIAJE';}
 }
 
 async function finalizarViajeSecretaria(cerrarRecorrido=false){
@@ -2838,7 +2858,7 @@ async function finalizarViajeSecretaria(cerrarRecorrido=false){
     a.textContent='✅ Viaje finalizado y confirmado por el Panel de Control.';a.style.display='block';
     volverInicioSinEsperar();
 
-  }catch(err){a.textContent=err.message||'No se pudo guardar el cierre en este dispositivo.';a.style.display='block';btn.disabled=false;btn.textContent='FINALIZAR VIAJE';}
+  }catch(err){a.textContent=mensajeErrorOperacion(err,'cierre');a.style.display='block';btn.disabled=false;btn.textContent='FINALIZAR VIAJE';}
 }
 
 function configurarPantallaViajeRecuperado(mensaje){
@@ -2881,7 +2901,7 @@ async function finalizarViajeInterno(cerrarRecorrido=false){
     const controlSection=document.querySelector('#inspectionScreen .vehicle-control-section');if(controlSection)controlSection.classList.add('hidden');
     volverInicioSinEsperar();
 
-  }catch(err){a.textContent=err.message||'No se pudo guardar el cierre localmente.';a.style.display='block';btn.disabled=false;btn.textContent='FINALIZAR SERVICIO';}
+  }catch(err){a.textContent=mensajeErrorOperacion(err,'cierre');a.style.display='block';btn.disabled=false;btn.textContent='FINALIZAR SERVICIO';}
 }
 
 function volverInicioSinEsperar(){
@@ -3142,7 +3162,7 @@ async function guardarReporteAdmin(){
     $('adminStatus').textContent='✓ Reporte / avería registrado correctamente.';
     $('adminReportObs').value='';
     cerrarReporteAdmin();
-  }catch(err){alert(err.message||'No se pudo registrar el reporte.');}
+  }catch(err){alert(mensajeErrorOperacion(err,'reporte'));}
   finally{btns.forEach(b=>b.disabled=false);}
 }
 
