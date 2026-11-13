@@ -1282,7 +1282,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
    ============================================================ */
 </script>
 <script src="./documentos-unidad.js?v=2"></script>
-<script src="./recorridos-chofer.js?v=20261113-2"></script>
+<script src="./recorridos-chofer.js?v=20261113-3"></script>
 <script src="./operaciones-viaje.js?v=1"></script>
 <script>
 const BACKEND_URL = "https://script.google.com/macros/s/AKfycbz0n4ZlW2p--nP2Wx0SnytyCRt_pL6RFxliEan0j1vUdSSrBrVNCbsTI7VC0JQWl5k9/exec";
@@ -1796,22 +1796,33 @@ function continuarViajeSecretaria(){
 }
 
 async function cargarDashboard(opciones={}){
-  if(!esChoferSecretaria())consultarRecorridoActual().catch(e=>console.warn("Recorrido:",e.message));
+  if(dashboardActualizacionPendiente){
+    await dashboardActualizacionPendiente;
+    if(opciones.force)return cargarDashboard(opciones);
+    return;
+  }
+  const pendiente=cargarDashboardInterno(opciones);dashboardActualizacionPendiente=pendiente;
+  try{return await pendiente;}finally{if(dashboardActualizacionPendiente===pendiente)dashboardActualizacionPendiente=null;}
+}
+async function cargarDashboardInterno(opciones={}){
   if(esChoferSecretaria()){ await cargarDashboardSecretaria(); return; }
   $('dashboardScreen').classList.remove('secretaria-mode');
   $('serviceBox').classList.remove('secretaria-content');
   if(dashboardCargando) return;
   dashboardCargando=true;
-  const idChofer=String(session?.idChofer||'').trim();
+  const idChofer=String(session?.idChofer||'').trim(),sesionDashboard=recSesionActual();
+  const lectura={force:opciones.force===true};
   try{
-    const [aRes,vRes,sRes,viRes,rRes] = await Promise.all([
-      getJson('listarAsignaciones'),
-      getJson('listarVehiculos'),
-      getJson('listarServicios'),
-      getJson('listarViajes'),
-      getJson('rutas')
+    const [aRes,vRes,sRes,viRes,rRes,estadoVigente] = await Promise.all([
+      getJson('listarAsignaciones',{},lectura),
+      getJson('listarVehiculos',{},lectura),
+      getJson('listarServicios',{},lectura),
+      getJson('listarViajes',{},lectura),
+      getJson('rutas',{},lectura),
+      consultarRecorridoActual().catch(e=>{console.warn('Recorrido:',e.message);return null;})
     ]);
 
+    if(sesionDashboard!==recSesionActual())return;
     const asignaciones=Array.isArray(aRes.asignaciones)?aRes.asignaciones:[];
     const vehiculos=Array.isArray(vRes.vehiculos)?vRes.vehiculos:[];
     const servicios=Array.isArray(sRes.servicios)?sRes.servicios:[];
@@ -1894,9 +1905,15 @@ async function cargarDashboard(opciones={}){
       return String(a.HORA_ASIGNACION||'').localeCompare(String(b.HORA_ASIGNACION||''));
     });
 
-    const asignacion=propias[0]||null;
+    // El viaje real manda sobre la agenda, incluso si su asignación ya cambió de estado.
+    const viajePrioritario=recSeleccionarViajeActivo(viajes,servicios,idChofer,estadoVigente);
+    const asignacion=viajePrioritario?{
+      ...(asignaciones.find(a=>String(a.ID_ASIGNACION)===String(viajePrioritario.ID_ASIGNACION))||{}),
+      ID_ASIGNACION:viajePrioritario.ID_ASIGNACION||'',ID_SERVICIO:viajePrioritario.ID_SERVICIO||'',
+      ID_CHOFER:viajePrioritario.ID_CHOFER||idChofer,ID_VEHICULO:viajePrioritario.ID_VEHICULO
+    }:propias[0]||null;
     const servicioBase=asignacion
-      ? servicios.find(s=>String(s.ID_SERVICIO||'').trim()===String(asignacion.ID_SERVICIO||'').trim())
+      ? servicios.find(s=>String(s.ID_SERVICIO||'').trim()===String(asignacion.ID_SERVICIO||'').trim()) || (viajePrioritario?{ID_SERVICIO:viajePrioritario.ID_SERVICIO||'',NOMBRE_SERVICIO:'Servicio en curso',ESTADO:'EN CURSO',FECHA:viajePrioritario.FECHA}:null)
       : null;
 
     let servicioActual=servicioBase?{
@@ -1921,11 +1938,7 @@ async function cargarDashboard(opciones={}){
       servicioActual.marca=vehiculoServicio?.MARCA||'';
       servicioActual.modelo=vehiculoServicio?.MODELO||'';
 
-      const viajeActivo=viajes.find(v=>
-        String(v.ID_SERVICIO||'').trim()===String(servicioActual.idServicio).trim() &&
-        String(v.ID_ASIGNACION||'').trim()===String(asignacion.ID_ASIGNACION||'').trim() &&
-        ['EN CURSO','ACTIVO','INICIADO'].includes(String(v.ESTADO||'').trim().toUpperCase())
-      );
+      const viajeActivo=viajePrioritario;
       if(viajeActivo){
         servicioActual.estado='EN VIAJE';
         servicioActual.idViaje=viajeActivo.ID_VIAJE;
@@ -1948,6 +1961,8 @@ async function cargarDashboard(opciones={}){
   }
 }
 
+let dashboardActualizacionPendiente=null;
+
 function iniciarActualizacionAutomatica(){
   if(dashboardTimer) clearInterval(dashboardTimer);
   dashboardTimer=setInterval(()=>{
@@ -1961,6 +1976,7 @@ function iniciarActualizacionAutomatica(){
       // La consulta inicial y el flujo de inicio/finalización siguen intactos.
       return;
     }
+    if(!$('inspectionScreen').classList.contains('hidden'))return;
     cargarDashboard();
   },15000);
 }
@@ -2166,11 +2182,11 @@ async function refrescarServicioEnSegundoPlano(id){
       getJson('rutas')
     ]);
     const servicio=(sRes.servicios||[]).find(x=>String(x.ID_SERVICIO||'')===String(id));
-    const asignacion=(aRes.asignaciones||[]).find(x=>String(x.ID_SERVICIO||'')===String(id)&&String(x.ID_CHOFER||'')===String(session.idChofer)&&String(x.ESTADO||'').toUpperCase()==='ACTIVA');
+    const viaje=(vRes.viajes||[]).find(v=>String(v.ID_VIAJE||'')===String(servicioEnInspeccion?.idViaje||'')&&String(v.ID_CHOFER||'')===String(session.idChofer)&&['EN CURSO','ACTIVO','INICIADO'].includes(String(v.ESTADO||'').toUpperCase()));
+    const asignacion=viaje?{...(aRes.asignaciones||[]).find(a=>String(a.ID_ASIGNACION)===String(viaje.ID_ASIGNACION)),ID_ASIGNACION:viaje.ID_ASIGNACION,ID_VEHICULO:viaje.ID_VEHICULO}:servicioEnInspeccion?.idViaje?{ID_ASIGNACION:servicioEnInspeccion.idAsignacion,ID_VEHICULO:servicioEnInspeccion.idUnidad}: (aRes.asignaciones||[]).find(x=>String(x.ID_SERVICIO||'')===String(id)&&String(x.ID_CHOFER||'')===String(session.idChofer)&&String(x.ESTADO||'').toUpperCase()==='ACTIVA');
     const vehiculos=(await getJson('listarVehiculos')).vehiculos||[];
     const rutas=rRes.rutas||[];
     const vehiculo=asignacion?vehiculos.find(x=>String(x.ID_VEHICULO||'')===String(asignacion.ID_VEHICULO||'')):null;
-    const viaje=(vRes.viajes||[]).find(x=>String(x.ID_SERVICIO||'')===String(id)&&['EN CURSO','ACTIVO','INICIADO'].includes(String(x.ESTADO||'').toUpperCase()));
 
     if(!servicio || !servicioEnInspeccion || String(servicioEnInspeccion.idServicio)!==String(id)) return;
     servicioEnInspeccion={...servicioEnInspeccion,fecha:servicio.FECHA,horaProgramada:servicio.HORA_PROGRAMADA,tipo:servicio.TIPO_SERVICIO,nombreServicio:servicio.NOMBRE_SERVICIO,rutaNombre:(rutas.find(x=>String(x.ID_RUTA||'')===String(servicio.ID_RUTA||''))?.NOMBRE_RUTA)||servicio.ID_RUTA||'',estado:viaje?'EN VIAJE':servicio.ESTADO,idAsignacion:asignacion?.ID_ASIGNACION||servicioEnInspeccion.idAsignacion,idUnidad:asignacion?.ID_VEHICULO||servicioEnInspeccion.idUnidad,dominio:vehiculo?.DOMINIO||servicioEnInspeccion.dominio,idViaje:viaje?.ID_VIAJE||servicioEnInspeccion.idViaje,kmInicial:viaje?.KM_INICIAL||servicioEnInspeccion.kmInicial};
@@ -2642,7 +2658,7 @@ function mostrarResumenControl(categoria,estado){
 }
 
 function mostrarModoViajeActivo(){
-  if(servicioEnInspeccion?.completandoInspeccion)return;
+  if(servicioEnInspeccion)servicioEnInspeccion.completandoInspeccion=false;
   const nombre=escapeHtml(session?.nombre||'Chofer');
   $('inspectionServiceLabel').textContent='Servicio activo · '+(servicioEnInspeccion?.nombreServicio||'En viaje');
   $('inspectionStatus').className='status-banner travel';
@@ -2661,7 +2677,6 @@ function mostrarModoViajeActivo(){
   const info=$('inspectionScreen').querySelector('.inspection-head p'); if(info) info.innerHTML='Buen viaje, <strong>'+nombre+'</strong> 👋';
   const nota=$('inspectionScreen').querySelector('.inspection-card > div:last-child'); if(nota && nota.textContent.includes('Las 4 fotos')) nota.classList.add('hidden');
   $('inspectionScreen').scrollIntoView({behavior:'smooth',block:'start'});
-  verificarFotosDeViajeActivo();
 }
 
 function asegurarCampoKmFinal(){

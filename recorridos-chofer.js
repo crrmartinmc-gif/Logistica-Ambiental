@@ -40,6 +40,14 @@ async function verificarInspeccionRecorrido(){
     if(!r||consulta!==consultaInspeccionActual||sesion!==recSesionActual()||String(servicioEnInspeccion?.idUnidad)!==String(idVehiculo))return;
     if(['EN VIAJE','EN CURSO','ACTIVO','INICIADO'].includes(String(servicioEnInspeccion?.estado||'').toUpperCase()))return;
     bloqueoOtroServicio=!!r.viajeActivo && (String(r.viajeActivo.ID_SERVICIO||'')!==String(idServicio)||!idServicio);
+    if(bloqueoOtroServicio){
+      await cargarDashboard({force:true});
+      const actual=window.__servicioActual;
+      if(actual?.idViaje && String(actual.idViaje)===String(r.viajeActivo.ID_VIAJE)){
+        mostrarAvisoOperacion('Recuperamos tu viaje en curso. Registrá el KM final para finalizarlo.');
+        await verServicio(actual.idServicio);return;
+      }
+    }
     if(r.reutilizable)inspeccionReutilizable=r.recorrido;
     document.querySelector('#inspectionScreen .check-section')?.classList.toggle('hidden',recPuedeReutilizar());
     actualizarEstadoInicio();
@@ -73,22 +81,23 @@ async function finalizarViaje(cerrarRecorrido=false){
 }
 
 async function verificarFotosDeViajeActivo(){
-  if(!servicioEnInspeccion||servicioEnInspeccion.completandoInspeccion)return;
-  const id=servicioEnInspeccion.idServicio||'',unidad=servicioEnInspeccion.idUnidad,sesion=recSesionActual();
-  try{
-    const r=await consultarRecorridoActual(unidad),v=r?.viajeActivo;
-    if(sesion!==recSesionActual()||!v||v.inspeccionCompleta!==false||String(servicioEnInspeccion?.idUnidad)!==String(unidad)||String(v.ID_SERVICIO||'')!==String(id)||servicioEnInspeccion.completandoInspeccion)return;
-    servicioEnInspeccion.completandoInspeccion=true;
-    servicioEnInspeccion.idViaje=v.ID_VIAJE;
-    servicioEnInspeccion.salidaId=v.ID_VIAJE;
-    servicioEnInspeccion.idAsignacion=v.ID_ASIGNACION||servicioEnInspeccion.idAsignacion;
-    restablecerPreparacionRecorrido();
-    window.__salidaFotos={frente:null,trasera:null,lateral_derecho:null,lateral_izquierdo:null};
-    $('finalKmBox')?.remove();construirFotosSalida();
-    $('currentKm').value=String(v.KM_INICIAL??'');$('currentKm').disabled=true;
-    $('finishInspectionBtn').textContent='GUARDAR INSPECCIÓN';
-    document.querySelector('#inspectionScreen .inspection-head h2').textContent='Completar inspección';
-    $('inspectionAlert').textContent='El servicio ya está iniciado desde el panel. Faltan sus cuatro fotos de hoy; al guardarlas se conservará el horario de inicio.';
-    $('inspectionAlert').style.display='block';actualizarEstadoInicio();
-  }catch(e){console.warn('Inspección del viaje activo:',e.message);}
+  // Una inspección pendiente nunca reemplaza los controles para cerrar un viaje real.
+  return;
+}
+function recSeleccionarViajeActivo(viajes,servicios,idChofer,confirmacion){
+  const mismo=(a,b)=>String(a||'').trim()===String(b||'').trim();
+  const activo=v=>['EN CURSO','ACTIVO','INICIADO'].includes(String(v.ESTADO||'').trim().toUpperCase());
+  if(confirmacion?.versionRecorridos===1){
+    const v=confirmacion.viajeActivo;
+    if(!v)return null;
+    const fila=(viajes||[]).find(x=>mismo(x.ID_VIAJE,v.ID_VIAJE)&&mismo(x.ID_CHOFER,idChofer));
+    return {...fila,...v,ID_CHOFER:idChofer};
+  }
+  return (viajes||[]).filter(v=>{
+    if(!mismo(v.ID_CHOFER,idChofer)||!activo(v))return false;
+    const servicio=(servicios||[]).find(s=>mismo(s.ID_SERVICIO,v.ID_SERVICIO));
+    if(servicio && ['FINALIZADO','CANCELADO','CANCELADA'].includes(String(servicio.ESTADO||'').toUpperCase()))return false;
+    if(servicio?.FECHA && v.HORA_INICIO && fechaArgentinaISO(servicio.FECHA)!==fechaArgentinaISO(v.HORA_INICIO))return false;
+    return true;
+  }).sort((a,b)=>(Date.parse(b.HORA_INICIO)||0)-(Date.parse(a.HORA_INICIO)||0))[0]||null;
 }
