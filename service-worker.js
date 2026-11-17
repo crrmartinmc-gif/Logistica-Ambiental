@@ -1,4 +1,4 @@
-importScripts('./operaciones-viaje.js');
+importScripts('./operaciones-viaje.js','./cola-viajes.js');
 /* ============================================================
    DIA VERDE - APP CHOFERES
    SERVICE WORKER WEB V32
@@ -71,8 +71,26 @@ function procesarSalidas(){
   return procesoEnCurso;
 }
 self.addEventListener('sync',event=>{
-  if(event.tag==='dia-verde-salidas')event.waitUntil(procesarSalidas().catch(()=>{}));
+  if(event.tag==='dia-verde-salidas')event.waitUntil(procesarSalidas());
 });
 self.addEventListener('message',event=>{
-  if(event.data?.type==='PROCESAR_SALIDAS_AHORA')event.waitUntil(procesarSalidas().catch(()=>{}));
+  if(event.data?.type==='PROCESAR_SALIDAS_AHORA')event.waitUntil(procesarSalidas());
+});
+
+
+self.addEventListener('sync',event=>{if(event.tag==='chofer-viajes-v33')event.waitUntil(ColaViajes.procesar(registro=>avisarClientes({type:'VIAJE_LOCAL_ACTUALIZADO',registro})));});
+
+// Solo recursos de la interfaz; nunca respuestas del backend ni documentos de Drive.
+const APP_CACHE='chofer-interfaz-v33';
+const APP_FILES=['./','./index.html','./operaciones-viaje.js?v=2','./cola-viajes.js?v=33','./viajes-locales.js?v=33','./recorridos-chofer.js?v=20261113-3','./documentos-unidad.js?v=2','./documentos-unidad.css?v=4','./manifest.webmanifest'];
+self.addEventListener('install',event=>event.waitUntil(caches.open(APP_CACHE).then(c=>c.addAll(APP_FILES))));
+self.addEventListener('fetch',event=>{
+  const u=new URL(event.request.url);
+  if(event.request.method!=='GET'||u.origin!==self.location.origin)return;
+  const allowed=APP_FILES.some(p=>new URL(p,self.registration.scope).href===u.href);
+  if(!allowed)return;
+  event.respondWith(fetch(event.request).then(response=>{
+    if(response.ok){const copy=response.clone();event.waitUntil(caches.open(APP_CACHE).then(c=>c.put(event.request,copy)));}
+    return response;
+  }).catch(async()=>{const cached=await caches.match(event.request);if(cached)return cached;throw Error('Recurso no disponible sin conexión.');}));
 });
