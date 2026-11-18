@@ -962,6 +962,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
 </style>
 
 <link rel="stylesheet" href="./documentos-unidad.css?v=4">
+<link rel="stylesheet" href="./ordenes-secretaria.css?v=1">
 </head>
 <body>
 <div class="app">
@@ -1765,6 +1766,7 @@ async function cargarDashboardSecretaria(){
     });
     window.__vehiculosSecretaria=vehiculos;
   }catch(err){if(await recuperarViajeLocal(true))return;console.warn('Carga de flota:',err);box.innerHTML='<div class="empty">No se pudo cargar la flota. Actualizá la pantalla.</div>';}
+  finally{if(typeof window.ordenesSecretariaRender==='function')window.ordenesSecretariaRender();}
 }
 
 function mostrarFotoSecretaria(photoBox,vehiculo){
@@ -3168,6 +3170,11 @@ $('loginForm').addEventListener('submit',async e=>{
     if(!res?.ok || !data?.ok || !u?.ID_CHOFER) throw new Error(res?.error||data?.error||'Usuario o contraseña incorrectos.');
     limpiarCacheAPI();
     session={idChofer:u.ID_CHOFER,nombre:u.NOMBRE,usuario:u.USUARIO,estado:u.ESTADO,rol:u.ROL,aplicacion:u.APLICACION};
+    // Sesión independiente solo para consultar y aceptar órdenes de Secretaría.
+    if(String(u.ROL||'').toUpperCase()==='CHOFER_SECRETARIA' && typeof window.ordenesSecretariaLogin==='function'){
+      const credenciales=await window.ordenesSecretariaLogin($('usuario').value,$('contrasena').value);
+      session={...session,...credenciales};
+    }
     registrarServiceWorkerWeb().catch(()=>{});
     sessionStorage.setItem('diaVerdeChofer',JSON.stringify(session));guardarSesionLocal();
     $('driverName').textContent=session.nombre;$('topUserName').textContent=session.nombre;$('avatar').textContent=initials(session.nombre);
@@ -3214,6 +3221,7 @@ $('loginForm').addEventListener('submit',async e=>{
 
 window.addEventListener('pagehide',()=>{ try{ detenerCamara(); }catch(e){} });
 </script>
+<script src="./ordenes-secretaria.js?v=1"></script>
 </body>
 </html>
 
