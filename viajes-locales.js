@@ -62,7 +62,8 @@ async function cerrarViajeLocal(cerrarRecorrido){
   if(km===null || km<Number(r.payload.kmInicial)){const a=$('inspectionAlert');a.textContent='Ingresá un KM final igual o mayor al inicial.';a.style.display='block';return true;}
   const secretaria=r.payload.accion==='iniciarViajeSecretaria';
   try{
-    r=await ColaViajes.cerrar(r.key,{accion:secretaria?'finalizarViajeSecretaria':'finalizarViaje',usuario:session.usuario,idChofer:session.idChofer,idVehiculo:r.payload.idVehiculo,idServicio:r.payload.idServicio||'',kmFinal:km,horaFin:new Date().toISOString(),finalizarRecorrido:cerrarRecorrido===true});
+    r=await ColaViajes.cerrar(r.key,{accion:secretaria?'finalizarViajeSecretaria':'finalizarViaje',usuario:session.usuario,idChofer:session.idChofer,idVehiculo:r.payload.idVehiculo,idServicio:r.payload.idServicio||'',kmFinal:km,horaFin:new Date().toISOString(),finalizarRecorrido:cerrarRecorrido===true,
+      ...(r.payload.idSolicitud?{idSolicitud:r.payload.idSolicitud,idAsignacionLocal:r.payload.idAsignacionLocal,tokenOrdenes:session.tokenOrdenes||r.payload.tokenOrdenes}:{} )});
     s.estado='FINALIZADO';mostrarEstadoLocal(r);await recuperarViajeLocal();lanzarEnvioLocal();
   }catch(e){mostrarAvisoOperacion('No se pudo guardar el cierre en este celular. Volvé a intentar.');}
   return true;
