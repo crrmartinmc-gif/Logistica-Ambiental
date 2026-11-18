@@ -22,7 +22,7 @@ function nota(texto){
   if(n)n.textContent=texto;
 }
 async function pintar(){
-  if(!window.session || !window.esChoferSecretaria?.())return;
+  if(!session || typeof esChoferSecretaria!=='function' || !esChoferSecretaria())return;
   const box=seccion();if(!box||consultando)return;
   const identidad=String(session.idChofer||'');
   box.innerHTML='<div class="ord-sec-head"><h3>📋 Mis traslados asignados</h3><button type="button" id="ordenesSecretariaRefresh">Actualizar</button></div>'
