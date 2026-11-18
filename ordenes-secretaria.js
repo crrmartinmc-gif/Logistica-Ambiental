@@ -5,7 +5,7 @@
 'use strict';
 if(window.__ORDENES_SECRETARIA_F5B__)return;window.__ORDENES_SECRETARIA_F5B__=true;
 const clean=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-let consultando=false,aceptando=false,ultimoId='';
+let consultando=false,aceptando=false,preparando=false,ultimoId='',ultimasOrdenes=[];
 function seccion(){
   const service=document.getElementById('serviceBox');
   if(!service)return null;
@@ -41,15 +41,25 @@ async function pintar(){
     if(String(session?.idChofer||'')!==identidad)return;
     ultimoId=identidad;
     const lista=data.items;
+    ultimasOrdenes=lista;
     nota(lista.length ? 'Solo aparecen los traslados confirmados que Secretaría te asignó.' :
       'Por ahora no tenés traslados confirmados para los próximos 7 días.');
     box.querySelector('#ordenesSecretariaLista').innerHTML=lista.map(o=>{
-      const aceptada=String(o.estado).toUpperCase()==='ACEPTADA';
+      const estado=String(o.estado||'').toUpperCase();
+      const aceptada=estado==='ACEPTADA',enCurso=estado==='EN_CURSO',finalizada=estado==='FINALIZADA';
+      const horario=Date.parse(String(o.fecha||'')+'T'+String(o.hora||'00:00').slice(0,5)+':00-03:00');
+      const demasiadoPronto=Number.isFinite(horario)&&Date.now()<horario-90*60000;
+      const vencida=Number.isFinite(horario)&&Date.now()>horario+24*60*60000;
+      const listo=aceptada&&!demasiadoPronto&&!vencida;
+      const leyenda=finalizada?'✓ FINALIZADO':enCurso?'🚐 EN VIAJE':aceptada?'✓ ACEPTADO':'PENDIENTE DE TU CONFIRMACIÓN';
       return '<div class="ord-sec-card"><div class="ord-sec-title">'+clean(o.origen)+' → '+clean(o.destino)+'</div>'
       +'<div class="ord-sec-detail">'+clean(o.fecha)+' · '+clean(o.hora)+' · '+Number(o.pasajeros||0)+' pasajero(s) · '+Number(o.duracion||0)+' min</div>'
       +'<div class="ord-sec-detail">Vehículo asignado: <strong>'+clean(o.dominio)+' · '+clean(o.interno)+'</strong></div>'
-      +'<div class="ord-sec-bottom"><span class="ord-sec-status">'+(aceptada?'✓ ACEPTADA':'PENDIENTE DE TU CONFIRMACIÓN')+'</span>'
-      +(aceptada?'':'<button type="button" class="ord-sec-accept" data-id="'+clean(o.id)+'">Aceptar traslado</button>')
+      +'<div class="ord-sec-bottom"><span class="ord-sec-status">'+leyenda+'</span>'
+      +(listo?'<button type="button" class="ord-sec-start" data-id="'+clean(o.id)+'">▶ Iniciar traslado</button>':'')
+      +(!aceptada&&!enCurso&&!finalizada?'<button type="button" class="ord-sec-accept" data-id="'+clean(o.id)+'">Aceptar traslado</button>':'')
+      +(aceptada&&demasiadoPronto?'<small>Podés iniciar hasta 90 minutos antes del horario programado.</small>':'')
+      +(aceptada&&vencida?'<small>Consultá a Secretaría: la ventana de inicio finalizó.</small>':'')
       +'</div></div>';
     }).join('');
   }catch(err){
@@ -58,6 +68,15 @@ async function pintar(){
   }finally{consultando=false}
 }
 async function accion(event){
+  const start=event.target.closest('.ord-sec-start');
+  if(start){
+    if(preparando||!session?.tokenOrdenes)return;
+    preparando=true;start.disabled=true;
+    try{await prepararTraslado(start.dataset.id);}
+    catch(err){nota('No se pudo preparar el traslado: '+(err?.message||String(err)));start.disabled=false}
+    finally{preparando=false}
+    return;
+  }
   const btn=event.target.closest('.ord-sec-accept');
   if(!btn||aceptando||!session?.tokenOrdenes)return;
   const id=btn.dataset.id;
@@ -71,6 +90,52 @@ async function accion(event){
   }catch(err){nota('No se pudo aceptar: '+(err?.message||String(err)));btn.disabled=false}
   finally{aceptando=false}
 }
+async function prepararTraslado(id){
+  if(!session||!esChoferSecretaria())throw Error('Ingresá con tu usuario de Secretaría.');
+  const orden=ultimasOrdenes.find(x=>String(x.id)===String(id));
+  if(!orden||String(orden.estado).toUpperCase()!=='ACEPTADA')throw Error('Primero aceptá esta orden.');
+  if(viajeSecretariaActivo||await recuperarViajeLocal(true))
+    throw Error('Ya hay un viaje abierto o pendiente de sincronizar. Terminá ese viaje primero.');
+  const unidad=(window.__vehiculosSecretaria||[]).find(x=>String(x.ID_VEHICULO)===String(orden.idVehiculo));
+  if(!unidad)throw Error('El vehículo de la orden no figura habilitado. Consultá a Secretaría.');
+  if(!confirm('¿Preparar traslado '+orden.origen+' → '+orden.destino+' con '+orden.dominio+'?'))return;
+  seleccionarVehiculoSecretaria(orden.idVehiculo);
+  if(String(servicioEnInspeccion?.idUnidad)!==String(orden.idVehiculo))
+    throw Error('No se pudo seleccionar el vehículo asignado.');
+  window.__ordenSecretariaEnPreparacion={...orden,idChofer:String(session.idChofer)};
+  servicioEnInspeccion.idSolicitud=orden.id;
+  servicioEnInspeccion.idAsignacionLocal=orden.idAsignacion;
+  $('inspectionServiceLabel').textContent=orden.origen+' → '+orden.destino+' · '+orden.dominio;
+  const box=document.getElementById('ordenesSecretariaBox');
+  if(box)box.style.display='none';
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+window.ordenesSecretariaOrdenActiva=function(){
+  const id=String(servicioEnInspeccion?.idSolicitud||'').trim();
+  if(!id||!session||!esChoferSecretaria())return null;
+  const local=window.__ordenSecretariaEnPreparacion;
+  if(local && String(local.id)===id && String(local.idChofer)===String(session.idChofer))return local;
+  return ultimasOrdenes.find(x=>String(x.id)===id &&
+    String(x.idVehiculo)===String(servicioEnInspeccion?.idUnidad||''))||
+    {id,idAsignacion:servicioEnInspeccion?.idAsignacionLocal,
+     idVehiculo:servicioEnInspeccion?.idUnidad};
+};
+window.ordenesSecretariaPorViaje=function(idViaje){
+  return ultimasOrdenes.find(o=>String(o.idViaje||'')===String(idViaje||'')&&!!idViaje)||null;
+};
+window.ordenesSecretariaActualizarCola=async function(){
+  if(!session?.tokenOrdenes||typeof ColaViajes==='undefined')return;
+  const lista=await ColaViajes.todos();
+  for(const item of lista){
+    if(item.cierreConfirmado||!item.payload?.idSolicitud||
+      String(item.payload?.idChofer)!==String(session.idChofer))continue;
+    await ColaViajes.editar(item.key,r=>r?{
+      ...r,payload:{...r.payload,tokenOrdenes:session.tokenOrdenes},
+      cierre:r.cierre?{...r.cierre,tokenOrdenes:session.tokenOrdenes}:null
+    }:r);
+  }
+};
+
 window.ordenesSecretariaRender=function(){pintar().catch(err=>console.warn('Órdenes de Secretaría:',err))};
 window.ordenesSecretariaLogin=async function(usuario,password){
   try{
