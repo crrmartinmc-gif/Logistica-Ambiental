@@ -5,7 +5,7 @@
 'use strict';
 if(window.__ORDENES_SECRETARIA_F5B__)return;window.__ORDENES_SECRETARIA_F5B__=true;
 const clean=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-let consultando=false,aceptando=false,preparando=false,ultimoId='',ultimasOrdenes=[];
+let consultando=false,aceptando=false,preparando=false,ultimoId='',ultimasOrdenes=[],inicioVinculadoHabilitado=false;
 function seccion(){
   const service=document.getElementById('serviceBox');
   if(!service)return null;
@@ -42,6 +42,7 @@ async function pintar(){
     ultimoId=identidad;
     const lista=data.items;
     ultimasOrdenes=lista;
+    inicioVinculadoHabilitado=data.modo==='VIAJES_VINCULADOS';
     nota(lista.length ? 'Solo aparecen los traslados confirmados que Secretaría te asignó.' :
       'Por ahora no tenés traslados confirmados para los próximos 7 días.');
     box.querySelector('#ordenesSecretariaLista').innerHTML=lista.map(o=>{
@@ -50,7 +51,7 @@ async function pintar(){
       const horario=Date.parse(String(o.fecha||'')+'T'+String(o.hora||'00:00').slice(0,5)+':00-03:00');
       const demasiadoPronto=Number.isFinite(horario)&&Date.now()<horario-90*60000;
       const vencida=Number.isFinite(horario)&&Date.now()>horario+24*60*60000;
-      const listo=aceptada&&!demasiadoPronto&&!vencida;
+      const listo=aceptada&&!demasiadoPronto&&!vencida&&inicioVinculadoHabilitado;
       const leyenda=finalizada?'✓ FINALIZADO':enCurso?'🚐 EN VIAJE':aceptada?'✓ ACEPTADO':'PENDIENTE DE TU CONFIRMACIÓN';
       return '<div class="ord-sec-card"><div class="ord-sec-title">'+clean(o.origen)+' → '+clean(o.destino)+'</div>'
       +'<div class="ord-sec-detail">'+clean(o.fecha)+' · '+clean(o.hora)+' · '+Number(o.pasajeros||0)+' pasajero(s) · '+Number(o.duracion||0)+' min</div>'
@@ -59,6 +60,7 @@ async function pintar(){
       +(listo?'<button type="button" class="ord-sec-start" data-id="'+clean(o.id)+'">▶ Iniciar traslado</button>':'')
       +(!aceptada&&!enCurso&&!finalizada?'<button type="button" class="ord-sec-accept" data-id="'+clean(o.id)+'">Aceptar traslado</button>':'')
       +(aceptada&&demasiadoPronto?'<small>Podés iniciar hasta 90 minutos antes del horario programado.</small>':'')
+      +(aceptada&&!inicioVinculadoHabilitado?'<small>Inicio de traslados pendiente de activación en el Panel Maestro.</small>':'')
       +(aceptada&&vencida?'<small>Consultá a Secretaría: la ventana de inicio finalizó.</small>':'')
       +'</div></div>';
     }).join('');
@@ -92,6 +94,7 @@ async function accion(event){
 }
 async function prepararTraslado(id){
   if(!session||!esChoferSecretaria())throw Error('Ingresá con tu usuario de Secretaría.');
+  if(!inicioVinculadoHabilitado)throw Error('El backend todavía no habilitó el inicio de traslados.');
   const orden=ultimasOrdenes.find(x=>String(x.id)===String(id));
   if(!orden||String(orden.estado).toUpperCase()!=='ACEPTADA')throw Error('Primero aceptá esta orden.');
   if(viajeSecretariaActivo||await recuperarViajeLocal(true))
