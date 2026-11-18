@@ -1,5 +1,5 @@
 /* Fase 5B.1. Órdenes confirmadas de APPSECRETARIA para CHOFER_SECRETARIA.
- * El viaje independiente y las fotos/KM NO cambian en esta etapa.
+ * Las nuevas salidas requieren orden aceptada. Las fotos/KM y cierres no se modifican.
  */
 (function(){
 'use strict';
@@ -66,7 +66,7 @@ async function pintar(){
     }).join('');
   }catch(err){
     nota('No se pudieron consultar las órdenes: '+(err?.message||String(err))+
-      '. Los viajes habituales siguen disponibles.');
+      '. Contactá a Secretaría; no podés iniciar viajes sin una orden confirmada.');
   }finally{consultando=false}
 }
 async function accion(event){
@@ -102,12 +102,18 @@ async function prepararTraslado(id){
   const unidad=(window.__vehiculosSecretaria||[]).find(x=>String(x.ID_VEHICULO)===String(orden.idVehiculo));
   if(!unidad)throw Error('El vehículo de la orden no figura habilitado. Consultá a Secretaría.');
   if(!confirm('¿Preparar traslado '+orden.origen+' → '+orden.destino+' con '+orden.dominio+'?'))return;
-  seleccionarVehiculoSecretaria(orden.idVehiculo);
-  if(String(servicioEnInspeccion?.idUnidad)!==String(orden.idVehiculo))
-    throw Error('No se pudo seleccionar el vehículo asignado.');
+  // La selección de unidad ya no inicia viajes libres: solo habilita esta orden validada.
   window.__ordenSecretariaEnPreparacion={...orden,idChofer:String(session.idChofer)};
-  servicioEnInspeccion.idSolicitud=orden.id;
-  servicioEnInspeccion.idAsignacionLocal=orden.idAsignacion;
+  try{
+    seleccionarVehiculoSecretaria(orden.idVehiculo);
+    if(String(servicioEnInspeccion?.idUnidad)!==String(orden.idVehiculo))
+      throw Error('No se pudo seleccionar el vehículo asignado.');
+    servicioEnInspeccion.idSolicitud=orden.id;
+    servicioEnInspeccion.idAsignacionLocal=orden.idAsignacion;
+  }catch(err){
+    window.__ordenSecretariaEnPreparacion=null;
+    throw err;
+  }
   $('inspectionServiceLabel').textContent=orden.origen+' → '+orden.destino+' · '+orden.dominio;
   const box=document.getElementById('ordenesSecretariaBox');
   if(box)box.style.display='none';
