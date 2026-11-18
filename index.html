@@ -1760,7 +1760,7 @@ async function cargarDashboardSecretaria(){
       return;
     }
     if(!vehiculos.length){box.innerHTML='<div class="empty">No hay vehículos operativos disponibles en el área SECRETARÍA.</div>';return;}
-    box.innerHTML='<div class="secretaria-selector-head"><div><span class="secretaria-kicker">UNIDADES DISPONIBLES</span><h3>Seleccioná tu vehículo</h3><p>Unidades habilitadas para el área Secretaría.</p></div><span class="secretaria-count">'+vehiculos.length+' '+(vehiculos.length===1?'UNIDAD':'UNIDADES')+'</span></div><div class="secretaria-vehicles">'+vehiculos.map(v=>`<div class="secretaria-vehicle-card"><button class="secretaria-vehicle-btn" type="button" onclick="seleccionarVehiculoSecretaria('${String(v.ID_VEHICULO).replace(/[^a-zA-Z0-9_-]/g,'')}')"><span class="secretaria-vehicle-photo" data-vehicle-photo></span><span class="secretaria-vehicle-data"><strong>${escapeHtml(v.DOMINIO||'SIN DOMINIO')}</strong><span class="secretaria-vehicle-internal">INTERNO ${escapeHtml(v.INTERNO||'—')}</span><small>${escapeHtml([v.MARCA,v.MODELO].filter(Boolean).join(' ')||'Modelo no informado')}</small></span><span class="secretaria-vehicle-km"><small>KM ACTUAL</small><strong>${escapeHtml(formatearKm(v.KM_ACTUAL||'—'))}</strong></span><span class="secretaria-vehicle-arrow">›</span></button><button type="button" class="unit-documents-button secretaria-documents-button" data-unit-documents="${escapeHtml(dominioUnidad(v.DOMINIO||''))}" aria-label="Documentos de la unidad ${escapeHtml(dominioUnidad(v.DOMINIO||''))}">Documentos de la unidad</button></div>`).join('')+'</div>';
+    box.innerHTML='<div class="secretaria-selector-head"><div><span class="secretaria-kicker">UNIDADES DISPONIBLES</span><h3>Vehículos de Secretaría</h3><p>Para iniciar un viaje, aceptá una orden en «Mis traslados asignados». Los vehículos se muestran solo para consulta.</p></div><span class="secretaria-count">'+vehiculos.length+' '+(vehiculos.length===1?'UNIDAD':'UNIDADES')+'</span></div><div class="secretaria-vehicles">'+vehiculos.map(v=>`<div class="secretaria-vehicle-card"><button class="secretaria-vehicle-btn" type="button" disabled aria-disabled="true" title="Solo podés iniciar un viaje desde un traslado asignado por Secretaría"><span class="secretaria-vehicle-photo" data-vehicle-photo></span><span class="secretaria-vehicle-data"><strong>${escapeHtml(v.DOMINIO||'SIN DOMINIO')}</strong><span class="secretaria-vehicle-internal">INTERNO ${escapeHtml(v.INTERNO||'—')}</span><small>${escapeHtml([v.MARCA,v.MODELO].filter(Boolean).join(' ')||'Modelo no informado')}</small></span><span class="secretaria-vehicle-km"><small>KM ACTUAL</small><strong>${escapeHtml(formatearKm(v.KM_ACTUAL||'—'))}</strong></span><span class="secretaria-vehicle-arrow">›</span></button><button type="button" class="unit-documents-button secretaria-documents-button" data-unit-documents="${escapeHtml(dominioUnidad(v.DOMINIO||''))}" aria-label="Documentos de la unidad ${escapeHtml(dominioUnidad(v.DOMINIO||''))}">Documentos de la unidad</button></div>`).join('')+'</div>';
     box.querySelectorAll('[data-vehicle-photo]').forEach((photoBox,index)=>{
       mostrarFotoSecretaria(photoBox,vehiculos[index]);
     });
@@ -1799,6 +1799,15 @@ function mostrarFotoSecretaria(photoBox,vehiculo){
 }
 
 function seleccionarVehiculoSecretaria(id){
+  // Nuevas salidas exclusivamente desde la orden aceptada y preasignada.
+  const orden=window.__ordenSecretariaEnPreparacion;
+  if(!esChoferSecretaria() || !session?.tokenOrdenes || !orden ||
+    String(orden.idChofer)!==String(session?.idChofer) ||
+    String(orden.idVehiculo)!==String(id) ||
+    String(orden.estado||'').toUpperCase()!=='ACEPTADA'){
+    mostrarAvisoOperacion('Para iniciar un viaje, Secretaría debe asignarte y confirmar un traslado. Abrí «Mis traslados asignados».');
+    return;
+  }
   restablecerPreparacionRecorrido();
   if(dashboardTimer){clearInterval(dashboardTimer);dashboardTimer=null;}
   const v=(window.__vehiculosSecretaria||[]).find(x=>String(x.ID_VEHICULO)===String(id));
@@ -2829,13 +2838,15 @@ async function iniciarViajeSecretaria(){
   if(km===null){a.textContent='Ingresá el kilometraje inicial.';a.style.display='block';return;}
   btn.disabled=true;btn.textContent='GUARDANDO…';a.style.display='none';
   try{
-    servicioEnInspeccion.salidaId=servicioEnInspeccion.salidaId||('VIA-APP-'+Date.now()+'-'+Math.random().toString(36).slice(2,10));
     const orden=typeof window.ordenesSecretariaOrdenActiva==='function'?window.ordenesSecretariaOrdenActiva():null;
-    if(orden && (!orden.idAsignacion||!session?.tokenOrdenes ||
-      String(orden.idVehiculo)!==String(vehiculoSecretariaSeleccionado.ID_VEHICULO)))
-      throw new Error('La orden de traslado no coincide con la sesión o el vehículo. Volvé a iniciar sesión.');
+    if(!orden || !orden.id || !orden.idAsignacion || !session?.tokenOrdenes ||
+      String(orden.idVehiculo)!==String(vehiculoSecretariaSeleccionado.ID_VEHICULO) ||
+      (orden.idChofer && String(orden.idChofer)!==String(session.idChofer)) ||
+      (orden.estado && String(orden.estado).toUpperCase()!=='ACEPTADA'))
+      throw new Error('No podés iniciar un viaje sin una orden aceptada, con chofer y vehículo asignados por Secretaría.');
+    servicioEnInspeccion.salidaId=servicioEnInspeccion.salidaId||('VIA-APP-'+Date.now()+'-'+Math.random().toString(36).slice(2,10));
     await guardarInicioLocal({accion:'iniciarViajeSecretaria',idViaje:servicioEnInspeccion.salidaId,idRecorrido:recPuedeReutilizar()?inspeccionReutilizable.ID_RECORRIDO:'',usuario:session.usuario,idChofer:session.idChofer,idVehiculo:vehiculoSecretariaSeleccionado.ID_VEHICULO,kmInicial:km,horaInicio:new Date().toISOString(),observaciones:$('inspectionObs').value.trim(),
-      ...(orden?{idSolicitud:orden.id,idAsignacionLocal:orden.idAsignacion,tokenOrdenes:session.tokenOrdenes}:{}),
+      idSolicitud:orden.id,idAsignacionLocal:orden.idAsignacion,tokenOrdenes:session.tokenOrdenes,
       fotos:{frente:f.frente?.dataUrl||'',trasera:f.trasera?.dataUrl||'',lateral_derecho:f.lateral_derecho?.dataUrl||'',lateral_izquierdo:f.lateral_izquierdo?.dataUrl||'',source:'LIVE_CAMERA'}});
     viajeSecretariaActivo={ID_VIAJE:servicioEnInspeccion.salidaId,ID_VEHICULO:vehiculoSecretariaSeleccionado.ID_VEHICULO,ID_CHOFER:session.idChofer,ESTADO:'EN CURSO'};
     servicioEnInspeccion.idViaje=viajeSecretariaActivo.ID_VIAJE;servicioEnInspeccion.estado='EN VIAJE';servicioEnInspeccion.completandoInspeccion=false;
