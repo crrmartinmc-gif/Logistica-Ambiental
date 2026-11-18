@@ -6,8 +6,8 @@ const css=fs.readFileSync('ordenes-secretaria.css','utf8');
 const service=fs.readFileSync('viajes-locales.js','utf8');
 let tests=0;
 function check(x,msg){assert.ok(x,msg);tests++}
-check(index.includes('./ordenes-secretaria.js?v=1'),'el módulo está enlazado');
-check(index.includes('./ordenes-secretaria.css?v=1'),'el estilo está enlazado');
+check(index.includes('./ordenes-secretaria.js?v=2'),'el módulo está enlazado');
+check(index.includes('./ordenes-secretaria.css?v=2'),'el estilo está enlazado');
 check(index.includes('await window.ordenesSecretariaLogin('),'obtiene sesión de órdenes al ingresar');
 check(index.includes("window.ordenesSecretariaRender()"),'carga traslados con dashboard Secretaría');
 check(orders.includes("accion:'listarOrdenesSecretaria'"),'consulta órdenes en endpoint separado');
