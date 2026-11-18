@@ -962,7 +962,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
 </style>
 
 <link rel="stylesheet" href="./documentos-unidad.css?v=4">
-<link rel="stylesheet" href="./ordenes-secretaria.css?v=1">
+<link rel="stylesheet" href="./ordenes-secretaria.css?v=2">
 </head>
 <body>
 <div class="app">
@@ -1816,7 +1816,11 @@ function seleccionarVehiculoSecretaria(id){
 
 function continuarViajeSecretaria(){
   if(!viajeSecretariaActivo)return;
-  servicioEnInspeccion={idServicio:'',idAsignacion:'',idUnidad:viajeSecretariaActivo.ID_VEHICULO,idViaje:viajeSecretariaActivo.ID_VIAJE,estado:'EN VIAJE'};
+  const orden=typeof window.ordenesSecretariaPorViaje==='function' ?
+    window.ordenesSecretariaPorViaje(viajeSecretariaActivo.ID_VIAJE):null;
+  servicioEnInspeccion={idServicio:'',idAsignacion:'',idUnidad:viajeSecretariaActivo.ID_VEHICULO,
+    idViaje:viajeSecretariaActivo.ID_VIAJE,estado:'EN VIAJE',
+    ...(orden?{idSolicitud:orden.id,idAsignacionLocal:orden.idAsignacion}:{})};
   $('serviceBox').classList.add('hidden');$('inspectionScreen').classList.remove('hidden');
   $('inspectionServiceLabel').textContent='Viaje en curso · '+(vehiculoSecretariaSeleccionado?.DOMINIO||'Unidad');
   mostrarModoViajeActivo(); $('finishInspectionBtn').onclick=finalizarViaje; $('finishInspectionBtn').textContent='FINALIZAR VIAJE';
@@ -2817,7 +2821,13 @@ async function iniciarViajeSecretaria(){
   btn.disabled=true;btn.textContent='GUARDANDO…';a.style.display='none';
   try{
     servicioEnInspeccion.salidaId=servicioEnInspeccion.salidaId||('VIA-APP-'+Date.now()+'-'+Math.random().toString(36).slice(2,10));
-    await guardarInicioLocal({accion:'iniciarViajeSecretaria',idViaje:servicioEnInspeccion.salidaId,idRecorrido:recPuedeReutilizar()?inspeccionReutilizable.ID_RECORRIDO:'',usuario:session.usuario,idChofer:session.idChofer,idVehiculo:vehiculoSecretariaSeleccionado.ID_VEHICULO,kmInicial:km,horaInicio:new Date().toISOString(),observaciones:$('inspectionObs').value.trim(),fotos:{frente:f.frente?.dataUrl||'',trasera:f.trasera?.dataUrl||'',lateral_derecho:f.lateral_derecho?.dataUrl||'',lateral_izquierdo:f.lateral_izquierdo?.dataUrl||'',source:'LIVE_CAMERA'}});
+    const orden=typeof window.ordenesSecretariaOrdenActiva==='function'?window.ordenesSecretariaOrdenActiva():null;
+    if(orden && (!orden.idAsignacion||!session?.tokenOrdenes ||
+      String(orden.idVehiculo)!==String(vehiculoSecretariaSeleccionado.ID_VEHICULO)))
+      throw new Error('La orden de traslado no coincide con la sesión o el vehículo. Volvé a iniciar sesión.');
+    await guardarInicioLocal({accion:'iniciarViajeSecretaria',idViaje:servicioEnInspeccion.salidaId,idRecorrido:recPuedeReutilizar()?inspeccionReutilizable.ID_RECORRIDO:'',usuario:session.usuario,idChofer:session.idChofer,idVehiculo:vehiculoSecretariaSeleccionado.ID_VEHICULO,kmInicial:km,horaInicio:new Date().toISOString(),observaciones:$('inspectionObs').value.trim(),
+      ...(orden?{idSolicitud:orden.id,idAsignacionLocal:orden.idAsignacion,tokenOrdenes:session.tokenOrdenes}:{}),
+      fotos:{frente:f.frente?.dataUrl||'',trasera:f.trasera?.dataUrl||'',lateral_derecho:f.lateral_derecho?.dataUrl||'',lateral_izquierdo:f.lateral_izquierdo?.dataUrl||'',source:'LIVE_CAMERA'}});
     viajeSecretariaActivo={ID_VIAJE:servicioEnInspeccion.salidaId,ID_VEHICULO:vehiculoSecretariaSeleccionado.ID_VEHICULO,ID_CHOFER:session.idChofer,ESTADO:'EN CURSO'};
     servicioEnInspeccion.idViaje=viajeSecretariaActivo.ID_VIAJE;servicioEnInspeccion.estado='EN VIAJE';servicioEnInspeccion.completandoInspeccion=false;
     mostrarModoViajeActivo();$('finishInspectionBtn').onclick=finalizarViaje;$('finishInspectionBtn').textContent='FINALIZAR VIAJE';
@@ -2831,7 +2841,10 @@ async function finalizarViajeSecretaria(cerrarRecorrido=false){
   if(kmFinal===null){a.textContent='Ingresá el kilometraje final.';a.style.display='block';$('finalKm')?.focus();return;}
   const idViaje=servicioEnInspeccion?.idViaje||viajeSecretariaActivo?.ID_VIAJE;
   if(!idViaje){a.textContent='No se encontró el viaje activo. No se cerró el servicio.';a.style.display='block';return;}
-  const payload={accion:'finalizarViajeSecretaria',finalizarRecorrido:cerrarRecorrido===true,horaFin:new Date().toISOString(),usuario:session.usuario,idViaje,kmFinal,idChofer:session.idChofer,idVehiculo:vehiculoSecretariaSeleccionado?.ID_VEHICULO||servicioEnInspeccion?.idUnidad};
+  const orden=typeof window.ordenesSecretariaOrdenActiva==='function'?window.ordenesSecretariaOrdenActiva():null;
+  const payload={accion:'finalizarViajeSecretaria',finalizarRecorrido:cerrarRecorrido===true,horaFin:new Date().toISOString(),usuario:session.usuario,idViaje,kmFinal,idChofer:session.idChofer,
+    idVehiculo:vehiculoSecretariaSeleccionado?.ID_VEHICULO||servicioEnInspeccion?.idUnidad,
+    ...(orden?{idSolicitud:orden.id,idAsignacionLocal:orden.idAsignacion,tokenOrdenes:session.tokenOrdenes}:{})};
   btn.disabled=true;btn.textContent='GUARDANDO CIERRE…';a.style.display='none';
   try{
     let cola=null;
@@ -3175,6 +3188,9 @@ $('loginForm').addEventListener('submit',async e=>{
       const credenciales=await window.ordenesSecretariaLogin($('usuario').value,$('contrasena').value);
       session={...session,...credenciales};
     }
+    if(session.tokenOrdenes && typeof window.ordenesSecretariaActualizarCola==='function'){
+      try{await window.ordenesSecretariaActualizarCola();}catch(err){console.warn('Reautenticación de órdenes pendientes:',err);}
+    }
     registrarServiceWorkerWeb().catch(()=>{});
     sessionStorage.setItem('diaVerdeChofer',JSON.stringify(session));guardarSesionLocal();
     $('driverName').textContent=session.nombre;$('topUserName').textContent=session.nombre;$('avatar').textContent=initials(session.nombre);
@@ -3221,7 +3237,7 @@ $('loginForm').addEventListener('submit',async e=>{
 
 window.addEventListener('pagehide',()=>{ try{ detenerCamara(); }catch(e){} });
 </script>
-<script src="./ordenes-secretaria.js?v=1"></script>
+<script src="./ordenes-secretaria.js?v=2"></script>
 </body>
 </html>
 
