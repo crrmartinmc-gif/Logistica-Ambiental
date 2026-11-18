@@ -1814,10 +1814,19 @@ function seleccionarVehiculoSecretaria(id){
   verificarInspeccionRecorrido();
 }
 
-function continuarViajeSecretaria(){
+async function continuarViajeSecretaria(){
   if(!viajeSecretariaActivo)return;
-  const orden=typeof window.ordenesSecretariaPorViaje==='function' ?
+  let orden=typeof window.ordenesSecretariaPorViaje==='function' ?
     window.ordenesSecretariaPorViaje(viajeSecretariaActivo.ID_VIAJE):null;
+  // Al cambiar de celular, recuperar el vínculo del viaje desde Secretaría.
+  if(!orden&&session?.tokenOrdenes){
+    try{
+      const res=await postJson({accion:'listarOrdenesSecretaria',tokenOrdenes:session.tokenOrdenes});
+      const data=res?.resultado||res;
+      orden=(Array.isArray(data.items)?data.items:[])
+        .find(o=>String(o.idViaje||'')===String(viajeSecretariaActivo.ID_VIAJE))||null;
+    }catch(err){console.warn('No se pudo recuperar la vinculación del traslado:',err);}
+  }
   servicioEnInspeccion={idServicio:'',idAsignacion:'',idUnidad:viajeSecretariaActivo.ID_VEHICULO,
     idViaje:viajeSecretariaActivo.ID_VIAJE,estado:'EN VIAJE',
     ...(orden?{idSolicitud:orden.id,idAsignacionLocal:orden.idAsignacion}:{})};
