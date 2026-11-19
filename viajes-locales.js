@@ -34,12 +34,27 @@ function lanzarEnvioLocal(){
   }
   registrarServiceWorkerWeb().then(reg=>{if(reg?.sync) return reg.sync.register('chofer-viajes-v33');}).catch(()=>{});
 }
+// Identifica cierres guardados para evitar que una respuesta antigua del servidor
+// vuelva a mostrar como activo el mismo servicio o asignación.
+async function cierresLocalesPendientesChofer(){
+  if(esChoferSecretaria()||!session?.idChofer)return {asignaciones:new Set(),viajes:new Set()};
+  const filas=await ColaViajes.todos();
+  const propios=filas.filter(r=>r.cierre&&!r.cierreConfirmado&&String(r.payload?.idChofer)===String(session.idChofer));
+  return {
+    asignaciones:new Set(propios.map(r=>String(r.payload?.idAsignacion||r.servicio?.idAsignacion||'')).filter(Boolean)),
+    viajes:new Set(propios.map(r=>String(r.idViaje||r.payload?.idViaje||'')).filter(Boolean))
+  };
+}
 async function recuperarViajeLocal(incluirConfirmado=false){
   if(!session?.idChofer)return false;
   const identidad=String(session.idChofer);
   let registros;try{registros=await ColaViajes.todos();}catch(e){return false;}
   if(identidad!==String(session?.idChofer))return false;
-  const r=registros.filter(x=>String(x.payload.idChofer)===identidad&&!x.cierreConfirmado&&(incluirConfirmado||!x.inicioConfirmado||x.cierre)).sort((a,b)=>b.createdAt-a.createdAt)[0];
+  // En Logística/Reserva, un cierre guardado no bloquea la agenda mientras se sincroniza.
+  // Secretaría conserva el flujo restringido de recuperación y cierre.
+  const r=registros.filter(x=>String(x.payload.idChofer)===identidad&&!x.cierreConfirmado&&
+    (esChoferSecretaria() || !x.cierre)&&
+    (incluirConfirmado||!x.inicioConfirmado||x.cierre)).sort((a,b)=>b.createdAt-a.createdAt)[0];
   if(!r)return false;
   $('dashboardScreen').classList.remove('hidden');
   if(!esChoferSecretaria()){
