@@ -16,7 +16,8 @@ async function guardarInicioLocal(payload){
 }
 function mostrarEstadoLocal(r){
   if(String(r.payload.idChofer)!==String(session?.idChofer))return;
-  const texto=r.error?'Guardado en este celular · Pendiente de sincronizar. Si persiste, avisá a Logística.':r.cierreConfirmado?'Viaje finalizado · Sincronizado':r.cierre?'Viaje finalizado en este celular · Pendiente de sincronizar':r.inicioConfirmado?'En viaje · Sincronizado':'En viaje · Pendiente de sincronizar';
+  const conflictoUnidad=/vehículo tiene un servicio en curso de otro chofer/i.test(String(r.error||''));
+  const texto=conflictoUnidad?'Sin sincronizar: la unidad tiene otro servicio abierto. Avisá a Logística.':r.error?'Guardado en este celular · Pendiente de sincronizar. Si persiste, avisá a Logística.':r.cierreConfirmado?'Viaje finalizado · Sincronizado':r.cierre?'Viaje finalizado en este celular · Pendiente de sincronizar':r.inicioConfirmado?'En viaje · Sincronizado':'En viaje · Pendiente de sincronizar';
   mostrarAvisoOperacion(texto);
   if(servicioEnInspeccion?.localKey===r.key){
     if(r.idViaje)servicioEnInspeccion.idViaje=r.idViaje;
@@ -41,6 +42,10 @@ async function recuperarViajeLocal(incluirConfirmado=false){
   const r=registros.filter(x=>String(x.payload.idChofer)===identidad&&!x.cierreConfirmado&&(incluirConfirmado||!x.inicioConfirmado||x.cierre)).sort((a,b)=>b.createdAt-a.createdAt)[0];
   if(!r)return false;
   $('dashboardScreen').classList.remove('hidden');
+  if(!esChoferSecretaria()){
+    const dominio=r.unidad?.DOMINIO||r.servicio?.dominio||r.payload.dominio||'';
+    renderVehicle({dominio},r.unidad||r.servicio,{km:r.payload.kmInicial});
+  }
   if(r.cierre){
     $('inspectionScreen').classList.add('hidden');$('serviceBox').classList.remove('hidden');
     $('serviceBox').innerHTML='<div class="empty"><strong>Viaje finalizado en este celular.</strong><br>El cierre está pendiente de sincronizar. La agenda se actualizará al confirmarse.</div>';
