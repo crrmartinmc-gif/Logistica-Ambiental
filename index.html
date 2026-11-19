@@ -1114,7 +1114,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
     <div>
       <div class="eyebrow">Panel del chofer</div>
       <h1>Hola, <span id="driverName">Chofer</span> 👋</h1>
-      <p>Acá vas a encontrar tu vehículo y los servicios que tenés asignados.</p>
+      
     </div>
     <div class="status-pill">● CUENTA ACTIVA</div>
   </div>
@@ -1177,9 +1177,6 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
 
       <div class="check-section">
         <h3>2. Ingresar kilometraje actual <span style="color:#c33">*</span></h3>
-        <p style="margin:0 0 10px;color:#71807a;font-size:13px">
-          Ingresá el kilometraje que figura en el tablero del vehículo al momento de salir.
-        </p>
         <div style="display:flex;gap:10px;align-items:center">
           <input id="currentKm" type="text" inputmode="numeric" autocomplete="off"
             placeholder="Ej.: 125.430"
@@ -1195,7 +1192,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
         <div class="vehicle-control-head">
           <div>
             <h3>3. Control del vehículo</h3>
-            <p class="vehicle-control-help">Reportá una falla o novedad si detectás algo. Este control es opcional.</p>
+            <p class="vehicle-control-help">Opcional. Reportá una falla si la detectás.</p>
           </div>
           <span class="optional-badge">Opcional</span>
         </div>
@@ -1228,9 +1225,6 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
         </button>
       </div>
 
-      <div style="margin-top:12px;padding:11px 14px;border-radius:12px;background:#eef7ff;color:#315a72;font-size:12px">
-        ℹ️ Las 4 fotos respaldan los servicios del mismo recorrido, chofer y vehículo durante el día. Se almacenan una sola vez en Google Drive.
-      </div>
     </div>
   </section>
 
@@ -1814,7 +1808,7 @@ function seleccionarVehiculoSecretaria(id){
   $('finishInspectionBtn').disabled=true; $('finishInspectionBtn').textContent='▶ INICIAR VIAJE'; $('finishInspectionBtn').onclick=iniciarViaje;
   $('currentKm').value=''; $('currentKm').disabled=false; $('inspectionObs').value='';
   const finalBox=document.getElementById('finalKmBox');if(finalBox)finalBox.remove(); construirFotosSalida();
-  $('lastKmHint').textContent='El kilometraje se registrará como KM inicial del viaje.';
+  $('lastKmHint').textContent='';
   verificarInspeccionRecorrido();
 }
 
@@ -2212,7 +2206,7 @@ async function verServicio(id){
   const finalBox=document.getElementById('finalKmBox'); if(finalBox) finalBox.remove();
   construirFotosSalida();
   actualizarEstadoInicio();
-  $('lastKmHint').textContent='El kilometraje se registrará como KM inicial del viaje.';
+  $('lastKmHint').textContent='';
   verificarInspeccionRecorrido();
   $('inspectionScreen').scrollIntoView({behavior:'smooth',block:'start'});
 
@@ -2524,7 +2518,7 @@ function actualizarEstadoInicio(){
   }
   if(reutiliza){
     if($('photoProgress'))$('photoProgress').textContent='4 fotos confirmadas en la inspección del recorrido';
-    $('inspectionStatus').className='status-banner '+(listo?'ready':'pending');$('inspectionStatus').textContent='✓ Inspección vigente · no necesitás repetir las cuatro fotos.'+(km===null?' Ingresá el kilometraje para continuar.':' Listo para iniciar.');return;
+    $('inspectionStatus').className='status-banner '+(listo?'ready':'pending');$('inspectionStatus').textContent='✓ Fotos ya registradas.'+(km===null?' Ingresá el kilometraje.':'');return;
   }
   if(listo){
     $('inspectionStatus').className='status-banner ready';
