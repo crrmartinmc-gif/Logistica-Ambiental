@@ -42,7 +42,8 @@ ctx.session.tokenOrdenes='token-valido';
 probar({idVehiculo:'veh-1',idChofer:'chofer-1',estado:'ACEPTADA'},'veh-1',true);
 ok(llamadas===1,'no prepara inspección sin orden');
 ok(avisos===6,'informa bloqueo al chofer');
-ok(index.includes('disabled aria-disabled="true" title="Solo podés iniciar un viaje desde un traslado asignado por Secretaría"'),'vehículos visibles pero no inician por sí solos');
+ok(!index.includes('UNIDADES DISPONIBLES'),'no aparece la lista de vehículos en Secretaría');
+ok(selector.includes('DOMINIO:dominioUnidad(orden.dominio)'),'la patente se toma de la orden');
 const bodyIndex=index.indexOf('async function iniciarViajeSecretaria(){');
 const nextIndex=index.indexOf('async function finalizarViajeSecretaria(',bodyIndex);
 const start=index.slice(bodyIndex,nextIndex);
@@ -54,6 +55,6 @@ ok(index.includes('if(esChoferSecretaria()) return iniciarViajeSecretaria();'),'
 ok(orders.includes('window.__ordenSecretariaEnPreparacion={...orden,idChofer:String(session.idChofer)};'),'marca orden validada');
 ok(orders.indexOf('window.__ordenSecretariaEnPreparacion={...orden')<orders.indexOf('seleccionarVehiculoSecretaria(orden.idVehiculo);'),'preparación autorizada ANTES de seleccionar unidad');
 ok(orders.includes("String(orden.estado).toUpperCase()!=='ACEPTADA'"),'ordenes tienen estado aceptado');
-ok(worker.includes("APP_CACHE='chofer-interfaz-v35'"),'PWA cambia versión de cache para no ofrecer inicio libre');
-ok(worker.includes("'./ordenes-secretaria.js?v=3'"),'cachea módulo correcto');
+ok(worker.includes("APP_CACHE='chofer-interfaz-v36'"),'PWA cambia versión de cache para no ofrecer inicio libre');
+ok(worker.includes("'./ordenes-secretaria.js?v=4'"),'cachea módulo correcto');
 console.log('OK '+n+' controles aislados de App Choferes: solo iniciar con orden aceptada.');

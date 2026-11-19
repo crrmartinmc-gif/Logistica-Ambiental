@@ -82,7 +82,7 @@ self.addEventListener('sync',event=>{if(event.tag==='chofer-viajes-v33')event.wa
 
 // Solo recursos de la interfaz; nunca respuestas del backend ni documentos de Drive.
 const APP_CACHE='chofer-interfaz-v36';
-const APP_FILES=['./','./index.html','./operaciones-viaje.js?v=2','./cola-viajes.js?v=33','./viajes-locales.js?v=34','./recorridos-chofer.js?v=20261113-3','./documentos-unidad.js?v=2','./documentos-unidad.css?v=4','./manifest.webmanifest','./ordenes-secretaria.js?v=3','./ordenes-secretaria.css?v=2'];
+const APP_FILES=['./','./index.html','./operaciones-viaje.js?v=2','./cola-viajes.js?v=33','./viajes-locales.js?v=34','./recorridos-chofer.js?v=20261119-1','./documentos-unidad.js?v=2','./documentos-unidad.css?v=4','./manifest.webmanifest','./ordenes-secretaria.js?v=4','./ordenes-secretaria.css?v=2'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(APP_CACHE).then(c=>c.addAll(APP_FILES))));
 self.addEventListener('fetch',event=>{
   const u=new URL(event.request.url);
