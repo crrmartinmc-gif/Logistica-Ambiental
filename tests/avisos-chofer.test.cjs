@@ -12,3 +12,52 @@ test('fallo de envío conserva estado sin confirmar y no expone permisos, rutas 
 test('kilometraje inválido conserva instrucción útil al chofer',()=>{assert.match(fixture().c.mensajeErrorOperacion(new Error('KM_FINAL no puede ser menor que el KM actual del vehículo (73330 km).'),'cierre'),/kilometraje/);});
 test('administrador conserva acceso a detalles técnicos',()=>{const f=fixture('ADMINISTRADOR');f.c.mostrarAvisoOperacion(error,true);assert.equal(f.nodo().textContent,error);assert.equal(f.c.mensajeErrorOperacion(new Error(error),'salida'),error);});
 test('confirmación real de éxito sigue visible al chofer',()=>{const f=fixture();f.c.mostrarAvisoOperacion('Viaje finalizado y confirmado.',false);assert.match(f.nodo().textContent,/confirmado/);});
+
+test('la sincronización actualiza el viaje sin generar carteles ni pisar el aviso de kilometraje', () => {
+  const inspectionAlert = { textContent: 'Ingresá un KM final igual o mayor al inicial.', style: { display: 'block' } };
+  const context = vm.createContext({
+    session: { idChofer: 'C1' },
+    servicioEnInspeccion: { localKey: 'ASIG-A1', estado: 'EN VIAJE' },
+    window: { addEventListener() {} },
+    $: () => inspectionAlert,
+    mostrarAvisoOperacion: () => assert.fail('El envío en segundo plano no debe mostrar un cartel')
+  });
+  vm.runInContext(fs.readFileSync('viajes-locales.js', 'utf8'), context);
+  const viaje = { key: 'ASIG-A1', payload: { idChofer: 'C1' } };
+  context.actualizarIdViajeLocal({ ...viaje, error: 'Servidor sin conexión' });
+  context.actualizarIdViajeLocal({ ...viaje, idViaje: 'VIA-1', inicioConfirmado: true });
+  assert.equal(context.servicioEnInspeccion.idViaje, 'VIA-1');
+  assert.equal(context.servicioEnInspeccion.estado, 'EN VIAJE');
+  assert.equal(inspectionAlert.textContent, 'Ingresá un KM final igual o mayor al inicial.');
+  assert.equal(inspectionAlert.style.display, 'block');
+});
+
+test('un cierre guardado devuelve al chofer a la agenda aunque el envío siga pendiente', async () => {
+  const servicio = { localKey: 'ASIG-A1', estado: 'EN VIAJE' };
+  let registro = { key: servicio.localKey, payload: { idChofer: 'C1', kmInicial: 100 } };
+  const serviceBox = {};
+  let volvio = false;
+  const context = vm.createContext({
+    servicioEnInspeccion: servicio,
+    session: { idChofer: 'C1' },
+    window: { addEventListener() {} },
+    ColaViajes: {
+      todos: async () => [registro],
+      cerrar: async (_, cierre) => {
+        registro = { ...registro, cierre };
+        return registro;
+      }
+    },
+    $: id => id === 'finalKm' ? { value: '110' } : serviceBox,
+    parsearKilometraje: Number,
+    esChoferSecretaria: () => false,
+    volverInicioSinEsperar: () => { volvio = true; },
+    mostrarAvisoOperacion: () => assert.fail('El cierre guardado no necesita un cartel')
+  });
+  vm.runInContext(fs.readFileSync('viajes-locales.js', 'utf8'), context);
+  context.lanzarEnvioLocal = () => {};
+  await context.cerrarViajeLocal(false);
+  assert.equal(volvio, true);
+  assert.equal(servicio.estado, 'FINALIZADO');
+  assert.match(serviceBox.innerHTML, /Viaje finalizado/);
+});

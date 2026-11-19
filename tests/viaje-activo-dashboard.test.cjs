@@ -13,6 +13,12 @@ function fixture(confirmado=true){
 test('viaje en curso se recupera antes que EL MIRASOL pendiente aunque su asignación esté cerrada',async()=>{const f=fixture();await f.c.cargarDashboard();const s=f.c.window.__servicioActual;assert.equal(s.idViaje,'V-REAL');assert.equal(s.idServicio,'S-ACTUAL');assert.equal(s.estado,'EN VIAJE');assert.equal(s.idUnidad,'V1');assert.equal(f.calls.find(x=>x.tipo==='vehiculo').v.DOMINIO,'AG213WS');});
 test('al abrir ese viaje ofrece finalizar y no construye otra pantalla de fotos',async()=>{const f=fixture();await f.c.cargarDashboard();await f.c.verServicio('S-ACTUAL');assert.equal(f.c.servicioEnInspeccion.idViaje,'V-REAL');assert.equal(f.calls.filter(x=>x.tipo==='cierre').length,1);assert.equal(f.calls.filter(x=>x.tipo==='fotos').length,0);});
 test('con viaje ya cerrado en servidor se presenta el siguiente servicio',async()=>{const f=fixture(false);f.servicio1.ESTADO='FINALIZADO';await f.c.cargarDashboard();assert.equal(f.c.window.__servicioActual.idServicio,'S-PENDIENTE');assert.equal(f.c.window.__servicioActual.idViaje,undefined);});
+test('un cierre local deja visible el siguiente servicio con el servidor todavía desactualizado', async () => {
+  const f = fixture();
+  f.c.cierresLocalesPendientesChofer = async () => ({ asignaciones: new Set(['A-CERRADA']), viajes: new Set(['V-REAL']) });
+  await f.c.cargarDashboard();
+  assert.equal(f.c.window.__servicioActual.idServicio, 'S-PENDIENTE');
+});
 test('finaliza el viaje recuperado con KM final y conserva el cierre sin pedir fotos',async()=>{const f=fixture();await f.c.cargarDashboard();await f.c.verServicio('S-ACTUAL');f.$('finalKm').value='110';let payload;
  Object.assign(f.c,{parsearKilometraje:v=>Number(v),encolarFinalizacionSegundoPlano:async()=>null,enviarOperacionViaje:async p=>{payload=p;return {ok:true};},confirmarOperacionEnPantalla(){},limpiarCacheAPI(){},mostrarAvisoOperacion(){},volverInicioSinEsperar(){}});
  vm.runInContext(fragment('async function finalizarViajeInterno(','function volverInicioSinEsperar(){'),f.c);await f.c.finalizarViajeInterno(false);assert.equal(payload.idViaje,'V-REAL');assert.equal(payload.idServicio,'S-ACTUAL');assert.equal(payload.kmFinal,110);assert.equal(payload.fotos,undefined);assert.equal(f.c.servicioEnInspeccion.estado,'FINALIZADO');});

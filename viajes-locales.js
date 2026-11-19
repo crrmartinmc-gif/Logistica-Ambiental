@@ -10,25 +10,19 @@ async function guardarInicioLocal(payload){
   try{r=await ColaViajes.iniciar(payload,{...servicioEnInspeccion,kmInicial:payload.kmInicial,estado:'EN VIAJE'},esChoferSecretaria()?vehiculoSecretariaSeleccionado:null);}
   catch(e){throw Error('No se pudo guardar la salida en este celular. No cierres la pantalla; volvé a intentar.');}
   servicioEnInspeccion.localKey=r.key;
-  mostrarEstadoLocal(r);
+  actualizarIdViajeLocal(r);
   // No esperar ninguna solicitud de red para liberar al chofer.
   lanzarEnvioLocal();
 }
-function mostrarEstadoLocal(r){
+function actualizarIdViajeLocal(r){
   if(String(r.payload.idChofer)!==String(session?.idChofer))return;
-  const conflictoUnidad=/vehículo tiene un servicio en curso de otro chofer/i.test(String(r.error||''));
-  const texto=conflictoUnidad?'Sin sincronizar: la unidad tiene otro servicio abierto. Avisá a Logística.':r.error?'Guardado en este celular · Pendiente de sincronizar. Si persiste, avisá a Logística.':r.cierreConfirmado?'Viaje finalizado · Sincronizado':r.cierre?'Viaje finalizado en este celular · Pendiente de sincronizar':r.inicioConfirmado?'En viaje · Sincronizado':'En viaje · Pendiente de sincronizar';
-  mostrarAvisoOperacion(texto);
-  if(servicioEnInspeccion?.localKey===r.key){
-    if(r.idViaje)servicioEnInspeccion.idViaje=r.idViaje;
-    const a=$('inspectionAlert');if(a){a.textContent=texto;a.style.display='block';}
-  }
+  if(servicioEnInspeccion?.localKey===r.key && r.idViaje)servicioEnInspeccion.idViaje=r.idViaje;
 }
 function lanzarEnvioLocal(){
   if(!envioLocalEnCurso){
     envioLocalEnCurso=ColaViajes.procesar(async r=>{
       if(!session)return;
-      limpiarCacheAPI();mostrarEstadoLocal(r);
+      limpiarCacheAPI();actualizarIdViajeLocal(r);
       if(r.cierreConfirmado && $('inspectionScreen').classList.contains('hidden'))cargarDashboard({force:true}).catch(()=>{});
     }).catch(e=>console.warn('Sincronización local pendiente:',e.message)).finally(()=>{envioLocalEnCurso=null;});
   }
@@ -63,16 +57,20 @@ async function recuperarViajeLocal(incluirConfirmado=false){
   }
   if(r.cierre){
     $('inspectionScreen').classList.add('hidden');$('serviceBox').classList.remove('hidden');
-    $('serviceBox').innerHTML='<div class="empty"><strong>Viaje finalizado en este celular.</strong><br>El cierre está pendiente de sincronizar. La agenda se actualizará al confirmarse.</div>';
+    $('serviceBox').innerHTML='<div class="empty"><strong>Viaje finalizado</strong></div>';
   }else{
-    if(servicioEnInspeccion?.localKey===r.key&&!$('inspectionScreen').classList.contains('hidden')){mostrarEstadoLocal(r);return true;}
+    if(servicioEnInspeccion?.localKey===r.key&&!$('inspectionScreen').classList.contains('hidden')){
+      actualizarIdViajeLocal(r);
+      return true;
+    }
     servicioEnInspeccion={...r.servicio,localKey:r.key,idViaje:r.idViaje||r.payload.idViaje||'',estado:'EN VIAJE'};
     if(r.unidad)vehiculoSecretariaSeleccionado=r.unidad;
     window.__servicioActual=servicioEnInspeccion;
     $('serviceBox').classList.add('hidden');$('inspectionScreen').classList.remove('hidden');
     mostrarModoViajeActivo();
   }
-  mostrarEstadoLocal(r);return true;
+  actualizarIdViajeLocal(r);
+  return true;
 }
 async function cerrarViajeLocal(cerrarRecorrido){
   const s=servicioEnInspeccion;if(!s||!session)return false;
@@ -84,13 +82,18 @@ async function cerrarViajeLocal(cerrarRecorrido){
   try{
     r=await ColaViajes.cerrar(r.key,{accion:secretaria?'finalizarViajeSecretaria':'finalizarViaje',usuario:session.usuario,idChofer:session.idChofer,idVehiculo:r.payload.idVehiculo,idServicio:r.payload.idServicio||'',kmFinal:km,horaFin:new Date().toISOString(),finalizarRecorrido:cerrarRecorrido===true,
       ...(r.payload.idSolicitud?{idSolicitud:r.payload.idSolicitud,idAsignacionLocal:r.payload.idAsignacionLocal,tokenOrdenes:session.tokenOrdenes||r.payload.tokenOrdenes}:{} )});
-    s.estado='FINALIZADO';mostrarEstadoLocal(r);await recuperarViajeLocal();lanzarEnvioLocal();
+    s.estado='FINALIZADO';actualizarIdViajeLocal(r);
+    if(!await recuperarViajeLocal()){
+      $('serviceBox').innerHTML='<div class="empty"><strong>Viaje finalizado</strong></div>';
+      volverInicioSinEsperar();
+    }
+    lanzarEnvioLocal();
   }catch(e){mostrarAvisoOperacion('No se pudo guardar el cierre en este celular. Volvé a intentar.');}
   return true;
 }
 window.addEventListener('load',()=>{
   if(session)lanzarEnvioLocal();
-  navigator.serviceWorker?.addEventListener('message',ev=>{if(ev.data?.type==='VIAJE_LOCAL_ACTUALIZADO'){limpiarCacheAPI();mostrarEstadoLocal(ev.data.registro);if(ev.data.registro.cierreConfirmado&&session&&$('inspectionScreen').classList.contains('hidden'))cargarDashboard({force:true}).catch(()=>{});}});
+  navigator.serviceWorker?.addEventListener('message',ev=>{if(ev.data?.type==='VIAJE_LOCAL_ACTUALIZADO'){limpiarCacheAPI();actualizarIdViajeLocal(ev.data.registro);if(ev.data.registro.cierreConfirmado&&session&&$('inspectionScreen').classList.contains('hidden'))cargarDashboard({force:true}).catch(()=>{});}});
   setInterval(()=>{if(session&&navigator.onLine)lanzarEnvioLocal();},30000);
 });
 window.addEventListener('online',()=>{if(session)lanzarEnvioLocal();});

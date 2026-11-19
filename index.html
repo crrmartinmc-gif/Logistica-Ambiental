@@ -1280,7 +1280,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
 <script src="./recorridos-chofer.js?v=20261119-2"></script>
 <script src="./operaciones-viaje.js?v=2"></script>
 <script src="./cola-viajes.js?v=33"></script>
-<script src="./viajes-locales.js?v=36"></script>
+<script src="./viajes-locales.js?v=37"></script>
 <script>
 const BACKEND_URL = "https://script.google.com/macros/s/AKfycbz0n4ZlW2p--nP2Wx0SnytyCRt_pL6RFxliEan0j1vUdSSrBrVNCbsTI7VC0JQWl5k9/exec";
 
@@ -1546,7 +1546,6 @@ function confirmarOperacionEnPantalla(payload,data){
       servicioEnInspeccion.idViaje=viaje?.ID_VIAJE||viaje?.idViaje||servicioEnInspeccion.idViaje||'';
     }
   }
-  mostrarAvisoOperacion(finalizacion?'✅ Viaje finalizado y confirmado por el Panel de Control.':'✅ Viaje iniciado y confirmado por el Panel de Control.');
 }
 
 function validarConfirmacionFotosSalida(data){return validarRespuestaViaje(data,true);}
@@ -1571,7 +1570,7 @@ async function reintentarOperacionesPendientes(){
     });
     for(const item of items.sort((a,b)=>a.createdAt-b.createdAt)){
       if(item.payload?.idChofer && String(item.payload.idChofer)!==String(session.idChofer))continue;
-      try{await intentarEnviarOperacionDirecta(item.opId);}catch(e){mostrarAvisoOperacion('⚠️ Envío pendiente: '+e.message,true);break;}
+      try{await intentarEnviarOperacionDirecta(item.opId);}catch(e){console.warn('Envío pendiente:',e.message);break;}
     }
   }catch(e){console.warn('No se pudo revisar la cola local:',e);}
 }
@@ -1584,16 +1583,14 @@ window.addEventListener('load',()=>{
       if(ev.data?.type==='SALIDA_GUARDADA'){
         limpiarCacheAPI('listarViajes','listarAsignaciones','listarServicios');
         console.info('Salida guardada en segundo plano:',ev.data.opId);
-        mostrarAvisoOperacion('✅ Viaje iniciado y confirmado por el Panel de Control.');
         try{if(typeof cargarDashboard==='function') cargarDashboard().catch(()=>{});}catch(e){}
       }
       if(ev.data?.type==='FINALIZACION_GUARDADA'){
         limpiarCacheAPI('listarViajes','listarAsignaciones','listarServicios','listarVehiculos');
         console.info('Finalización confirmada por el backend:',ev.data.opId);
-        mostrarAvisoOperacion('✅ Viaje finalizado y confirmado por el Panel de Control.');
         try{if(typeof cargarDashboard==='function') cargarDashboard().catch(()=>{});}catch(e){}
       }
-      if(['SALIDA_PENDIENTE','FINALIZACION_PENDIENTE'].includes(ev.data?.type)) mostrarAvisoOperacion('⚠️ Envío pendiente: '+ev.data.error,true);
+      if(['SALIDA_PENDIENTE','FINALIZACION_PENDIENTE'].includes(ev.data?.type)) console.warn('Envío pendiente:',ev.data.error);
     });
   }
 });
@@ -1949,11 +1946,13 @@ async function cargarDashboardInterno(opciones={}){
     });
 
     // El viaje real manda sobre la agenda, incluso si su asignación ya cambió de estado.
-    const viajesVigentes=viajes.filter(v=>
-      !cierresLocales.viajes.has(String(v.ID_VIAJE||'')) &&
-      !cierresLocales.asignaciones.has(String(v.ID_ASIGNACION||''))
-    );
-    const viajePrioritario=recSeleccionarViajeActivo(viajesVigentes,servicios,idChofer,estadoVigente);
+    const cerradoLocalmente=v=>cierresLocales.viajes.has(String(v.ID_VIAJE||'')) ||
+      cierresLocales.asignaciones.has(String(v.ID_ASIGNACION||''));
+    const viajesVigentes=viajes.filter(v=>!cerradoLocalmente(v));
+    const recorridoVigente=estadoVigente?.viajeActivo && cerradoLocalmente(estadoVigente.viajeActivo)
+      ? {...estadoVigente,viajeActivo:null}
+      : estadoVigente;
+    const viajePrioritario=recSeleccionarViajeActivo(viajesVigentes,servicios,idChofer,recorridoVigente);
     const asignacion=viajePrioritario?{
       ...(asignaciones.find(a=>String(a.ID_ASIGNACION)===String(viajePrioritario.ID_ASIGNACION))||{}),
       ID_ASIGNACION:viajePrioritario.ID_ASIGNACION||'',ID_SERVICIO:viajePrioritario.ID_SERVICIO||'',
@@ -2843,7 +2842,7 @@ async function iniciarViaje(){
     servicioEnInspeccion.kmInicial=km;
     window.__servicioActual=servicioEnInspeccion;
     try{localStorage.setItem('diaVerdeServicioActivo',JSON.stringify({idServicio:servicioEnInspeccion.idServicio,idViaje:servicioEnInspeccion.idViaje||'',pendienteGuardado:false}));}catch(e){}
-    configurarPantallaViajeRecuperado('Viaje iniciado · Pendiente de sincronizar');
+    mostrarModoViajeActivo();
     renderService(servicioEnInspeccion);
     window.__iniciandoViajeDiaVerde=false;
   }catch(err){
@@ -2875,8 +2874,6 @@ async function iniciarViajeSecretaria(){
     viajeSecretariaActivo={ID_VIAJE:servicioEnInspeccion.salidaId,ID_VEHICULO:vehiculoSecretariaSeleccionado.ID_VEHICULO,ID_CHOFER:session.idChofer,ESTADO:'EN CURSO'};
     servicioEnInspeccion.idViaje=viajeSecretariaActivo.ID_VIAJE;servicioEnInspeccion.estado='EN VIAJE';servicioEnInspeccion.completandoInspeccion=false;
     mostrarModoViajeActivo();$('finishInspectionBtn').onclick=finalizarViaje;$('finishInspectionBtn').textContent='FINALIZAR VIAJE';
-    mostrarAvisoOperacion('Viaje iniciado · Pendiente de sincronizar');
-    $('inspectionAlert').textContent='Salida guardada en este celular. Al regresar, ingresá el KM final.';$('inspectionAlert').style.display='block';
   }catch(err){invalidarInspeccionReutilizada(err);a.textContent=mensajeErrorOperacion(err,'salida');a.style.display='block';btn.disabled=false;btn.textContent='▶ INICIAR VIAJE';}
 }
 
@@ -2893,12 +2890,10 @@ async function finalizarViajeSecretaria(cerrarRecorrido=false){
   try{
     let cola=null;
     try{cola=await encolarFinalizacionSegundoPlano(payload);}catch(e){console.warn('Cola local no disponible:',e);}
-    mostrarAvisoOperacion('Enviando cierre al Panel de Control…',true);
     try{
       if(cola?.opId) await intentarEnviarOperacionDirecta(cola.opId);
       else{const confirmacion=await enviarOperacionViaje(payload);confirmarOperacionEnPantalla(payload,confirmacion);limpiarCacheAPI('listarViajes','listarAsignaciones','listarServicios','listarVehiculos');}
     }catch(e){
-      mostrarAvisoOperacion('⚠️ Cierre pendiente: '+e.message,true);
       if(cola?.opId)programarProcesamientoCola(cola.opId).catch(()=>{});
       throw e;
     }
@@ -2906,15 +2901,9 @@ async function finalizarViajeSecretaria(cerrarRecorrido=false){
     if(servicioEnInspeccion){servicioEnInspeccion.estado='FINALIZADO';servicioEnInspeccion.idViaje=idViaje;}
     try{localStorage.removeItem('diaVerdeServicioActivo');}catch(e){}
     $('inspectionStatus').className='status-banner ready';$('inspectionStatus').innerHTML='✅ <strong>Viaje finalizado</strong>';
-    a.textContent='✅ Viaje finalizado y confirmado por el Panel de Control.';a.style.display='block';
     volverInicioSinEsperar();
 
   }catch(err){a.textContent=mensajeErrorOperacion(err,'cierre');a.style.display='block';btn.disabled=false;btn.textContent='FINALIZAR VIAJE';}
-}
-
-function configurarPantallaViajeRecuperado(mensaje){
-  mostrarModoViajeActivo();
-  const a=$('inspectionAlert');a.textContent=mensaje||'El viaje está activo. Podés finalizarlo desde acá.';a.style.display='block';
 }
 
 async function finalizarViajeInterno(cerrarRecorrido=false){
@@ -2937,19 +2926,16 @@ async function finalizarViajeInterno(cerrarRecorrido=false){
     const payload={accion:'finalizarViaje',finalizarRecorrido:cerrarRecorrido===true,horaFin:horaFinCapturada,idViaje,kmFinal,idServicio:servicioEnInspeccion.idServicio,idChofer:session.idChofer,idVehiculo:servicioEnInspeccion.idUnidad||'',observaciones:''};
     let cola=null;
     try{cola=await encolarFinalizacionSegundoPlano(payload);}catch(e){console.warn('Cola local no disponible:',e);}
-    mostrarAvisoOperacion('Enviando cierre al Panel de Control…',true);
     try{
       if(cola?.opId) await intentarEnviarOperacionDirecta(cola.opId);
       else{const confirmacion=await enviarOperacionViaje(payload);confirmarOperacionEnPantalla(payload,confirmacion);limpiarCacheAPI('listarViajes','listarAsignaciones','listarServicios','listarVehiculos');}
     }catch(e){
-      mostrarAvisoOperacion('⚠️ Cierre pendiente: '+e.message,true);
       if(cola?.opId)programarProcesamientoCola(cola.opId).catch(()=>{});
       throw e;
     }
     servicioEnInspeccion.estado='FINALIZADO';servicioEnInspeccion.idViaje=idViaje;window.__servicioActual=servicioEnInspeccion;
     try{localStorage.removeItem('diaVerdeServicioActivo');}catch(e){}
     $('inspectionStatus').className='status-banner ready';$('inspectionStatus').innerHTML='✅ <strong>Cierre guardado</strong>';
-    a.textContent='✅ Viaje finalizado y confirmado por el Panel de Control.';a.style.display='block';
     const controlSection=document.querySelector('#inspectionScreen .vehicle-control-section');if(controlSection)controlSection.classList.add('hidden');
     volverInicioSinEsperar();
 

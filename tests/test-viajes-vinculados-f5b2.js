@@ -7,7 +7,8 @@ const index=fs.readFileSync('index.html','utf8'),
 let n=0;
 const verify=(condition,message)=>{assert.ok(condition,message);n++};
 verify(index.includes('./ordenes-secretaria.js?v=5'),'la versión nueva de órdenes está enlazada');
-verify(index.includes('./viajes-locales.js?v=34'),'la versión nueva de cola local está enlazada');
+const versionViajesLocales=index.match(/src="(\.\/viajes-locales\.js\?v=(\d+))"/);
+verify(versionViajesLocales && Number(versionViajesLocales[2])>=34,'la cola local con viajes vinculados está enlazada');
 verify(orders.includes("inicioVinculadoHabilitado=data.modo==='VIAJES_VINCULADOS'"),'se habilita iniciar SOLO con backend vinculado');
 verify(orders.includes("const listo=aceptada&&!demasiadoPronto&&!vencida&&inicioVinculadoHabilitado"),'solo pueden iniciar órdenes aceptadas en horario válido');
 verify(orders.includes("window.ordenesSecretariaOrdenActiva="),'identifica orden seleccionada');
@@ -19,7 +20,7 @@ verify(local.includes("idSolicitud:r.payload.idSolicitud,idAsignacionLocal:r.pay
 verify(index.includes("contarFotosSalida()!==4"),'conserva las 4 fotos obligatorias');
 verify(index.includes("km=parsearKilometraje($('currentKm').value)"),'conserva KM inicial');
 verify(local.includes("km=parsearKilometraje($('finalKm')?.value)"),'conserva KM final');
-verify(sw.includes("APP_CACHE='chofer-interfaz-v38'"),'se renovó el cache PWA');
+verify(sw.includes(`'${versionViajesLocales[1]}'`),'la PWA incluye la misma versión de viajes locales que la página');
 verify(sw.includes("'./ordenes-secretaria.js?v=5'"),'incluye órdenes en cache');
 verify(sw.includes("'./ordenes-secretaria.css?v=2'"),'incluye estilo de órdenes en cache');
 verify(index.includes("const res=await postJson({accion:'listarOrdenesSecretaria',tokenOrdenes:session.tokenOrdenes})"),'recupera la orden vinculada al continuar desde otro equipo');
