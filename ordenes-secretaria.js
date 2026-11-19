@@ -5,7 +5,7 @@
 'use strict';
 if(window.__ORDENES_SECRETARIA_F5B__)return;window.__ORDENES_SECRETARIA_F5B__=true;
 const clean=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-let consultando=false,aceptando=false,preparando=false,ultimoId='',ultimasOrdenes=[],inicioVinculadoHabilitado=false;
+let consultando=false,sincronizandoAceptacion=false,preparando=false,ultimoId='',ultimasOrdenes=[],inicioVinculadoHabilitado=false;
 function seccion(){
   const service=document.getElementById('serviceBox');
   if(!service)return null;
@@ -45,29 +45,11 @@ async function pintar(){
     inicioVinculadoHabilitado=data.modo==='VIAJES_VINCULADOS';
     nota(lista.length ? 'Solo aparecen los traslados confirmados que Secretaría te asignó.' :
       'Por ahora no tenés traslados confirmados para los próximos 7 días.');
-    box.querySelector('#ordenesSecretariaLista').innerHTML=lista.map(o=>{
-      const estado=String(o.estado||'').toUpperCase();
-      const aceptada=estado==='ACEPTADA',enCurso=estado==='EN_CURSO',finalizada=estado==='FINALIZADA';
-      const horario=Date.parse(String(o.fecha||'')+'T'+String(o.hora||'00:00').slice(0,5)+':00-03:00');
-      const demasiadoPronto=Number.isFinite(horario)&&Date.now()<horario-90*60000;
-      const vencida=Number.isFinite(horario)&&Date.now()>horario+24*60*60000;
-      const listo=aceptada&&!demasiadoPronto&&!vencida&&inicioVinculadoHabilitado;
-      const leyenda=finalizada?'✓ FINALIZADO':enCurso?'🚐 EN VIAJE':aceptada?'✓ ACEPTADO':'PENDIENTE DE TU CONFIRMACIÓN';
-      return '<div class="ord-sec-card"><div class="ord-sec-title">'+clean(o.origen)+' → '+clean(o.destino)+'</div>'
-      +'<div class="ord-sec-detail">'+clean(o.fecha)+' · '+clean(o.hora)+' · '+Number(o.pasajeros||0)+' pasajero(s) · '+Number(o.duracion||0)+' min</div>'
-      +'<div class="ord-sec-detail">Vehículo asignado: <strong>'+clean(o.dominio)+' · '+clean(o.interno)+'</strong></div>'
-      +'<div class="ord-sec-bottom"><span class="ord-sec-status">'+leyenda+'</span>'
-      +(listo?'<button type="button" class="ord-sec-start" data-id="'+clean(o.id)+'">▶ Iniciar traslado</button>':'')
-      +(!aceptada&&!enCurso&&!finalizada?'<button type="button" class="ord-sec-accept" data-id="'+clean(o.id)+'">Aceptar traslado</button>':'')
-      +(aceptada&&demasiadoPronto?'<small>Podés iniciar hasta 90 minutos antes del horario programado.</small>':'')
-      +(aceptada&&!inicioVinculadoHabilitado?'<small>Inicio de traslados pendiente de activación en el Panel Maestro.</small>':'')
-      +(aceptada&&vencida?'<small>Consultá a Secretaría: la ventana de inicio finalizó.</small>':'')
-      +'</div></div>';
-    }).join('');
+    mostrarOrdenes(box);
   }catch(err){
     nota('No se pudieron consultar las órdenes: '+(err?.message||String(err))+
       '. Contactá a Secretaría; no podés iniciar viajes sin una orden confirmada.');
-  }finally{consultando=false}
+  }finally{consultando=false;void sincronizarAceptaciones();}
 }
 async function accion(event){
   const start=event.target.closest('.ord-sec-start');
@@ -80,18 +62,84 @@ async function accion(event){
     return;
   }
   const btn=event.target.closest('.ord-sec-accept');
-  if(!btn||aceptando||!session?.tokenOrdenes)return;
+  if(!btn||!session?.tokenOrdenes)return;
   const id=btn.dataset.id;
-  if(!id||!confirm('¿Confirmás que podés realizar este traslado de Secretaría?'))return;
-  aceptando=true;btn.disabled=true;nota('Registrando aceptación…');
+  const pendientes=pendientesAceptacion();
+  if(!id||pendientes.includes(id)||!confirm('¿Confirmás que podés realizar este traslado de Secretaría?'))return;
   try{
-    const res=await postJson({accion:'aceptarOrdenSecretaria',tokenOrdenes:session.tokenOrdenes,idSolicitud:id});
-    const data=res?.resultado||res;
-    if(!data?.ok||data.estado!=='ACEPTADA')throw Error(data?.error||'No se confirmó la aceptación.');
-    nota('¡Traslado aceptado correctamente!');await pintar();
-  }catch(err){nota('No se pudo aceptar: '+(err?.message||String(err)));btn.disabled=false}
-  finally{aceptando=false}
+    localStorage.setItem(claveAceptaciones(),JSON.stringify([...pendientes,id]));
+  }catch{
+    nota('No se pudo guardar la aceptación en este celular. Volvé a intentar.');
+    return;
+  }
+  mostrarOrdenes(seccion());
+  nota('Aceptación guardada en este celular · Pendiente de sincronizar.');
+  void sincronizarAceptaciones();
 }
+function claveAceptaciones(){
+  return 'chofer.aceptaciones.'+String(session?.idChofer||'');
+}
+function pendientesAceptacion(clave=claveAceptaciones()){
+  try{
+    const ids=JSON.parse(localStorage.getItem(clave)||'[]');
+    return Array.isArray(ids)?ids.filter(id=>typeof id==='string'):[];
+  }catch{return [];}
+}
+function mostrarOrdenes(box){
+  if(!box?.querySelector('#ordenesSecretariaLista'))return;
+    box.querySelector('#ordenesSecretariaLista').innerHTML=ultimasOrdenes.map(o=>{
+      const estado=String(o.estado||'').toUpperCase();
+      const pendiente=pendientesAceptacion().includes(String(o.id));
+      const aceptada=estado==='ACEPTADA',enCurso=estado==='EN_CURSO',finalizada=estado==='FINALIZADA';
+      const horario=Date.parse(String(o.fecha||'')+'T'+String(o.hora||'00:00').slice(0,5)+':00-03:00');
+      const demasiadoPronto=Number.isFinite(horario)&&Date.now()<horario-90*60000;
+      const vencida=Number.isFinite(horario)&&Date.now()>horario+24*60*60000;
+      const listo=aceptada&&!demasiadoPronto&&!vencida&&inicioVinculadoHabilitado;
+      const leyenda=finalizada?'✓ FINALIZADO':enCurso?'🚐 EN VIAJE':aceptada?'✓ ACEPTADO':pendiente?'ACEPTACIÓN PENDIENTE DE ENVÍO':'PENDIENTE DE TU CONFIRMACIÓN';
+      return '<div class="ord-sec-card"><div class="ord-sec-title">'+clean(o.origen)+' → '+clean(o.destino)+'</div>'
+      +'<div class="ord-sec-detail">'+clean(o.fecha)+' · '+clean(o.hora)+' · '+Number(o.pasajeros||0)+' pasajero(s) · '+Number(o.duracion||0)+' min</div>'
+      +'<div class="ord-sec-detail">Vehículo asignado: <strong>'+clean(o.dominio)+' · '+clean(o.interno)+'</strong></div>'
+      +'<div class="ord-sec-bottom"><span class="ord-sec-status">'+leyenda+'</span>'
+      +(listo?'<button type="button" class="ord-sec-start" data-id="'+clean(o.id)+'">▶ Iniciar traslado</button>':'')
+      +(!pendiente&&!aceptada&&!enCurso&&!finalizada?'<button type="button" class="ord-sec-accept" data-id="'+clean(o.id)+'">Aceptar traslado</button>':'')
+      +(aceptada&&demasiadoPronto?'<small>Podés iniciar hasta 90 minutos antes del horario programado.</small>':'')
+      +(aceptada&&!inicioVinculadoHabilitado?'<small>Inicio de traslados pendiente de activación en el Panel Maestro.</small>':'')
+      +(aceptada&&vencida?'<small>Consultá a Secretaría: la ventana de inicio finalizó.</small>':'')
+      +'</div></div>';
+    }).join('');
+}
+async function sincronizarAceptaciones(){
+  const token=session?.tokenOrdenes;
+  if(!token||sincronizandoAceptacion||!navigator.onLine)return;
+  const clave=claveAceptaciones();
+  sincronizandoAceptacion=true;
+  try{
+    for(const id of pendientesAceptacion(clave)){
+      if(session?.tokenOrdenes!==token)break;
+      const actual=ultimasOrdenes.find(o=>String(o.id)===id);
+      if(!actual || ultimoId!==String(session?.idChofer||''))continue;
+      if(!['ACEPTADA','EN_CURSO','FINALIZADA'].includes(String(actual.estado).toUpperCase())){
+        const res=await postJson({accion:'aceptarOrdenSecretaria',tokenOrdenes:token,idSolicitud:id});
+        const data=res?.resultado||res;
+        if(!data?.ok||data.estado!=='ACEPTADA')throw Error(data?.error||'No se confirmó la aceptación.');
+        if(session?.tokenOrdenes===token){
+          const vigente=ultimasOrdenes.find(o=>String(o.id)===id);
+          if(vigente && !['EN_CURSO','FINALIZADA'].includes(String(vigente.estado).toUpperCase()))vigente.estado='ACEPTADA';
+        }
+      }
+      localStorage.setItem(clave,JSON.stringify(pendientesAceptacion(clave).filter(x=>x!==id)));
+      if(session?.tokenOrdenes===token){
+        mostrarOrdenes(seccion());
+        nota('✓ Traslado aceptado y sincronizado.');
+      }
+    }
+  }catch(err){
+    if(session?.tokenOrdenes===token)nota('Aceptación pendiente de sincronizar: '+err.message);
+  }finally{sincronizandoAceptacion=false;}
+}
+window.addEventListener('online',()=>void sincronizarAceptaciones());
+setInterval(()=>void sincronizarAceptaciones(),15000);
+
 async function prepararTraslado(id){
   if(!session||!esChoferSecretaria())throw Error('Ingresá con tu usuario de Secretaría.');
   if(!inicioVinculadoHabilitado)throw Error('El backend todavía no habilitó el inicio de traslados.');

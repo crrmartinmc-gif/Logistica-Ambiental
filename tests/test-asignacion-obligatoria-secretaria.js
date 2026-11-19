@@ -55,6 +55,6 @@ ok(index.includes('if(esChoferSecretaria()) return iniciarViajeSecretaria();'),'
 ok(orders.includes('window.__ordenSecretariaEnPreparacion={...orden,idChofer:String(session.idChofer)};'),'marca orden validada');
 ok(orders.indexOf('window.__ordenSecretariaEnPreparacion={...orden')<orders.indexOf('seleccionarVehiculoSecretaria(orden.idVehiculo);'),'preparación autorizada ANTES de seleccionar unidad');
 ok(orders.includes("String(orden.estado).toUpperCase()!=='ACEPTADA'"),'ordenes tienen estado aceptado');
-ok(worker.includes("APP_CACHE='chofer-interfaz-v36'"),'PWA cambia versión de cache para no ofrecer inicio libre');
-ok(worker.includes("'./ordenes-secretaria.js?v=4'"),'cachea módulo correcto');
+ok(worker.includes("APP_CACHE='chofer-interfaz-v37'"),'PWA cambia versión de cache para no ofrecer inicio libre');
+ok(worker.includes("'./ordenes-secretaria.js?v=5'"),'cachea módulo correcto');
 console.log('OK '+n+' controles aislados de App Choferes: solo iniciar con orden aceptada.');
