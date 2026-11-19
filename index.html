@@ -1852,10 +1852,12 @@ async function cargarDashboardInterno(opciones={}){
   const idChofer=String(session?.idChofer||'').trim(),sesionDashboard=recSesionActual();
   const lectura={force:opciones.force===true};
   try{
-    const [aRes,vRes,sRes,estadoVigente] = await Promise.all([
+    const [aRes,vRes,sRes,viRes,rRes,estadoVigente] = await Promise.all([
       getJson('listarAsignaciones',{},lectura),
       getJson('listarVehiculos',{},lectura),
       getJson('listarServicios',{},lectura),
+      getJson('listarViajes',{},lectura),
+      getJson('rutas',{},lectura),
       consultarRecorridoActual().catch(e=>{console.warn('Recorrido:',e.message);return null;})
     ]);
 
@@ -1864,11 +1866,8 @@ async function cargarDashboardInterno(opciones={}){
     const asignaciones=Array.isArray(aRes.asignaciones)?aRes.asignaciones:[];
     const vehiculos=Array.isArray(vRes.vehiculos)?vRes.vehiculos:[];
     const servicios=Array.isArray(sRes.servicios)?sRes.servicios:[];
-    // El estado del recorrido ya confirma si el chofer tiene un viaje activo.
-    const viRes=estadoVigente?null:await getJson('listarViajes',{},lectura);
-    if(sesionDashboard!==recSesionActual())return;
-    if(viRes && typeof recuperarViajeLocal==='function' && await recuperarViajeLocal())return;
-    const viajes=Array.isArray(viRes?.viajes)?viRes.viajes:[];
+    const viajes=Array.isArray(viRes.viajes)?viRes.viajes:[];
+    const rutas=Array.isArray(rRes.rutas)?rRes.rutas:[];
 
     const fechaHoy=hoyArgentinaISO();
     const fechaManana=mananaArgentinaISO();
@@ -1965,7 +1964,7 @@ async function cargarDashboardInterno(opciones={}){
       tipo:servicioBase.TIPO_SERVICIO,
       nombreServicio:servicioBase.NOMBRE_SERVICIO,
       idRuta:servicioBase.ID_RUTA,
-      rutaNombre:servicioBase.ID_RUTA||'',
+      rutaNombre:(rutas.find(r=>String(r.ID_RUTA||'').trim()===String(servicioBase.ID_RUTA||'').trim())?.NOMBRE_RUTA)||servicioBase.ID_RUTA||'',
       estado:servicioBase.ESTADO,
       idAsignacion:asignacion.ID_ASIGNACION,
       idChofer:asignacion.ID_CHOFER,
@@ -1994,21 +1993,9 @@ async function cargarDashboardInterno(opciones={}){
 
     renderVehicle(asignacion?{dominio:vehiculo?.DOMINIO,idUnidad:asignacion.ID_VEHICULO}:null,vehiculo,null);
     renderService(servicioActual);
-    if(servicioActual?.idRuta){
-      getJson('rutas',{}, {ttl:120000}).then(({rutas})=>{
-        if(sesionDashboard!==recSesionActual() || window.__servicioActual!==servicioActual)return;
-        const ruta=Array.isArray(rutas) && rutas.find(r=>String(r.ID_RUTA||'').trim()===String(servicioActual.idRuta).trim());
-        if(!ruta?.NOMBRE_RUTA)return;
-        servicioActual.rutaNombre=ruta.NOMBRE_RUTA;
-        const label=$('serviceRouteName');
-        if(label)label.textContent=servicioActual.rutaNombre;
-      }).catch(err=>console.warn('Nombre de la ruta:',err.message));
-    }
   }catch(err){
     if(typeof recuperarViajeLocal==='function' && await recuperarViajeLocal(true))return;
-    if(sesionDashboard!==recSesionActual())return;
-    $('serviceBox').classList.remove('hidden');
-    $('serviceBox').innerHTML='<div class="empty">No se pudo cargar el servicio.<br><button class="secondary" type="button" onclick="cargarDashboard({force:true})">Reintentar</button></div>';
+    $('serviceBox').innerHTML='<div class="empty">No se pudieron consultar los datos operativos.<br>Intentá actualizar en unos segundos.</div>';
     console.error(err);
   }finally{
     dashboardCargando=false;
