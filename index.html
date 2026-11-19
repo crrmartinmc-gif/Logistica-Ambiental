@@ -2317,7 +2317,7 @@ async function abrirCamaraSalida(key,label){
 
   $('cameraTitle').textContent='📷 '+label;
   $('cameraSubtitle').textContent='Foto nueva obligatoria · tomada ahora';
-  $('cameraLabel').textContent=label+' · cámara en vivo';
+  $('cameraLabel').textContent='Abriendo cámara…';
   error.style.display='none';
   error.textContent='';
   btn.disabled=true;
@@ -2329,23 +2329,36 @@ async function abrirCamaraSalida(key,label){
       throw new Error('Este dispositivo/navegador no permite acceder a la cámara en vivo.');
     }
 
-    // Nunca usamos <input type=file>: la imagen nace del stream de cámara.
-    camaraStream=await navigator.mediaDevices.getUserMedia({
-      video:{
-        facingMode:{ideal:'environment'},
-        width:{ideal:1920},
-        height:{ideal:1080}
-      },
-      audio:false
-    });
-
-    video.srcObject=camaraStream;
-    await video.play();
+    let solicitudVigente=true;
+    let limite;
+    try{
+      const apertura=navigator.mediaDevices.getUserMedia({
+        video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}},
+        audio:false
+      }).then(stream=>{
+        if(!solicitudVigente || camaraKeyActual!==key){
+          stream.getTracks().forEach(track=>track.stop());
+          return false;
+        }
+        camaraStream=stream;
+        video.srcObject=stream;
+        return video.play().then(()=>true);
+      });
+      const espera=new Promise((_,reject)=>{
+        limite=setTimeout(()=>reject(new Error('Tiempo de apertura agotado.')),10000);
+      });
+      if(!await Promise.race([apertura,espera]) || camaraKeyActual!==key)return;
+    }finally{
+      solicitudVigente=false;
+      clearTimeout(limite);
+    }
+    $('cameraLabel').textContent=label+' · cámara en vivo';
     btn.disabled=false;
     if(camaraRequiereHorizontal) actualizarRequisitoOrientacion();
   }catch(err){
+    if(camaraKeyActual!==key)return;
     console.error('Cámara:',err);
-    error.textContent='No se pudo abrir la cámara. Verificá el permiso de cámara del sitio y volvé a intentar.';
+    error.textContent='No se pudo abrir la cámara. Cerrá esta pantalla y volvé a intentar.';
     error.style.display='block';
     detenerCamara();
   }finally{
