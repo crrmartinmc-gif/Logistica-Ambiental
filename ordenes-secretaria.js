@@ -99,8 +99,7 @@ async function prepararTraslado(id){
   if(!orden||String(orden.estado).toUpperCase()!=='ACEPTADA')throw Error('Primero aceptá esta orden.');
   if(viajeSecretariaActivo||await recuperarViajeLocal(true))
     throw Error('Ya hay un viaje abierto o pendiente de sincronizar. Terminá ese viaje primero.');
-  const unidad=(window.__vehiculosSecretaria||[]).find(x=>String(x.ID_VEHICULO)===String(orden.idVehiculo));
-  if(!unidad)throw Error('El vehículo de la orden no figura habilitado. Consultá a Secretaría.');
+  if(!orden.idVehiculo || !orden.dominio)throw Error('La orden no tiene una unidad con patente asignada. Consultá a Secretaría.');
   if(!confirm('¿Preparar traslado '+orden.origen+' → '+orden.destino+' con '+orden.dominio+'?'))return;
   // La selección de unidad ya no inicia viajes libres: solo habilita esta orden validada.
   window.__ordenSecretariaEnPreparacion={...orden,idChofer:String(session.idChofer)};

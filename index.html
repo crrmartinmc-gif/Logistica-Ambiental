@@ -1283,7 +1283,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
    ============================================================ */
 </script>
 <script src="./documentos-unidad.js?v=2"></script>
-<script src="./recorridos-chofer.js?v=20261113-3"></script>
+<script src="./recorridos-chofer.js?v=20261119-1"></script>
 <script src="./operaciones-viaje.js?v=2"></script>
 <script src="./cola-viajes.js?v=33"></script>
 <script src="./viajes-locales.js?v=34"></script>
@@ -1724,17 +1724,16 @@ async function cargarDashboardSecretaria(){
   const box=$('serviceBox');
   box.classList.add('secretaria-content');
   box.classList.remove('hidden');
-  box.innerHTML='<div class="secretaria-loading">Consultando vehículos de Secretaría…</div>';
+  box.innerHTML='<div class="secretaria-loading">Consultando viajes de Secretaría…</div>';
   try{
     if(!session?.usuario || !session?.idChofer) throw new Error('La sesión no contiene usuario e ID de chofer. Cerrá sesión e ingresá nuevamente.');
     const paramsSecretaria={usuario:String(session.usuario).trim(),idChofer:String(session.idChofer).trim()};
-    const [vr,tr]=await Promise.all([getJson('listarVehiculosSecretaria',paramsSecretaria,{force:true}),getJson('listarViajesSecretaria',paramsSecretaria,{force:true})]);
+    const tr=await getJson('listarViajesSecretaria',paramsSecretaria,{force:true});
     if(await recuperarViajeLocal())return;
-    const vehiculos=Array.isArray(vr.vehiculos)?vr.vehiculos:[];
     const viajes=Array.isArray(tr.viajes)?tr.viajes:[];
     viajeSecretariaActivo=viajes.find(v=>String(v.ID_CHOFER||'')===String(session.idChofer||'') && ['EN CURSO','ACTIVO','INICIADO'].includes(String(v.ESTADO||'').toUpperCase()))||null;
     if(viajeSecretariaActivo){
-      let unidad=vehiculos.find(v=>String(v.ID_VEHICULO)===String(viajeSecretariaActivo.ID_VEHICULO));
+      let unidad;
       // La unidad en uso puede dejar de aparecer entre los vehículos disponibles.
       if(!unidad){
         try{
@@ -1759,13 +1758,9 @@ async function cargarDashboardSecretaria(){
       mostrarFotoSecretaria($('secretariaActivePhoto'),vehiculoSecretariaSeleccionado);
       return;
     }
-    if(!vehiculos.length){box.innerHTML='<div class="empty">No hay vehículos operativos disponibles en el área SECRETARÍA.</div>';return;}
-    box.innerHTML='<div class="secretaria-selector-head"><div><span class="secretaria-kicker">UNIDADES DISPONIBLES</span><h3>Vehículos de Secretaría</h3><p>Para iniciar un viaje, aceptá una orden en «Mis traslados asignados». Los vehículos se muestran solo para consulta.</p></div><span class="secretaria-count">'+vehiculos.length+' '+(vehiculos.length===1?'UNIDAD':'UNIDADES')+'</span></div><div class="secretaria-vehicles">'+vehiculos.map(v=>`<div class="secretaria-vehicle-card"><button class="secretaria-vehicle-btn" type="button" disabled aria-disabled="true" title="Solo podés iniciar un viaje desde un traslado asignado por Secretaría"><span class="secretaria-vehicle-photo" data-vehicle-photo></span><span class="secretaria-vehicle-data"><strong>${escapeHtml(v.DOMINIO||'SIN DOMINIO')}</strong><span class="secretaria-vehicle-internal">INTERNO ${escapeHtml(v.INTERNO||'—')}</span><small>${escapeHtml([v.MARCA,v.MODELO].filter(Boolean).join(' ')||'Modelo no informado')}</small></span><span class="secretaria-vehicle-km"><small>KM ACTUAL</small><strong>${escapeHtml(formatearKm(v.KM_ACTUAL||'—'))}</strong></span><span class="secretaria-vehicle-arrow">›</span></button><button type="button" class="unit-documents-button secretaria-documents-button" data-unit-documents="${escapeHtml(dominioUnidad(v.DOMINIO||''))}" aria-label="Documentos de la unidad ${escapeHtml(dominioUnidad(v.DOMINIO||''))}">Documentos de la unidad</button></div>`).join('')+'</div>';
-    box.querySelectorAll('[data-vehicle-photo]').forEach((photoBox,index)=>{
-      mostrarFotoSecretaria(photoBox,vehiculos[index]);
-    });
-    window.__vehiculosSecretaria=vehiculos;
-  }catch(err){if(await recuperarViajeLocal(true))return;console.warn('Carga de flota:',err);box.innerHTML='<div class="empty">No se pudo cargar la flota. Actualizá la pantalla.</div>';}
+    box.replaceChildren();
+    box.classList.add('hidden');
+  }catch(err){if(await recuperarViajeLocal(true))return;console.warn('Carga de viajes:',err);box.innerHTML='<div class="empty">No se pudieron consultar los viajes en curso. Actualizá la pantalla.</div>';}
   finally{if(typeof window.ordenesSecretariaRender==='function')window.ordenesSecretariaRender();}
 }
 
@@ -1810,16 +1805,16 @@ function seleccionarVehiculoSecretaria(id){
   }
   restablecerPreparacionRecorrido();
   if(dashboardTimer){clearInterval(dashboardTimer);dashboardTimer=null;}
-  const v=(window.__vehiculosSecretaria||[]).find(x=>String(x.ID_VEHICULO)===String(id));
-  if(!v)return; vehiculoSecretariaSeleccionado=v; servicioEnInspeccion={idServicio:'',idAsignacion:'',idUnidad:v.ID_VEHICULO,dominio:v.DOMINIO||'',estado:'PENDIENTE',idViaje:''};
+  const v={ID_VEHICULO:orden.idVehiculo,DOMINIO:dominioUnidad(orden.dominio),INTERNO:orden.interno};
+  vehiculoSecretariaSeleccionado=v; servicioEnInspeccion={idServicio:'',idAsignacion:'',idUnidad:v.ID_VEHICULO,dominio:v.DOMINIO||'',estado:'PENDIENTE',idViaje:''};
   $('serviceBox').classList.add('hidden'); $('inspectionScreen').classList.remove('hidden');
   $('inspectionServiceLabel').textContent=(v.DOMINIO||v.INTERNO||'Vehículo')+' · '+[v.MARCA,v.MODELO].filter(Boolean).join(' ');
   $('inspectionAlert').style.display='none'; window.__salidaFotos={frente:null,trasera:null,lateral_derecho:null,lateral_izquierdo:null};
   $('inspectionStatus').className='status-banner pending'; $('inspectionStatus').innerHTML='📸 <strong>Preparando salida</strong> · 4 fotos + KM inicial obligatorios';
   $('finishInspectionBtn').disabled=true; $('finishInspectionBtn').textContent='▶ INICIAR VIAJE'; $('finishInspectionBtn').onclick=iniciarViaje;
   $('currentKm').value=''; $('currentKm').disabled=false; $('inspectionObs').value='';
-  const finalBox=document.getElementById('finalKmBox');if(finalBox)finalBox.remove(); construirFotosSalida(); actualizarEstadoInicio();
-  $('lastKmHint').textContent='KM registrado de la unidad: '+(v.KM_ACTUAL||'—');
+  const finalBox=document.getElementById('finalKmBox');if(finalBox)finalBox.remove(); construirFotosSalida();
+  $('lastKmHint').textContent='El kilometraje se registrará como KM inicial del viaje.';
   verificarInspeccionRecorrido();
 }
 
@@ -2506,6 +2501,12 @@ function actualizarEstadoInicio(){
   if($('photoProgress')) $('photoProgress').textContent=fotos+' de 4 fotos cargadas';
 
   const reutiliza=recPuedeReutilizar();
+  if(esChoferSecretaria() && inspeccionSecretariaPendiente){
+    $('finishInspectionBtn').disabled=true;
+    $('inspectionStatus').className='status-banner pending';
+    $('inspectionStatus').textContent='Verificando las fotos de la unidad asignada…';
+    return;
+  }
   const listo=(fotos===4 || reutiliza) && km!==null && !bloqueoOtroServicio;
 
   $('finishInspectionBtn').disabled=!listo;
@@ -3257,7 +3258,7 @@ $('loginForm').addEventListener('submit',async e=>{
 
 window.addEventListener('pagehide',()=>{ try{ detenerCamara(); }catch(e){} });
 </script>
-<script src="./ordenes-secretaria.js?v=3"></script>
+<script src="./ordenes-secretaria.js?v=4"></script>
 </body>
 </html>
 

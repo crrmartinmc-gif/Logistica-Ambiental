@@ -3,6 +3,7 @@ let estadoRecorridoServidor=null;
 let inspeccionReutilizable=null;
 let consultaInspeccionActual=0;
 let bloqueoOtroServicio=false;
+let inspeccionSecretariaPendiente=false;
 function recSesionActual(){return String(session?.usuario||'')+'|'+String(session?.idChofer||'');}
 function recPuedeReutilizar(){
   const r=inspeccionReutilizable;
@@ -26,6 +27,7 @@ function dibujarEstadoRecorrido(){
 }
 function restablecerPreparacionRecorrido(){
   inspeccionReutilizable=null;bloqueoOtroServicio=false;consultaInspeccionActual++;
+  inspeccionSecretariaPendiente=false;
   document.querySelectorAll('#inspectionScreen .check-section').forEach(s=>s.classList.remove('hidden'));
   const actions=document.querySelector('#inspectionScreen .inspection-actions');
   if(actions)actions.innerHTML='<button class="secondary" type="button" onclick="volverServicio()">VOLVER</button><button class="primary" type="button" id="finishInspectionBtn" onclick="iniciarViaje()" disabled>▶ INICIAR VIAJE</button>';
@@ -35,12 +37,18 @@ function restablecerPreparacionRecorrido(){
 async function verificarInspeccionRecorrido(){
   const consulta=++consultaInspeccionActual,idVehiculo=servicioEnInspeccion?.idUnidad,idServicio=servicioEnInspeccion?.idServicio||'',sesion=recSesionActual();
   inspeccionReutilizable=null;bloqueoOtroServicio=false;
+  const secretaria=typeof esChoferSecretaria==='function' && esChoferSecretaria();
+  if(secretaria){
+    inspeccionSecretariaPendiente=true;
+    document.querySelector('#inspectionScreen .check-section')?.classList.add('hidden');
+    actualizarEstadoInicio();
+  }
   try{
     const r=await consultarRecorridoActual(idVehiculo);
     if(!r||consulta!==consultaInspeccionActual||sesion!==recSesionActual()||String(servicioEnInspeccion?.idUnidad)!==String(idVehiculo))return;
     if(['EN VIAJE','EN CURSO','ACTIVO','INICIADO'].includes(String(servicioEnInspeccion?.estado||'').toUpperCase()))return;
     bloqueoOtroServicio=!!r.viajeActivo && (String(r.viajeActivo.ID_SERVICIO||'')!==String(idServicio)||!idServicio);
-    if(bloqueoOtroServicio){
+    if(bloqueoOtroServicio && !secretaria){
       await cargarDashboard({force:true});
       const actual=window.__servicioActual;
       if(actual?.idViaje && String(actual.idViaje)===String(r.viajeActivo.ID_VIAJE)){
@@ -51,7 +59,14 @@ async function verificarInspeccionRecorrido(){
     if(r.reutilizable)inspeccionReutilizable=r.recorrido;
     document.querySelector('#inspectionScreen .check-section')?.classList.toggle('hidden',recPuedeReutilizar());
     actualizarEstadoInicio();
-  }catch(e){console.warn('Inspección sin verificar:',e.message);/* Ante error se mantienen las cuatro fotos obligatorias. */}
+  }catch(e){console.warn('Inspección sin verificar:',e.message);}
+  finally{
+    if(secretaria && consulta===consultaInspeccionActual && sesion===recSesionActual() && String(servicioEnInspeccion?.idUnidad)===String(idVehiculo)){
+      inspeccionSecretariaPendiente=false;
+      document.querySelector('#inspectionScreen .check-section')?.classList.toggle('hidden',recPuedeReutilizar());
+      actualizarEstadoInicio();
+    }
+  }
 }
 async function cerrarRecorridoActual(){
   const r=estadoRecorridoServidor?.recorrido,btn=$('cerrarRecorridoBtn');
