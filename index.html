@@ -1852,11 +1852,10 @@ async function cargarDashboardInterno(opciones={}){
   const idChofer=String(session?.idChofer||'').trim(),sesionDashboard=recSesionActual();
   const lectura={force:opciones.force===true};
   try{
-    const [aRes,vRes,sRes,viRes,estadoVigente] = await Promise.all([
+    const [aRes,vRes,sRes,estadoVigente] = await Promise.all([
       getJson('listarAsignaciones',{},lectura),
       getJson('listarVehiculos',{},lectura),
       getJson('listarServicios',{},lectura),
-      getJson('listarViajes',{},lectura),
       consultarRecorridoActual().catch(e=>{console.warn('Recorrido:',e.message);return null;})
     ]);
 
@@ -1865,7 +1864,11 @@ async function cargarDashboardInterno(opciones={}){
     const asignaciones=Array.isArray(aRes.asignaciones)?aRes.asignaciones:[];
     const vehiculos=Array.isArray(vRes.vehiculos)?vRes.vehiculos:[];
     const servicios=Array.isArray(sRes.servicios)?sRes.servicios:[];
-    const viajes=Array.isArray(viRes.viajes)?viRes.viajes:[];
+    // El estado del recorrido ya confirma si el chofer tiene un viaje activo.
+    const viRes=estadoVigente?null:await getJson('listarViajes',{},lectura);
+    if(sesionDashboard!==recSesionActual())return;
+    if(viRes && typeof recuperarViajeLocal==='function' && await recuperarViajeLocal())return;
+    const viajes=Array.isArray(viRes?.viajes)?viRes.viajes:[];
 
     const fechaHoy=hoyArgentinaISO();
     const fechaManana=mananaArgentinaISO();
@@ -2003,7 +2006,9 @@ async function cargarDashboardInterno(opciones={}){
     }
   }catch(err){
     if(typeof recuperarViajeLocal==='function' && await recuperarViajeLocal(true))return;
-    $('serviceBox').innerHTML='<div class="empty">No se pudieron consultar los datos operativos.<br>Intentá actualizar en unos segundos.</div>';
+    if(sesionDashboard!==recSesionActual())return;
+    $('serviceBox').classList.remove('hidden');
+    $('serviceBox').innerHTML='<div class="empty">No se pudo cargar el servicio.<br><button class="secondary" type="button" onclick="cargarDashboard({force:true})">Reintentar</button></div>';
     console.error(err);
   }finally{
     dashboardCargando=false;
