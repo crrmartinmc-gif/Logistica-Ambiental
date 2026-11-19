@@ -1283,7 +1283,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
    ============================================================ */
 </script>
 <script src="./documentos-unidad.js?v=2"></script>
-<script src="./recorridos-chofer.js?v=20261119-1"></script>
+<script src="./recorridos-chofer.js?v=20261119-2"></script>
 <script src="./operaciones-viaje.js?v=2"></script>
 <script src="./cola-viajes.js?v=33"></script>
 <script src="./viajes-locales.js?v=34"></script>
@@ -2507,6 +2507,14 @@ function actualizarEstadoInicio(){
     $('inspectionStatus').textContent='Verificando las fotos de la unidad asignada…';
     return;
   }
+  const reintento=$('reintentarInspeccionSecretaria');
+  if(esChoferSecretaria() && errorVerificacionSecretaria){
+    $('finishInspectionBtn').disabled=true;
+    $('inspectionStatus').className='status-banner warning';
+    $('inspectionStatus').innerHTML='No pudimos verificar las fotos de esta unidad. <button type="button" id="reintentarInspeccionSecretaria" onclick="verificarInspeccionRecorrido()">Reintentar verificación</button>';
+    return;
+  }
+  reintento?.remove();
   const listo=(fotos===4 || reutiliza) && km!==null && !bloqueoOtroServicio;
 
   $('finishInspectionBtn').disabled=!listo;
@@ -2834,6 +2842,7 @@ async function iniciarViaje(){
 
 async function iniciarViajeSecretaria(){
   const btn=$('finishInspectionBtn'),a=$('inspectionAlert'),km=parsearKilometraje($('currentKm').value),f=window.__salidaFotos||{};
+  if(inspeccionSecretariaPendiente||errorVerificacionSecretaria)return;
   if(!vehiculoSecretariaSeleccionado?.ID_VEHICULO){a.textContent='Seleccioná un vehículo.';a.style.display='block';return;}
   if(!recPuedeReutilizar() && contarFotosSalida()!==4){a.textContent='Tenés que cargar las 4 fotos obligatorias.';a.style.display='block';return;}
   if(km===null){a.textContent='Ingresá el kilometraje inicial.';a.style.display='block';return;}

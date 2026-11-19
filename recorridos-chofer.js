@@ -4,6 +4,7 @@ let inspeccionReutilizable=null;
 let consultaInspeccionActual=0;
 let bloqueoOtroServicio=false;
 let inspeccionSecretariaPendiente=false;
+let errorVerificacionSecretaria=false;
 function recSesionActual(){return String(session?.usuario||'')+'|'+String(session?.idChofer||'');}
 function recPuedeReutilizar(){
   const r=inspeccionReutilizable;
@@ -28,6 +29,7 @@ function dibujarEstadoRecorrido(){
 function restablecerPreparacionRecorrido(){
   inspeccionReutilizable=null;bloqueoOtroServicio=false;consultaInspeccionActual++;
   inspeccionSecretariaPendiente=false;
+  errorVerificacionSecretaria=false;
   document.querySelectorAll('#inspectionScreen .check-section').forEach(s=>s.classList.remove('hidden'));
   const actions=document.querySelector('#inspectionScreen .inspection-actions');
   if(actions)actions.innerHTML='<button class="secondary" type="button" onclick="volverServicio()">VOLVER</button><button class="primary" type="button" id="finishInspectionBtn" onclick="iniciarViaje()" disabled>▶ INICIAR VIAJE</button>';
@@ -39,6 +41,7 @@ async function verificarInspeccionRecorrido(){
   inspeccionReutilizable=null;bloqueoOtroServicio=false;
   const secretaria=typeof esChoferSecretaria==='function' && esChoferSecretaria();
   if(secretaria){
+    errorVerificacionSecretaria=false;
     inspeccionSecretariaPendiente=true;
     document.querySelector('#inspectionScreen .check-section')?.classList.add('hidden');
     actualizarEstadoInicio();
@@ -57,13 +60,17 @@ async function verificarInspeccionRecorrido(){
       }
     }
     if(r.reutilizable)inspeccionReutilizable=r.recorrido;
+    if(secretaria && (typeof r.reutilizable!=='boolean' || (r.reutilizable && !recPuedeReutilizar())))throw new Error('Respuesta de inspección inconsistente.');
     document.querySelector('#inspectionScreen .check-section')?.classList.toggle('hidden',recPuedeReutilizar());
     actualizarEstadoInicio();
-  }catch(e){console.warn('Inspección sin verificar:',e.message);}
+  }catch(e){
+    if(secretaria && consulta===consultaInspeccionActual && sesion===recSesionActual())errorVerificacionSecretaria=true;
+    console.warn('Inspección sin verificar:',e.message);
+  }
   finally{
     if(secretaria && consulta===consultaInspeccionActual && sesion===recSesionActual() && String(servicioEnInspeccion?.idUnidad)===String(idVehiculo)){
       inspeccionSecretariaPendiente=false;
-      document.querySelector('#inspectionScreen .check-section')?.classList.toggle('hidden',recPuedeReutilizar());
+      document.querySelector('#inspectionScreen .check-section')?.classList.toggle('hidden',errorVerificacionSecretaria||recPuedeReutilizar());
       actualizarEstadoInicio();
     }
   }

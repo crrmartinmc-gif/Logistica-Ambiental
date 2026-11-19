@@ -19,7 +19,7 @@ verify(local.includes("idSolicitud:r.payload.idSolicitud,idAsignacionLocal:r.pay
 verify(index.includes("contarFotosSalida()!==4"),'conserva las 4 fotos obligatorias');
 verify(index.includes("km=parsearKilometraje($('currentKm').value)"),'conserva KM inicial');
 verify(local.includes("km=parsearKilometraje($('finalKm')?.value)"),'conserva KM final');
-verify(sw.includes("APP_CACHE='chofer-interfaz-v37'"),'se renovó el cache PWA');
+verify(sw.includes("APP_CACHE='chofer-interfaz-v38'"),'se renovó el cache PWA');
 verify(sw.includes("'./ordenes-secretaria.js?v=5'"),'incluye órdenes en cache');
 verify(sw.includes("'./ordenes-secretaria.css?v=2'"),'incluye estilo de órdenes en cache');
 verify(index.includes("const res=await postJson({accion:'listarOrdenesSecretaria',tokenOrdenes:session.tokenOrdenes})"),'recupera la orden vinculada al continuar desde otro equipo');
