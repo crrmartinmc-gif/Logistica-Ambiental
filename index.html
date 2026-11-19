@@ -1280,7 +1280,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
 <script src="./recorridos-chofer.js?v=20261119-2"></script>
 <script src="./operaciones-viaje.js?v=2"></script>
 <script src="./cola-viajes.js?v=33"></script>
-<script src="./viajes-locales.js?v=35"></script>
+<script src="./viajes-locales.js?v=36"></script>
 <script>
 const BACKEND_URL = "https://script.google.com/macros/s/AKfycbz0n4ZlW2p--nP2Wx0SnytyCRt_pL6RFxliEan0j1vUdSSrBrVNCbsTI7VC0JQWl5k9/exec";
 
@@ -1874,7 +1874,9 @@ async function cargarDashboardInterno(opciones={}){
     const fechaManana=mananaArgentinaISO();
     const normalizarFecha=v=>fechaArgentinaISO(v);
 
+    const cierresLocales=typeof cierresLocalesPendientesChofer==='function' ? await cierresLocalesPendientesChofer() : {asignaciones:new Set(),viajes:new Set()};
     const propias=asignaciones.filter(a=>{
+      if(cierresLocales.asignaciones.has(String(a.ID_ASIGNACION||'')))return false;
       const f=normalizarFecha(a.FECHA);
       const servicio=servicios.find(s =>
         String(s.ID_SERVICIO||'').trim()===String(a.ID_SERVICIO||'').trim()
@@ -1947,7 +1949,11 @@ async function cargarDashboardInterno(opciones={}){
     });
 
     // El viaje real manda sobre la agenda, incluso si su asignación ya cambió de estado.
-    const viajePrioritario=recSeleccionarViajeActivo(viajes,servicios,idChofer,estadoVigente);
+    const viajesVigentes=viajes.filter(v=>
+      !cierresLocales.viajes.has(String(v.ID_VIAJE||'')) &&
+      !cierresLocales.asignaciones.has(String(v.ID_ASIGNACION||''))
+    );
+    const viajePrioritario=recSeleccionarViajeActivo(viajesVigentes,servicios,idChofer,estadoVigente);
     const asignacion=viajePrioritario?{
       ...(asignaciones.find(a=>String(a.ID_ASIGNACION)===String(viajePrioritario.ID_ASIGNACION))||{}),
       ID_ASIGNACION:viajePrioritario.ID_ASIGNACION||'',ID_SERVICIO:viajePrioritario.ID_SERVICIO||'',
