@@ -78,6 +78,8 @@ async function recuperarViajeLocal(incluirConfirmado=false){
 }
 // Cierres nuevos: siempre se envían por la ruta de servidor del index.
 // Los viajes antiguos pendientes conservan su cola para no perder registros.
+// Compatibilidad para viajes antiguos del teléfono: cerrar contra el servidor,
+// sin depender de que la cola local termine de sincronizar el inicio.
 async function cerrarViajeLocal(cerrarRecorrido){
   const actual=servicioEnInspeccion;
   if(!actual?.localKey || !session)return false;
@@ -86,27 +88,48 @@ async function cerrarViajeLocal(cerrarRecorrido){
     String(x.payload?.idChofer)===String(session.idChofer));
   if(!r)return false;
   const km=parsearKilometraje($('finalKm')?.value);
-  const a=$('inspectionAlert');
+  const a=$('inspectionAlert'),btn=$('finishInspectionBtn');
   if(km===null || km<Number(r.payload.kmInicial)){
     a.textContent='Ingresá un KM final igual o mayor al inicial.';a.style.display='block';return true;
   }
+  btn.disabled=true;btn.textContent='GUARDANDO CIERRE…';a.style.display='none';
   try{
+    let id=String(r.idViaje||actual.idViaje||r.payload.idViaje||'').trim();
+    // Cuando una respuesta se perdió, recuperar el ID real del viaje del chofer.
+    if(!id){
+      const respuesta=await getJson('listarViajes',{}, {force:true});
+      const viajes=Array.isArray(respuesta.viajes)?respuesta.viajes:[];
+      const propios=viajes.filter(v=>String(v.ID_CHOFER||'')===String(session.idChofer) &&
+        ['EN CURSO','ACTIVO','INICIADO'].includes(String(v.ESTADO||'').trim().toUpperCase()));
+      const servicio=String(r.payload.idServicio||actual.idServicio||'');
+      const compatibles=servicio?propios.filter(v=>String(v.ID_SERVICIO||'')===servicio):propios;
+      if(compatibles.length===1)id=String(compatibles[0].ID_VIAJE||'');
+    }
+    if(!id)throw Error('No se pudo identificar el viaje en el servidor. No se realizó el cierre.');
     const secretaria=r.payload.accion==='iniciarViajeSecretaria';
-    await ColaViajes.cerrar(r.key,{accion:secretaria?'finalizarViajeSecretaria':'finalizarViaje',
-      usuario:session.usuario,idChofer:session.idChofer,idVehiculo:r.payload.idVehiculo,
-      idServicio:r.payload.idServicio||'',kmFinal:km,horaFin:new Date().toISOString(),
+    const payload={accion:secretaria?'finalizarViajeSecretaria':'finalizarViaje',
+      usuario:session.usuario,idChofer:session.idChofer,
+      idVehiculo:r.payload.idVehiculo,idServicio:r.payload.idServicio||'',
+      idViaje:id,kmFinal:km,horaFin:new Date().toISOString(),
       finalizarRecorrido:cerrarRecorrido===true,
-      ...(r.payload.idSolicitud?{idSolicitud:r.payload.idSolicitud,idAsignacionLocal:r.payload.idAsignacionLocal,
-        tokenOrdenes:session.tokenOrdenes||r.payload.tokenOrdenes}:{})});
-    // No declarar éxito ni abandonar la pantalla hasta confirmar el backend.
-    await ColaViajes.procesar();
-    actual.estado='FINALIZADO';actual.localKey='';
+      ...(r.payload.idSolicitud?{idSolicitud:r.payload.idSolicitud,
+        idAsignacionLocal:r.payload.idAsignacionLocal,
+        tokenOrdenes:session.tokenOrdenes||r.payload.tokenOrdenes}:{})};
+    await enviarOperacionViaje(payload);
+    await ColaViajes.editar(r.key,anterior=>({...anterior,idViaje:id,
+      inicioConfirmado:true,cierre:payload,cierreConfirmado:true,error:''}));
+    actual.estado='FINALIZADO';actual.localKey='';actual.idViaje=id;
     limpiarCacheAPI('listarViajes','listarAsignaciones','listarServicios','listarVehiculos');
     volverInicioSinEsperar();
-  }catch(e){a.textContent='El servidor todavía no confirmó el cierre. Volvé a intentar con conexión.';
-    a.style.display='block';console.warn('Cierre anterior pendiente:',e);}
+  }catch(e){
+    a.textContent=e.message||'No se pudo confirmar el cierre. Intentá nuevamente.';
+    a.style.display='block';console.warn('Cierre de viaje recuperado:',e);
+  }finally{
+    btn.disabled=false;btn.textContent='FINALIZAR SERVICIO';
+  }
   return true;
 }
+
 window.addEventListener('load',()=>{
   if(session)lanzarEnvioLocal();
   navigator.serviceWorker?.addEventListener('message',ev=>{if(ev.data?.type==='VIAJE_LOCAL_ACTUALIZADO'){limpiarCacheAPI();actualizarIdViajeLocal(ev.data.registro);if(ev.data.registro.cierreConfirmado&&session&&$('inspectionScreen').classList.contains('hidden'))cargarDashboard({force:true}).catch(()=>{});}});
