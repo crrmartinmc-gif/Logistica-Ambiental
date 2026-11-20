@@ -2916,11 +2916,32 @@ async function finalizarViajeInterno(cerrarRecorrido=false){
   btn.disabled=true;btn.textContent='GUARDANDO CIERRE…';a.style.display='none';
   try{
     let idViaje=servicioEnInspeccion?.idViaje||'';
-    if(!idViaje){
+    // Antes de cerrar, reconciliar el identificador local con el viaje real.
+    // Una sesión restaurada puede conservar un ID antiguo; nunca cerrar otro chofer.
+    try{
       const r=await getJson('listarViajes',{}, {force:true});
       const viajes=Array.isArray(r.viajes)?r.viajes:[];
-      const viaje=viajes.find(v=>String(v.ID_SERVICIO||'')===String(servicioEnInspeccion.idServicio||'')&&String(v.ID_CHOFER||'')===String(session.idChofer||'')&&['EN CURSO','ACTIVO','INICIADO'].includes(String(v.ESTADO||'').toUpperCase()));
-      idViaje=viaje?.ID_VIAJE||'';
+      const propios=viajes.filter(v=>
+        String(v.ID_CHOFER||'')===String(session.idChofer||'') &&
+        ['EN CURSO','ACTIVO','INICIADO'].includes(String(v.ESTADO||'').trim().toUpperCase())
+      );
+      const idServicio=String(servicioEnInspeccion?.idServicio||'');
+      const coincidentes=idServicio
+        ? propios.filter(v=>String(v.ID_SERVICIO||'')===idServicio)
+        : propios;
+      const confirmado=coincidentes.find(v=>String(v.ID_VIAJE||'')===String(idViaje)) ||
+        (coincidentes.length===1 ? coincidentes[0] : null);
+      if(confirmado?.ID_VIAJE){
+        idViaje=confirmado.ID_VIAJE;
+        servicioEnInspeccion.idViaje=idViaje;
+      }else if(propios.length && !coincidentes.length){
+        throw new Error('El viaje activo no coincide con el servicio seleccionado. No se cerró otro viaje.');
+      }else if(coincidentes.length>1 && !confirmado){
+        throw new Error('Hay varios viajes activos para este servicio. Se requiere identificar el correcto.');
+      }
+    }catch(error){
+      if(/no coincide|varios viajes activos/.test(String(error.message||'')))throw error;
+      console.warn('No se pudo verificar el ID del viaje; se conserva el identificador local:',error);
     }
     if(!idViaje) throw new Error('No se encontró el viaje activo para finalizar. No se guardó el cierre.');
     const payload={accion:'finalizarViaje',finalizarRecorrido:cerrarRecorrido===true,horaFin:horaFinCapturada,idViaje,kmFinal,idServicio:servicioEnInspeccion.idServicio,idChofer:session.idChofer,idVehiculo:servicioEnInspeccion.idUnidad||'',observaciones:''};
