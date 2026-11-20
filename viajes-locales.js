@@ -5,14 +5,18 @@ async function fetchConTiempo(url,options={}){
   try{const response=await fetch(url,{...options,signal:c.signal});const body=await response.text();return {ok:response.ok,status:response.status,text:async()=>body};}
   catch(e){if(e.name==='AbortError')throw Error('La conexión está demorando. Volvé a intentar.');throw e;}finally{clearTimeout(timer);}
 }
+// Los viajes nuevos se confirman directamente con el servidor. La cola antigua
+// se conserva únicamente para recuperar operaciones ya pendientes.
 async function guardarInicioLocal(payload){
-  let r;
-  try{r=await ColaViajes.iniciar(payload,{...servicioEnInspeccion,kmInicial:payload.kmInicial,estado:'EN VIAJE'},esChoferSecretaria()?vehiculoSecretariaSeleccionado:null);}
-  catch(e){throw Error('No se pudo guardar la salida en este celular. No cierres la pantalla; volvé a intentar.');}
-  servicioEnInspeccion.localKey=r.key;
-  actualizarIdViajeLocal(r);
-  // No esperar ninguna solicitud de red para liberar al chofer.
-  lanzarEnvioLocal();
+  const data=await enviarOperacionViaje(payload);
+  const resultado=resultadoOperacionViaje(data);
+  const viaje=resultado?.viaje||resultado;
+  const id=viaje?.ID_VIAJE||viaje?.idViaje||payload.idViaje;
+  if(!id)throw Error('El servidor no devolvió el ID del viaje. Consultá el estado antes de reintentar.');
+  servicioEnInspeccion.idViaje=id;
+  servicioEnInspeccion.localKey='';
+  limpiarCacheAPI('listarViajes','listarAsignaciones','listarServicios','listarVehiculos');
+  return {idViaje:id};
 }
 function actualizarIdViajeLocal(r){
   if(String(r.payload.idChofer)!==String(session?.idChofer))return;
@@ -72,23 +76,35 @@ async function recuperarViajeLocal(incluirConfirmado=false){
   actualizarIdViajeLocal(r);
   return true;
 }
+// Cierres nuevos: siempre se envían por la ruta de servidor del index.
+// Los viajes antiguos pendientes conservan su cola para no perder registros.
 async function cerrarViajeLocal(cerrarRecorrido){
-  const s=servicioEnInspeccion;if(!s||!session)return false;
-  let r;try{r=(await ColaViajes.todos()).find(x=>!x.cierreConfirmado&&String(x.payload.idChofer)===String(session.idChofer)&&(x.key===s.localKey||(s.idViaje&&x.idViaje===s.idViaje)));}catch(e){if(s.localKey){mostrarAvisoOperacion('No se pudo leer el viaje guardado. Volvé a intentar.');return true;}return false;}
+  const actual=servicioEnInspeccion;
+  if(!actual?.localKey || !session)return false;
+  const registros=await ColaViajes.todos();
+  const r=registros.find(x=>!x.cierreConfirmado && x.key===actual.localKey &&
+    String(x.payload?.idChofer)===String(session.idChofer));
   if(!r)return false;
   const km=parsearKilometraje($('finalKm')?.value);
-  if(km===null || km<Number(r.payload.kmInicial)){const a=$('inspectionAlert');a.textContent='Ingresá un KM final igual o mayor al inicial.';a.style.display='block';return true;}
-  const secretaria=r.payload.accion==='iniciarViajeSecretaria';
+  const a=$('inspectionAlert');
+  if(km===null || km<Number(r.payload.kmInicial)){
+    a.textContent='Ingresá un KM final igual o mayor al inicial.';a.style.display='block';return true;
+  }
   try{
-    r=await ColaViajes.cerrar(r.key,{accion:secretaria?'finalizarViajeSecretaria':'finalizarViaje',usuario:session.usuario,idChofer:session.idChofer,idVehiculo:r.payload.idVehiculo,idServicio:r.payload.idServicio||'',kmFinal:km,horaFin:new Date().toISOString(),finalizarRecorrido:cerrarRecorrido===true,
-      ...(r.payload.idSolicitud?{idSolicitud:r.payload.idSolicitud,idAsignacionLocal:r.payload.idAsignacionLocal,tokenOrdenes:session.tokenOrdenes||r.payload.tokenOrdenes}:{} )});
-    s.estado='FINALIZADO';actualizarIdViajeLocal(r);
-    if(!await recuperarViajeLocal()){
-      $('serviceBox').innerHTML='<div class="empty"><strong>Viaje finalizado</strong></div>';
-      volverInicioSinEsperar();
-    }
-    lanzarEnvioLocal();
-  }catch(e){mostrarAvisoOperacion('No se pudo guardar el cierre en este celular. Volvé a intentar.');}
+    const secretaria=r.payload.accion==='iniciarViajeSecretaria';
+    await ColaViajes.cerrar(r.key,{accion:secretaria?'finalizarViajeSecretaria':'finalizarViaje',
+      usuario:session.usuario,idChofer:session.idChofer,idVehiculo:r.payload.idVehiculo,
+      idServicio:r.payload.idServicio||'',kmFinal:km,horaFin:new Date().toISOString(),
+      finalizarRecorrido:cerrarRecorrido===true,
+      ...(r.payload.idSolicitud?{idSolicitud:r.payload.idSolicitud,idAsignacionLocal:r.payload.idAsignacionLocal,
+        tokenOrdenes:session.tokenOrdenes||r.payload.tokenOrdenes}:{})});
+    // No declarar éxito ni abandonar la pantalla hasta confirmar el backend.
+    await ColaViajes.procesar();
+    actual.estado='FINALIZADO';actual.localKey='';
+    limpiarCacheAPI('listarViajes','listarAsignaciones','listarServicios','listarVehiculos');
+    volverInicioSinEsperar();
+  }catch(e){a.textContent='El servidor todavía no confirmó el cierre. Volvé a intentar con conexión.';
+    a.style.display='block';console.warn('Cierre anterior pendiente:',e);}
   return true;
 }
 window.addEventListener('load',()=>{
