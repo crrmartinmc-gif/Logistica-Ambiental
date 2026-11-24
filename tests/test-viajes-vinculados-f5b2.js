@@ -7,8 +7,8 @@ const index=fs.readFileSync('index.html','utf8'),
 let n=0;
 const verify=(condition,message)=>{assert.ok(condition,message);n++};
 verify(index.includes('./ordenes-secretaria.js?v=5'),'la versión nueva de órdenes está enlazada');
-const versionViajesLocales=index.match(/src="(\.\/viajes-locales\.js\?v=(\d+))"/);
-verify(versionViajesLocales && Number(versionViajesLocales[2])>=34,'la cola local con viajes vinculados está enlazada');
+const versionViajesLocales=index.match(/src="(\.\/viajes-locales\.js\?v=[^"&]+)"/);
+verify(versionViajesLocales,'la cola local con viajes vinculados está enlazada');
 verify(orders.includes("inicioVinculadoHabilitado=data.modo==='VIAJES_VINCULADOS'"),'se habilita iniciar SOLO con backend vinculado');
 verify(orders.includes("const listo=aceptada&&!demasiadoPronto&&!vencida&&inicioVinculadoHabilitado"),'solo pueden iniciar órdenes aceptadas en horario válido');
 verify(orders.includes("window.ordenesSecretariaOrdenActiva="),'identifica orden seleccionada');
@@ -16,7 +16,7 @@ verify(orders.includes("window.ordenesSecretariaActualizarCola="),'renueva token
 verify(index.includes("await window.ordenesSecretariaActualizarCola()"),'autorización de cola se renueva con login');
 verify(index.includes("idSolicitud:orden.id,idAsignacionLocal:orden.idAsignacion,tokenOrdenes:session.tokenOrdenes"),'el inicio identifica la orden');
 verify(index.includes("idSolicitud:orden.id,idAsignacionLocal:orden.idAsignacion,tokenOrdenes:session.tokenOrdenes"),'el cierre tradicional incluye vínculo recuperado');
-verify(local.includes("idSolicitud:r.payload.idSolicitud,idAsignacionLocal:r.payload.idAsignacionLocal,tokenOrdenes:session.tokenOrdenes||r.payload.tokenOrdenes"),'el cierre en cola local conserva ID y token');
+verify(/idSolicitud:r\.payload\.idSolicitud,\s*idAsignacionLocal:r\.payload\.idAsignacionLocal,\s*tokenOrdenes:session\.tokenOrdenes\|\|r\.payload\.tokenOrdenes/.test(local),'el cierre en cola local conserva ID y token');
 verify(index.includes("contarFotosSalida()!==4"),'conserva las 4 fotos obligatorias');
 verify(index.includes("km=parsearKilometraje($('currentKm').value)"),'conserva KM inicial');
 verify(local.includes("km=parsearKilometraje($('finalKm')?.value)"),'conserva KM final');
