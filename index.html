@@ -1278,10 +1278,10 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
    ============================================================ */
 </script>
 <script src="./documentos-unidad.js?v=2"></script>
-<script src="./recorridos-chofer.js?v=20261119-2"></script>
+<script src="./recorridos-chofer.js?v=20261124-fotos"></script>
 <script src="./operaciones-viaje.js?v=2"></script>
 <script src="./cola-viajes.js?v=33"></script>
-<script src="./viajes-locales.js?v=20261124-inicio"></script>
+<script src="./viajes-locales.js?v=20261124-fotos"></script>
 <script>
 const BACKEND_URL = "https://script.google.com/macros/s/AKfycbz0n4ZlW2p--nP2Wx0SnytyCRt_pL6RFxliEan0j1vUdSSrBrVNCbsTI7VC0JQWl5k9/exec";
 
@@ -2836,13 +2836,13 @@ async function iniciarViaje(){
   const fotos=window.__salidaFotos||{};
   const observacion=$('inspectionObs').value.trim();
   a.style.display='none';
-  if(!recPuedeReutilizar() && contarFotosSalida()!==4){a.textContent='Tenés que cargar las 4 fotos obligatorias antes de iniciar el viaje.';a.style.display='block';return;}
+  if(contarFotosSalida()!==4){a.textContent='Sacá las cuatro fotos de la unidad para iniciar el viaje.';a.style.display='block';return;}
   if(km===null){a.textContent='Ingresá el kilometraje actual para poder iniciar el viaje.';a.style.display='block';$('currentKm').focus();return;}
   if(!servicio?.idAsignacion){a.textContent='La asignación del servicio no está disponible. Actualizá la aplicación e intentá nuevamente.';a.style.display='block';return;}
 
   const payload={
     accion:'iniciarViaje',
-    idRecorrido:recPuedeReutilizar()?inspeccionReutilizable.ID_RECORRIDO:'',
+    fotosPorViaje:true,
     idServicio:servicio.idServicio,
     idAsignacion:servicio.idAsignacion,
     idChofer:session.idChofer,
@@ -2892,8 +2892,8 @@ async function iniciarViaje(){
       if(!sigueVigente())return;
       if(!viaje)throw error;
       inicio={idViaje:viaje.ID_VIAJE,kmInicial:viaje.KM_INICIAL};
-      fotosPendientes=viaje.inspeccionCompleta!==true;
-      if(viaje.inspeccionCompleta===false && error.message.startsWith('El servidor no confirmó las 4 fotos')){
+      fotosPendientes=viaje.fotosViajeCompletas!==true;
+      if(viaje.fotosViajeCompletas===false && error.message.startsWith('El servidor no confirmó las 4 fotos')){
         estado.textContent='Inicio confirmado. Reintentando el envío de las fotos…';
         try{
           inicio=await guardarInicioLocal(payload,servicio);
@@ -2916,7 +2916,6 @@ async function iniciarViaje(){
     window.__iniciandoViajeDiaVerde=null;
     pantalla.classList.remove('inicio-en-progreso');
     titulo.textContent=tituloAnterior;
-    invalidarInspeccionReutilizada(err);
     actualizarEstadoInicio();
     a.textContent=mensajeErrorOperacion(err,'salida');a.style.display='block';
   }finally{

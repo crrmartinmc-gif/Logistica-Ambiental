@@ -7,6 +7,7 @@ let inspeccionSecretariaPendiente=false;
 let errorVerificacionSecretaria=false;
 function recSesionActual(){return String(session?.usuario||'')+'|'+String(session?.idChofer||'');}
 function recPuedeReutilizar(){
+  if(!esChoferSecretaria())return false;
   const r=inspeccionReutilizable;
   return !!r && String(r.ID_CHOFER)===String(session?.idChofer) && String(r.ID_VEHICULO)===String(servicioEnInspeccion?.idUnidad) && r.DIA===hoyArgentinaISO() && r.ESTADO==='ABIERTO';
 }
@@ -24,7 +25,7 @@ function dibujarEstadoRecorrido(){
   if(!r || r.DIA!==hoyArgentinaISO() || String(r.ID_CHOFER)!==String(session?.idChofer)){box.classList.add('hidden');return;}
   box.classList.remove('hidden');
   const activo=!!estadoRecorridoServidor.viajeActivo;
-  box.innerHTML='<div class="card-title"><div><div class="eyebrow">Recorrido de hoy</div><h2>'+escapeHtml(r.DOMINIO||'Unidad')+'</h2></div></div><p>La inspección inicial respalda los servicios con esta unidad hasta que finalices el recorrido o cambies de vehículo.</p><button type="button" class="secondary" id="cerrarRecorridoBtn" onclick="cerrarRecorridoActual()" '+(activo?'disabled':'')+'>FINALIZAR RECORRIDO</button>'+(activo?'<p style="font-size:12px">Finalizá el servicio en curso para cerrar el recorrido.</p>':'');
+  box.innerHTML='<div class="card-title"><div><div class="eyebrow">Recorrido de hoy</div><h2>'+escapeHtml(r.DOMINIO||'Unidad')+'</h2></div></div><button type="button" class="secondary" id="cerrarRecorridoBtn" onclick="cerrarRecorridoActual()" '+(activo?'disabled':'')+'>FINALIZAR RECORRIDO</button>'+(activo?'<p style="font-size:12px">Finalizá el servicio en curso para cerrar el recorrido.</p>':'');
 }
 function restablecerPreparacionRecorrido(){
   inspeccionReutilizable=null;bloqueoOtroServicio=false;consultaInspeccionActual++;
@@ -59,9 +60,10 @@ async function verificarInspeccionRecorrido(){
         await verServicio(actual.idServicio);return;
       }
     }
-    if(r.reutilizable)inspeccionReutilizable=r.recorrido;
-    if(secretaria && (typeof r.reutilizable!=='boolean' || (r.reutilizable && !recPuedeReutilizar())))throw new Error('Respuesta de inspección inconsistente.');
-    document.querySelector('#inspectionScreen .check-section')?.classList.toggle('hidden',recPuedeReutilizar());
+    if(secretaria){
+      if(r.reutilizable)inspeccionReutilizable=r.recorrido;
+      if(typeof r.reutilizable!=='boolean' || (r.reutilizable && !recPuedeReutilizar()))throw new Error('Respuesta de inspección inconsistente.');
+    }
     actualizarEstadoInicio();
   }catch(e){
     if(secretaria && consulta===consultaInspeccionActual && sesion===recSesionActual())errorVerificacionSecretaria=true;
@@ -84,7 +86,7 @@ async function cerrarRecorridoActual(){
     const datos=resultadoOperacionViaje(respuesta);
     if(respuesta?.ok!==true||datos?.ok===false||datos?.recorrido?.ESTADO!=='CERRADO')throw new Error(respuesta?.error||datos?.error||'El servidor no confirmó el cierre del recorrido.');
     inspeccionReutilizable=null;estadoRecorridoServidor=null;$('recorridoActualBox')?.classList.add('hidden');
-    mostrarAvisoOperacion('✅ Recorrido finalizado. La próxima salida requerirá cuatro fotos nuevas.');
+    mostrarAvisoOperacion('✅ Recorrido finalizado.');
     await consultarRecorridoActual();
   }catch(e){mostrarAvisoOperacion('No se pudo cerrar el recorrido: '+e.message,true);if(btn){btn.disabled=false;btn.textContent='FINALIZAR RECORRIDO';}}
 }

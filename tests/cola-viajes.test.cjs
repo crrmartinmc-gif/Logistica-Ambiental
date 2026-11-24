@@ -61,7 +61,7 @@ test('muestra la pantalla del viaje durante el envío y un doble toque no duplic
 });
 
 test('recupera el mismo viaje si se pierde la respuesta del inicio',async()=>{
- const {contexto,$}=interfazInicio({recorrido:{...viajeRegistrado,inspeccionCompleta:true},
+ const {contexto,$}=interfazInicio({recorrido:{...viajeRegistrado,fotosViajeCompletas:true},
   enviar:async()=>{throw Error('Falló la conexión');}});
  await contexto.iniciarViaje();
  assert.equal(contexto.servicioEnInspeccion.idViaje,'V1');
@@ -71,15 +71,25 @@ test('recupera el mismo viaje si se pierde la respuesta del inicio',async()=>{
 
 test('reintenta fotos parciales con los datos originales y permite finalizar aunque sigan pendientes',async()=>{
  const solicitudes=[];
- const {contexto,$}=interfazInicio({recorrido:{...viajeRegistrado,inspeccionCompleta:false},
+ const {contexto,$}=interfazInicio({recorrido:{...viajeRegistrado,inspeccionCompleta:true,fotosViajeCompletas:false},
   enviar:async datos=>{solicitudes.push(datos);throw Error('El servidor no confirmó las 4 fotos de salida.');}});
  await contexto.iniciarViaje();
  assert.equal(solicitudes.length,2);
  assert.equal(solicitudes[0],solicitudes[1]);
  assert.equal(solicitudes[1].fotos.frente,'FRENTE');
+ assert.equal(solicitudes[1].fotosPorViaje,true);
  assert.equal(contexto.servicioEnInspeccion.idViaje,'V1');
  assert.match($('inspectionAlert').textContent,/fotos de salida sin confirmar/);
  assert.equal($('finishInspectionBtn').textContent,'FINALIZAR SERVICIO');
+});
+
+test('con tres fotos no se envía el inicio aunque el recorrido anterior tenga fotos',async()=>{
+ const {contexto,$}=interfazInicio({enviar:()=>assert.fail('El inicio no debe enviarse')});
+ contexto.recPuedeReutilizar=()=>true;
+ contexto.contarFotosSalida=()=>3;
+ await contexto.iniciarViaje();
+ assert.match($('inspectionAlert').textContent,/cuatro fotos/);
+ assert.equal(contexto.servicioEnInspeccion.estado,'PENDIENTE');
 });
 
 test('si el inicio sigue sin confirmarse, restaura la preparación con sus fotos',async()=>{

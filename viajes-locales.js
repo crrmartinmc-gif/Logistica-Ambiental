@@ -13,6 +13,11 @@ async function guardarInicioLocal(payload,servicio=servicioEnInspeccion){
   const viaje=resultado?.viaje||resultado;
   const id=viaje?.ID_VIAJE||viaje?.idViaje||payload.idViaje;
   if(!id)throw Error('El servidor no devolvió el ID del viaje. Consultá el estado antes de reintentar.');
+  const fotos=resultado?.FOTOS_SALIDA||viaje?.FOTOS_SALIDA||data?.FOTOS_SALIDA;
+  if(payload.fotosPorViaje===true && (fotos?.reutilizadas===true ||
+      (fotos?.ID_VIAJE_ORIGEN && String(fotos.ID_VIAJE_ORIGEN)!==String(id)))){
+    throw Error('El servidor confirmó fotos de otro viaje.');
+  }
   servicio.idViaje=id;
   servicio.localKey='';
   limpiarCacheAPI('listarViajes','listarAsignaciones','listarServicios','listarVehiculos');
