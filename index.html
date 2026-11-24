@@ -135,6 +135,7 @@ button{cursor:pointer}
 .logout-btn:hover{background:rgba(255,255,255,.10)}
 }
 .inspection-wrap{max-width:980px;margin:28px auto;padding:0 18px 40px}.inspection-card{background:#ffffff;border:1px solid #dce9e3;border-radius:18px;box-shadow:0 10px 28px rgba(0,70,45,.08);overflow:hidden}.inspection-head{background:linear-gradient(135deg,#004b35,#087a52);color:#ffffff;padding:24px}.inspection-head h2{margin:4px 0 6px;font-size:24px}.inspection-head p{margin:0;opacity:.88}.check-section{padding:20px 22px;border-bottom:1px solid #e7efeb}.check-section h3{margin:0 0 14px;font-size:17px}
+#inspectionScreen.inicio-en-progreso :is(.check-section,.vehicle-control-section,.inspection-actions){display:none}
 /* V12 — fotos obligatorias de salida */
 .vehicle-photo-card{background:#f7fbf9;border:1px solid #d5e6de;border-radius:14px;padding:9px;text-align:center}
 .vehicle-photo-preview{width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:10px;background:#e9f1ed;display:block}
@@ -1160,7 +1161,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
         <p id="inspectionServiceLabel">Completá los datos antes de comenzar el viaje.</p>
       </div>
 
-      <div class="status-banner pending" id="inspectionStatus">📸 <strong>Preparando salida</strong> · 4 fotos + kilometraje requeridos</div>
+      <div class="status-banner pending" id="inspectionStatus" role="status">📸 <strong>Preparando salida</strong> · 4 fotos + kilometraje requeridos</div>
 
       <div class="check-section">
         <h3>1. Fotos del vehículo <span style="color:#c33">*</span></h3>
@@ -1280,7 +1281,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
 <script src="./recorridos-chofer.js?v=20261119-2"></script>
 <script src="./operaciones-viaje.js?v=2"></script>
 <script src="./cola-viajes.js?v=33"></script>
-<script src="./viajes-locales.js?v=20261120-cierre-simple2"></script>
+<script src="./viajes-locales.js?v=20261124-inicio"></script>
 <script>
 const BACKEND_URL = "https://script.google.com/macros/s/AKfycbz0n4ZlW2p--nP2Wx0SnytyCRt_pL6RFxliEan0j1vUdSSrBrVNCbsTI7VC0JQWl5k9/exec";
 
@@ -1685,6 +1686,7 @@ function cerrarSesion(){
   estadoRecorridoServidor=null;inspeccionReutilizable=null;consultaInspeccionActual++;$('recorridoActualBox')?.classList.add('hidden');
   session=null;
   servicioEnInspeccion=null;
+  window.__iniciandoViajeDiaVerde=null;
   window.__servicioActual=null;
   window.__salidaFotos={frente:null,trasera:null,lateral_derecho:null,lateral_izquierdo:null};
   if(dashboardTimer) clearInterval(dashboardTimer);
@@ -1694,6 +1696,7 @@ function cerrarSesion(){
   $('topUser').classList.add('hidden');
   $('dashboardScreen').classList.add('hidden');
   $('adminScreen').classList.add('hidden');
+  $('inspectionScreen').classList.remove('inicio-en-progreso');
   $('inspectionScreen').classList.add('hidden');
   $('loginScreen').classList.remove('hidden');
   $('usuario').value='';
@@ -1841,6 +1844,7 @@ async function cargarDashboard(opciones={}){
   try{return await pendiente;}finally{if(dashboardActualizacionPendiente===pendiente)dashboardActualizacionPendiente=null;}
 }
 async function cargarDashboardInterno(opciones={}){
+  if(window.__iniciandoViajeDiaVerde)return;
   if(typeof recuperarViajeLocal==='function' && await recuperarViajeLocal())return;
   if(esChoferSecretaria()){ await cargarDashboardSecretaria(); return; }
   $('dashboardScreen').classList.remove('secretaria-mode');
@@ -1848,6 +1852,7 @@ async function cargarDashboardInterno(opciones={}){
   if(dashboardCargando) return;
   dashboardCargando=true;
   const idChofer=String(session?.idChofer||'').trim(),sesionDashboard=recSesionActual();
+  const viajeInicial=servicioEnInspeccion?.idViaje;
   const lectura={force:opciones.force===true};
   try{
     const [aRes,vRes,sRes,viRes,rRes,estadoVigente] = await Promise.all([
@@ -1859,7 +1864,9 @@ async function cargarDashboardInterno(opciones={}){
       consultarRecorridoActual().catch(e=>{console.warn('Recorrido:',e.message);return null;})
     ]);
 
-    if(sesionDashboard!==recSesionActual())return;
+    if(sesionDashboard!==recSesionActual() || window.__iniciandoViajeDiaVerde)return;
+    if(servicioEnInspeccion?.idViaje && servicioEnInspeccion.idViaje!==viajeInicial &&
+       !$('inspectionScreen').classList.contains('hidden'))return;
     if(typeof recuperarViajeLocal==='function' && await recuperarViajeLocal())return;
     const asignaciones=Array.isArray(aRes.asignaciones)?aRes.asignaciones:[];
     const vehiculos=Array.isArray(vRes.vehiculos)?vRes.vehiculos:[];
@@ -2177,6 +2184,7 @@ function formatearHora(v){
 }
 
 async function verServicio(id){
+  if(window.__iniciandoViajeDiaVerde)return;
   let s=window.__servicioActual;
   if(!s || String(s.idServicio)!==String(id)){
     alert('No se pudo cargar el servicio seleccionado.');
@@ -2221,6 +2229,9 @@ async function verServicio(id){
 }
 
 async function refrescarServicioEnSegundoPlano(id){
+  const inspeccion=servicioEnInspeccion;
+  const sesion=recSesionActual();
+  const estadoInicial=inspeccion?.estado;
   try{
     const [sRes,aRes,vRes,rRes]=await Promise.all([
       getJson('listarServicios'),
@@ -2235,8 +2246,11 @@ async function refrescarServicioEnSegundoPlano(id){
     const rutas=rRes.rutas||[];
     const vehiculo=asignacion?vehiculos.find(x=>String(x.ID_VEHICULO||'')===String(asignacion.ID_VEHICULO||'')):null;
 
-    if(!servicio || !servicioEnInspeccion || String(servicioEnInspeccion.idServicio)!==String(id)) return;
-    servicioEnInspeccion={...servicioEnInspeccion,fecha:servicio.FECHA,horaProgramada:servicio.HORA_PROGRAMADA,tipo:servicio.TIPO_SERVICIO,nombreServicio:servicio.NOMBRE_SERVICIO,rutaNombre:(rutas.find(x=>String(x.ID_RUTA||'')===String(servicio.ID_RUTA||''))?.NOMBRE_RUTA)||servicio.ID_RUTA||'',estado:viaje?'EN VIAJE':servicio.ESTADO,idAsignacion:asignacion?.ID_ASIGNACION||servicioEnInspeccion.idAsignacion,idUnidad:asignacion?.ID_VEHICULO||servicioEnInspeccion.idUnidad,dominio:vehiculo?.DOMINIO||servicioEnInspeccion.dominio,idViaje:viaje?.ID_VIAJE||servicioEnInspeccion.idViaje,kmInicial:viaje?.KM_INICIAL||servicioEnInspeccion.kmInicial};
+    if(!servicio || !inspeccion || inspeccion!==servicioEnInspeccion || inspeccion.estado!==estadoInicial ||
+       sesion!==recSesionActual() || window.__iniciandoViajeDiaVerde || String(inspeccion.idServicio)!==String(id))return;
+    const servicioTerminado=['FINALIZADO','CANCELADO','CANCELADA'].includes(String(servicio.ESTADO||'').trim().toUpperCase());
+    const inicioConfirmado=inspeccion.idViaje && estadoInicial==='EN VIAJE';
+    servicioEnInspeccion={...servicioEnInspeccion,fecha:servicio.FECHA,horaProgramada:servicio.HORA_PROGRAMADA,tipo:servicio.TIPO_SERVICIO,nombreServicio:servicio.NOMBRE_SERVICIO,rutaNombre:(rutas.find(x=>String(x.ID_RUTA||'')===String(servicio.ID_RUTA||''))?.NOMBRE_RUTA)||servicio.ID_RUTA||'',estado:viaje || (inicioConfirmado && !servicioTerminado)?'EN VIAJE':servicio.ESTADO,idAsignacion:asignacion?.ID_ASIGNACION||servicioEnInspeccion.idAsignacion,idUnidad:asignacion?.ID_VEHICULO||servicioEnInspeccion.idUnidad,dominio:vehiculo?.DOMINIO||servicioEnInspeccion.dominio,idViaje:viaje?.ID_VIAJE||servicioEnInspeccion.idViaje,kmInicial:viaje?.KM_INICIAL||servicioEnInspeccion.kmInicial};
     renderService(servicioEnInspeccion);
 
     // Si el estado cambió mientras cargábamos, adaptamos la pantalla sin recargarla.
@@ -2508,6 +2522,7 @@ function contarFotosSalida(){
 }
 
 function actualizarEstadoInicio(){
+  if(globalThis.__iniciandoViajeDiaVerde)return;
   const fotos=contarFotosSalida();
   const km=parsearKilometraje($('currentKm')?.value);
 
@@ -2794,31 +2809,46 @@ function asegurarCampoKmFinal(){
   return box;
 }
 
+async function consultarInicioRegistrado(payload){
+  const coincide=(viaje)=>viaje?.ID_VIAJE &&
+    String(viaje.ID_SERVICIO||'').trim()===String(payload.idServicio).trim() &&
+    String(viaje.ID_ASIGNACION||'').trim()===String(payload.idAsignacion).trim() &&
+    String(viaje.ID_VEHICULO||'').trim()===String(payload.idVehiculo).trim();
+  try{
+    const estado=await consultarRecorridoActual(payload.idVehiculo);
+    if(coincide(estado?.viajeActivo))return estado.viajeActivo;
+  }catch(error){console.warn('No se pudo consultar el recorrido:',error.message);}
+
+  const respuesta=await getJson('listarViajes',{}, {force:true});
+  const viajes=Array.isArray(respuesta.viajes)?respuesta.viajes:[];
+  return viajes.find(v=>coincide(v) &&
+    String(v.ID_CHOFER||'').trim()===String(payload.idChofer).trim() &&
+    ['EN CURSO','EN VIAJE','ACTIVO','INICIADO'].includes(String(v.ESTADO||'').trim().toUpperCase()));
+}
+
 async function iniciarViaje(){
   if(esChoferSecretaria()) return iniciarViajeSecretaria();
-  // Evita doble toque / doble evento mientras se persiste la salida.
-  if(window.__iniciandoViajeDiaVerde===true) return;
-  window.__iniciandoViajeDiaVerde=true;
+  if(window.__iniciandoViajeDiaVerde)return;
+  const servicio=servicioEnInspeccion;
+  if(servicio?.idViaje)return;
   const btn=$('finishInspectionBtn'),a=$('inspectionAlert');
   const km=parsearKilometraje($('currentKm').value);
   const fotos=window.__salidaFotos||{};
   const observacion=$('inspectionObs').value.trim();
   a.style.display='none';
-  if(!recPuedeReutilizar() && contarFotosSalida()!==4){a.textContent='Tenés que cargar las 4 fotos obligatorias antes de iniciar el viaje.';a.style.display='block';window.__iniciandoViajeDiaVerde=false;return;}
-  if(km===null){a.textContent='Ingresá el kilometraje actual para poder iniciar el viaje.';a.style.display='block';$('currentKm').focus();window.__iniciandoViajeDiaVerde=false;return;}
-  if(!servicioEnInspeccion?.idAsignacion){a.textContent='La asignación del servicio no está disponible. Actualizá la aplicación e intentá nuevamente.';a.style.display='block';window.__iniciandoViajeDiaVerde=false;return;}
-
-  btn.disabled=true;btn.textContent='GUARDANDO…';
+  if(!recPuedeReutilizar() && contarFotosSalida()!==4){a.textContent='Tenés que cargar las 4 fotos obligatorias antes de iniciar el viaje.';a.style.display='block';return;}
+  if(km===null){a.textContent='Ingresá el kilometraje actual para poder iniciar el viaje.';a.style.display='block';$('currentKm').focus();return;}
+  if(!servicio?.idAsignacion){a.textContent='La asignación del servicio no está disponible. Actualizá la aplicación e intentá nuevamente.';a.style.display='block';return;}
 
   const payload={
     accion:'iniciarViaje',
     idRecorrido:recPuedeReutilizar()?inspeccionReutilizable.ID_RECORRIDO:'',
-    idServicio:servicioEnInspeccion.idServicio,
-    idAsignacion:servicioEnInspeccion.idAsignacion,
+    idServicio:servicio.idServicio,
+    idAsignacion:servicio.idAsignacion,
     idChofer:session.idChofer,
-    idVehiculo:servicioEnInspeccion.idUnidad||'',
-    idUnidad:servicioEnInspeccion.idUnidad||'',
-    dominio:servicioEnInspeccion.dominio||'',
+    idVehiculo:servicio.idUnidad||'',
+    idUnidad:servicio.idUnidad||'',
+    dominio:servicio.dominio||'',
     kmInicial:km,
     kilometraje:km,
     horaInicio:new Date().toISOString(),
@@ -2835,21 +2865,65 @@ async function iniciarViaje(){
     }
   };
 
+  const operacion={};
+  const sigueVigente=()=>window.__iniciandoViajeDiaVerde===operacion && servicioEnInspeccion===servicio;
+  window.__iniciandoViajeDiaVerde=operacion;
+  consultaInspeccionActual++;
+  btn.disabled=true;
+  const pantalla=$('inspectionScreen');
+  const titulo=pantalla.querySelector('.inspection-head h2');
+  const tituloAnterior=titulo.textContent;
+  const estado=$('inspectionStatus');
+  pantalla.classList.add('inicio-en-progreso');
+  titulo.textContent='Viaje en curso';
+  estado.className='status-banner travel';
+  estado.textContent='Confirmando el inicio y las fotos con el servidor…';
+
+  let fotosPendientes=false;
   try{
-    await guardarInicioLocal(payload);
-    servicioEnInspeccion.estado='EN VIAJE';
-    servicioEnInspeccion.completandoInspeccion=false;
-    servicioEnInspeccion.kmInicial=km;
-    window.__servicioActual=servicioEnInspeccion;
-    // Estado de viaje confirmado por backend; no duplicar en localStorage.
+    let inicio;
+    try{
+      inicio=await guardarInicioLocal(payload,servicio);
+    }catch(error){
+      if(!sigueVigente())return;
+      const viaje=await consultarInicioRegistrado(payload).catch(e=>{
+        console.warn('No se pudo recuperar el inicio:',e.message);
+      });
+      if(!sigueVigente())return;
+      if(!viaje)throw error;
+      inicio={idViaje:viaje.ID_VIAJE,kmInicial:viaje.KM_INICIAL};
+      fotosPendientes=viaje.inspeccionCompleta!==true;
+      if(viaje.inspeccionCompleta===false && error.message.startsWith('El servidor no confirmó las 4 fotos')){
+        estado.textContent='Inicio confirmado. Reintentando el envío de las fotos…';
+        try{
+          inicio=await guardarInicioLocal(payload,servicio);
+          fotosPendientes=false;
+        }catch(e){console.warn('Fotos de salida pendientes:',e.message);}
+      }
+    }
+    if(!sigueVigente())return;
+    limpiarCacheAPI('listarViajes','listarAsignaciones','listarServicios','listarVehiculos');
+    servicioEnInspeccion={...servicio,idViaje:inicio.idViaje,estado:'EN VIAJE',
+      kmInicial:parsearKilometraje(inicio.kmInicial)??km,completandoInspeccion:false,localKey:''};
     mostrarModoViajeActivo();
     renderService(servicioEnInspeccion);
-    window.__iniciandoViajeDiaVerde=false;
+    if(fotosPendientes){
+      a.textContent='El viaje está iniciado. Quedaron fotos de salida sin confirmar.';
+      a.style.display='block';
+    }
   }catch(err){
+    if(!sigueVigente())return;
+    window.__iniciandoViajeDiaVerde=null;
+    pantalla.classList.remove('inicio-en-progreso');
+    titulo.textContent=tituloAnterior;
     invalidarInspeccionReutilizada(err);
+    actualizarEstadoInicio();
     a.textContent=mensajeErrorOperacion(err,'salida');a.style.display='block';
-    window.__iniciandoViajeDiaVerde=false;
-    btn.disabled=false;btn.textContent='▶ INICIAR VIAJE';btn.onclick=iniciarViaje;
+  }finally{
+    if(window.__iniciandoViajeDiaVerde===operacion){
+      window.__iniciandoViajeDiaVerde=null;
+      pantalla.classList.remove('inicio-en-progreso');
+    }
   }
 }
 
@@ -2902,6 +2976,7 @@ async function finalizarViajeSecretaria(cerrarRecorrido=false){
 }
 
 async function finalizarViajeInterno(cerrarRecorrido=false){
+  if(window.__iniciandoViajeDiaVerde)return;
   if(typeof cerrarViajeLocal==='function' && await cerrarViajeLocal(cerrarRecorrido))return;
   const horaFinCapturada=new Date().toISOString();
   if(esChoferSecretaria()) return finalizarViajeSecretaria(cerrarRecorrido===true);

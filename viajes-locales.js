@@ -1,4 +1,4 @@
-/* La pantalla avanza solamente después de confirmar la transacción local. */
+/* Confirmación de viajes y recuperación de la cola anterior. */
 let envioLocalEnCurso=null;
 async function fetchConTiempo(url,options={}){
   const c=new AbortController(),timer=setTimeout(()=>c.abort(),45000);
@@ -7,16 +7,16 @@ async function fetchConTiempo(url,options={}){
 }
 // Los viajes nuevos se confirman directamente con el servidor. La cola antigua
 // se conserva únicamente para recuperar operaciones ya pendientes.
-async function guardarInicioLocal(payload){
+async function guardarInicioLocal(payload,servicio=servicioEnInspeccion){
   const data=await enviarOperacionViaje(payload);
   const resultado=resultadoOperacionViaje(data);
   const viaje=resultado?.viaje||resultado;
   const id=viaje?.ID_VIAJE||viaje?.idViaje||payload.idViaje;
   if(!id)throw Error('El servidor no devolvió el ID del viaje. Consultá el estado antes de reintentar.');
-  servicioEnInspeccion.idViaje=id;
-  servicioEnInspeccion.localKey='';
+  servicio.idViaje=id;
+  servicio.localKey='';
   limpiarCacheAPI('listarViajes','listarAsignaciones','listarServicios','listarVehiculos');
-  return {idViaje:id};
+  return {idViaje:id,kmInicial:viaje?.KM_INICIAL??viaje?.kmInicial};
 }
 function actualizarIdViajeLocal(r){
   if(String(r.payload.idChofer)!==String(session?.idChofer))return;
@@ -47,7 +47,7 @@ async function recuperarViajeLocal(incluirConfirmado=false){
   if(!session?.idChofer)return false;
   const identidad=String(session.idChofer);
   let registros;try{registros=await ColaViajes.todos();}catch(e){return false;}
-  if(identidad!==String(session?.idChofer))return false;
+  if(identidad!==String(session?.idChofer)||window.__iniciandoViajeDiaVerde)return false;
   // En Logística/Reserva, un cierre guardado no bloquea la agenda mientras se sincroniza.
   // Secretaría conserva el flujo restringido de recuperación y cierre.
   const r=registros.filter(x=>String(x.payload.idChofer)===identidad&&!x.cierreConfirmado&&
