@@ -12,25 +12,34 @@ test('cierre agregado durante envío no se pierde',async()=>{let unblock;const w
 test('fallo de cierre conserva cierre y no vuelve a subir fotos',async()=>{let fail=true;const calls=[];const q=fixture(async p=>{calls.push(p.accion);if(p.accion==='finalizarViaje'&&fail)throw Error('Sin red');return {ID_VIAJE:'SERVER'};});const r=await q.iniciar(payload,{},null);await q.cerrar(r.key,{accion:'finalizarViaje'});await assert.rejects(q.procesar());fail=false;await q.procesar();assert.deepEqual(calls,['iniciarViaje','finalizarViaje','finalizarViaje']);});
 test('Secretaría conserva identidad de viaje entre reintentos',async()=>{const q=fixture(async()=>({ID_VIAJE:'SEC1'}));const p={...payload,accion:'iniciarViajeSecretaria',idViaje:'SEC1'};await q.iniciar(p,{},{});await q.iniciar(p,{},{});assert.equal((await q.todos()).length,1);});
 
-function interfazInicio({enviar,recorrido=null,viajes=[]}){
+function interfazInicio({enviar,recorrido=null,viajes=[],persistir=true}){
  const html=fs.readFileSync('index.html','utf8');
- const codigo=html.slice(html.indexOf('async function consultarInicioRegistrado('),html.indexOf('async function iniciarViajeSecretaria(){'));
+ const codigo=html.slice(html.indexOf('function salidaCorrespondeAlServicio('),html.indexOf('async function iniciarViajeSecretaria(){'));
  const nodos=new Map();
  const clases=new Set();
  const titulo={textContent:'Preparar salida'};
  const $=id=>{
   if(!nodos.has(id))nodos.set(id,{value:id==='currentKm'?'100':'',style:{},focus(){},
-   querySelector:()=>titulo,classList:{add:c=>clases.add(c),remove:c=>clases.delete(c)}});
+   querySelector:()=>titulo,classList:{add:c=>clases.add(c),remove:c=>clases.delete(c),contains:c=>clases.has(c)}});
   return nodos.get(id);
  };
  const fotos={frente:{dataUrl:'FRENTE'},trasera:{dataUrl:'TRASERA'},
   lateral_derecho:{dataUrl:'DERECHA'},lateral_izquierdo:{dataUrl:'IZQUIERDA'}};
- const contexto=vm.createContext({$,window:{__salidaFotos:fotos},consultaInspeccionActual:0,
+ let fila;
+ const contexto=vm.createContext({$,window:{__salidaFotos:fotos,addEventListener(){}},consultaInspeccionActual:0,
+  document:{addEventListener(){}},navigator:{},appServiceWorkerRegistration:null,registrarServiceWorkerWeb:async()=>null,
+  ColaFotosSalida:{guardar:async payload=>{
+   if(!persistir)throw Error('Sin almacenamiento');
+   fila={opId:'PENDIENTE1',payload};return fila;
+  },enviar:async()=>enviar(fila.payload)},
   servicioEnInspeccion:{idAsignacion:'A1',idServicio:'S1',idUnidad:'U1',estado:'PENDIENTE'},
   session:{idChofer:'C1'},esChoferSecretaria:()=>false,parsearKilometraje:Number,
   recPuedeReutilizar:()=>false,contarFotosSalida:()=>4,guardarInicioLocal:enviar,
   consultarRecorridoActual:async()=>({viajeActivo:recorrido}),getJson:async()=>({viajes}),
-  mostrarModoViajeActivo:()=>{$('finishInspectionBtn').textContent='FINALIZAR SERVICIO';},
+  mostrarModoViajeActivo:()=>{
+   $('finishInspectionBtn').textContent='FINALIZAR SERVICIO';
+   if(contexto.servicioEnInspeccion.fotosSalidaPendientes)contexto.mostrarFotosDeSalidaPendientes();
+  },
   renderService(){},invalidarInspeccionReutilizada(){},limpiarCacheAPI(){},
   actualizarEstadoInicio:()=>{$('finishInspectionBtn').disabled=false;},
   mensajeErrorOperacion:e=>e.message,console:{warn(){}}});
@@ -48,6 +57,7 @@ test('muestra la pantalla del viaje durante el envío y un doble toque no duplic
  const {contexto,clases,titulo,$}=interfazInicio({enviar:()=>{solicitudes++;return envio;}});
  const inicio=contexto.iniciarViaje();
  await contexto.iniciarViaje();
+ await new Promise(setImmediate);
  assert.equal(titulo.textContent,'Viaje en curso');
  assert.ok(clases.has('inicio-en-progreso'));
  assert.equal($('finishInspectionBtn').disabled,true);
@@ -79,7 +89,7 @@ test('reintenta fotos parciales con los datos originales y permite finalizar aun
  assert.equal(solicitudes[1].fotos.frente,'FRENTE');
  assert.equal(solicitudes[1].fotosPorViaje,true);
  assert.equal(contexto.servicioEnInspeccion.idViaje,'V1');
- assert.match($('inspectionAlert').textContent,/fotos de salida sin confirmar/);
+ assert.match($('inspectionAlert').textContent,/fotos de salida pendientes de envío/);
  assert.equal($('finishInspectionBtn').textContent,'FINALIZAR SERVICIO');
 });
 
@@ -92,7 +102,7 @@ test('con tres fotos no se envía el inicio aunque el recorrido anterior tenga f
  assert.equal(contexto.servicioEnInspeccion.estado,'PENDIENTE');
 });
 
-test('si el inicio sigue sin confirmarse, restaura la preparación con sus fotos',async()=>{
+test('si el inicio sigue sin confirmarse, ofrece reintentar el envío ya guardado',async()=>{
  const {contexto,clases,titulo,$,fotos}=interfazInicio({
   recorrido:{...viajeRegistrado,ID_ASIGNACION:'OTRA'},viajes:[{...viajeRegistrado,ID_CHOFER:'OTRO'}],
   enviar:async()=>{throw Error('Falló la conexión');}});
@@ -100,7 +110,20 @@ test('si el inicio sigue sin confirmarse, restaura la preparación con sus fotos
  assert.equal(contexto.servicioEnInspeccion.estado,'PENDIENTE');
  assert.equal(contexto.window.__salidaFotos,fotos);
  assert.equal($('currentKm').value,'100');
- assert.equal(titulo.textContent,'Preparar salida');
+ assert.equal(titulo.textContent,'Salida pendiente');
+ assert.equal($('finishInspectionBtn').textContent,'REINTENTAR ENVÍO');
  assert.equal($('finishInspectionBtn').disabled,false);
  assert.ok(!clases.has('inicio-en-progreso'));
+});
+
+test('si el almacenamiento está bloqueado, indica que la app debe quedar abierta',async()=>{
+ let terminar;
+ const envio=new Promise(resolve=>{terminar=resolve;});
+ const {contexto,$}=interfazInicio({persistir:false,enviar:()=>envio});
+ const inicio=contexto.iniciarViaje();
+ await new Promise(setImmediate);
+ assert.match($('inspectionStatus').textContent,/app abierta/);
+ terminar({idViaje:'V1',kmInicial:100});
+ await inicio;
+ assert.equal(contexto.servicioEnInspeccion.idViaje,'V1');
 });

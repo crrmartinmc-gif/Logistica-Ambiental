@@ -136,6 +136,7 @@ button{cursor:pointer}
 }
 .inspection-wrap{max-width:980px;margin:28px auto;padding:0 18px 40px}.inspection-card{background:#ffffff;border:1px solid #dce9e3;border-radius:18px;box-shadow:0 10px 28px rgba(0,70,45,.08);overflow:hidden}.inspection-head{background:linear-gradient(135deg,#004b35,#087a52);color:#ffffff;padding:24px}.inspection-head h2{margin:4px 0 6px;font-size:24px}.inspection-head p{margin:0;opacity:.88}.check-section{padding:20px 22px;border-bottom:1px solid #e7efeb}.check-section h3{margin:0 0 14px;font-size:17px}
 #inspectionScreen.inicio-en-progreso :is(.check-section,.vehicle-control-section,.inspection-actions){display:none}
+#inspectionScreen.salida-en-cola :is(.check-section,.vehicle-control-section){display:none}
 /* V12 — fotos obligatorias de salida */
 .vehicle-photo-card{background:#f7fbf9;border:1px solid #d5e6de;border-radius:14px;padding:9px;text-align:center}
 .vehicle-photo-preview{width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:10px;background:#e9f1ed;display:block}
@@ -1279,9 +1280,10 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
 </script>
 <script src="./documentos-unidad.js?v=2"></script>
 <script src="./recorridos-chofer.js?v=20261124-fotos"></script>
-<script src="./operaciones-viaje.js?v=2"></script>
+<script src="./operaciones-viaje.js?v=3"></script>
 <script src="./cola-viajes.js?v=33"></script>
-<script src="./viajes-locales.js?v=20261124-fotos"></script>
+<script src="./cola-fotos-salida.js?v=1"></script>
+<script src="./viajes-locales.js?v=20261124-bg"></script>
 <script>
 const BACKEND_URL = "https://script.google.com/macros/s/AKfycbz0n4ZlW2p--nP2Wx0SnytyCRt_pL6RFxliEan0j1vUdSSrBrVNCbsTI7VC0JQWl5k9/exec";
 
@@ -1696,7 +1698,7 @@ function cerrarSesion(){
   $('topUser').classList.add('hidden');
   $('dashboardScreen').classList.add('hidden');
   $('adminScreen').classList.add('hidden');
-  $('inspectionScreen').classList.remove('inicio-en-progreso');
+  $('inspectionScreen').classList.remove('inicio-en-progreso','salida-en-cola');
   $('inspectionScreen').classList.add('hidden');
   $('loginScreen').classList.remove('hidden');
   $('usuario').value='';
@@ -2196,14 +2198,28 @@ async function verServicio(id){
   ultimaInspeccionCargada=null;
   $('serviceBox').classList.remove('hidden');
   $('inspectionScreen').classList.remove('hidden');
+  $('inspectionScreen').classList.remove('salida-en-cola');
   $('inspectionServiceLabel').textContent=(s.nombreServicio||'Servicio')+' · '+formatearHora(s.horaProgramada);
   $('inspectionAlert').style.display='none';
 
   if(['EN VIAJE','EN CURSO','ACTIVO','INICIADO'].includes(String(s.estado||'').toUpperCase())){
     try{ localStorage.setItem('diaVerdeServicioActivo',JSON.stringify({idServicio:s.idServicio,idViaje:s.idViaje||''})); }catch(e){}
     mostrarModoViajeActivo();
+    buscarSalidaEnCola(s).then(fila=>{
+      if(fila && servicioEnInspeccion?.idViaje===s.idViaje &&
+         salidaCorrespondeAlServicio(fila.payload,servicioEnInspeccion))mostrarFotosDeSalidaPendientes();
+    }).catch(()=>{});
     // Refresco silencioso: no bloquea la apertura de la pantalla.
     refrescarServicioEnSegundoPlano(id).catch(e=>console.warn('Refresco servicio:',e));
+    return;
+  }
+
+  const pendiente=await buscarSalidaEnCola(s).catch(()=>null);
+  if(servicioEnInspeccion!==s || $('inspectionScreen').classList.contains('hidden'))return;
+  if(pendiente){
+    restablecerPreparacionRecorrido();
+    mostrarSalidaEnCola(pendiente,s);
+    reanudarEnviosFotos();
     return;
   }
 
@@ -2522,7 +2538,8 @@ function contarFotosSalida(){
 }
 
 function actualizarEstadoInicio(){
-  if(globalThis.__iniciandoViajeDiaVerde)return;
+  if(globalThis.__iniciandoViajeDiaVerde || typeof document!=='undefined' &&
+     document.getElementById?.('inspectionScreen')?.classList.contains('salida-en-cola'))return;
   const fotos=contarFotosSalida();
   const km=parsearKilometraje($('currentKm')?.value);
 
@@ -2754,6 +2771,7 @@ function mostrarModoViajeActivo(){
   $('inspectionStatus').innerHTML='🟢 <strong>EN VIAJE</strong> · servicio activo';
   document.querySelectorAll('#inspectionScreen .check-section').forEach(sec=>sec.classList.add('hidden'));
   $('inspectionAlert').style.display='none';
+  if(servicioEnInspeccion?.fotosSalidaPendientes)mostrarFotosDeSalidaPendientes();
   $('vehiclePhotosGrid').innerHTML='';$('currentKm').value='';$('inspectionObs').value='';
   const controlSection=document.querySelector('#inspectionScreen .vehicle-control-section');
   if(controlSection) controlSection.classList.remove('hidden');
@@ -2808,6 +2826,133 @@ function asegurarCampoKmFinal(){
   box.style.display='block';
   return box;
 }
+
+function salidaCorrespondeAlServicio(salida,servicio){
+  return !!servicio && salida.idChofer===session?.idChofer &&
+    salida.idServicio===servicio.idServicio && salida.idAsignacion===servicio.idAsignacion &&
+    salida.idVehiculo===servicio.idUnidad;
+}
+
+async function buscarSalidaEnCola(servicio){
+  return (await ColaFotosSalida.pendientes()).find(({payload})=>salidaCorrespondeAlServicio(payload,servicio) &&
+    fechaArgentinaISO(payload.horaInicio)===hoyArgentinaISO());
+}
+
+async function programarEnvioFotos(){
+  const reg=appServiceWorkerRegistration||await registrarServiceWorkerWeb();
+  if(!reg)return;
+  try{await reg.sync?.register('chofer-fotos-salida');}
+  catch(error){console.warn('Sincronización de fotos no disponible:',error.message);}
+}
+
+async function enviarSalidaConWorker(opId){
+  const worker=appServiceWorkerRegistration?.active;
+  if(!worker || typeof MessageChannel==='undefined')return ColaFotosSalida.enviar(opId);
+  const resultado=await new Promise((resolve,reject)=>{
+    const canal=new MessageChannel();
+    let espera=setTimeout(()=>terminar(),1000);
+    function terminar(respuesta){
+      clearTimeout(espera);
+      canal.port1.close();
+      if(respuesta?.error)reject(Error(respuesta.error));
+      else resolve(respuesta);
+    }
+    canal.port1.onmessage=evento=>{
+      if(evento.data.recibido){
+        clearTimeout(espera);
+        espera=setTimeout(()=>terminar(),100000);
+      }else terminar(evento.data);
+    };
+    try{worker.postMessage({type:'ENVIAR_FOTOS_SALIDA',opId},[canal.port2]);}
+    catch(error){terminar();}
+  });
+  return resultado?resultado.salida:ColaFotosSalida.enviar(opId);
+}
+
+function mostrarFotosDeSalidaPendientes(){
+  servicioEnInspeccion.fotosSalidaPendientes=true;
+  const aviso=$('inspectionAlert');
+  aviso.textContent='El viaje está iniciado. Quedaron fotos de salida pendientes de envío.';
+  aviso.style.display='block';
+}
+
+function mostrarSalidaEnCola(fila,servicio){
+  const pantalla=$('inspectionScreen');
+  pantalla.classList.add('salida-en-cola');
+  pantalla.querySelector('.inspection-head h2').textContent='Salida pendiente';
+  const estado=$('inspectionStatus');
+  estado.className='status-banner pending';
+  estado.textContent='Las fotos están guardadas para enviar. El inicio está pendiente de confirmación.';
+  const btn=$('finishInspectionBtn');
+  btn.textContent='REINTENTAR ENVÍO';
+  btn.disabled=false;
+  btn.onclick=()=>procesarSalidaEnPantalla(servicio,()=>fila);
+}
+
+function salidaTerminada(inicio){
+  return inicio.activo===false || ['FINALIZADO','CANCELADO','CANCELADA'].includes(String(inicio.estado||'').trim().toUpperCase());
+}
+
+function aplicarInicioConfirmado(servicio,inicio,km,fotosSalidaPendientes=false){
+  $('inspectionScreen').classList.remove('salida-en-cola');
+  servicioEnInspeccion={...servicio,idViaje:inicio.idViaje,estado:'EN VIAJE',
+    kmInicial:parsearKilometraje(inicio.kmInicial)??km,completandoInspeccion:false,localKey:'',fotosSalidaPendientes};
+  mostrarModoViajeActivo();
+  renderService(servicioEnInspeccion);
+}
+
+function actualizarSalidaDesdeCola(salida){
+  if(salida.idChofer!==session?.idChofer)return;
+  limpiarCacheAPI('listarViajes','listarAsignaciones','listarServicios','listarVehiculos');
+  const servicio=servicioEnInspeccion;
+  const coincide=salidaCorrespondeAlServicio(salida,servicio) &&
+    (servicio.idViaje?servicio.idViaje===salida.idViaje:fechaArgentinaISO(salida.horaInicio)===hoyArgentinaISO());
+  if(window.__iniciandoViajeDiaVerde){
+    if(coincide)window.__iniciandoViajeDiaVerde.confirmacion=salida;
+    return;
+  }
+  if($('inspectionScreen').classList.contains('hidden')){
+    cargarDashboard({force:true}).catch(()=>{});
+    return;
+  }
+  if(!coincide)return;
+  if(salidaTerminada(salida)){
+    $('inspectionScreen').classList.remove('salida-en-cola');
+    volverInicioSinEsperar();
+    return;
+  }
+  if(!servicio.idViaje)aplicarInicioConfirmado(servicio,salida,servicio.kmInicial);
+  else if(servicio.fotosSalidaPendientes){
+    servicio.fotosSalidaPendientes=false;
+    const aviso=$('inspectionAlert');
+    if(aviso.textContent.endsWith('Quedaron fotos de salida pendientes de envío.'))aviso.style.display='none';
+  }
+}
+
+let reanudacionFotos=null;
+function reanudarEnviosFotos(){
+  const idChofer=session?.idChofer;
+  if(!idChofer||reanudacionFotos)return;
+  let syncProgramada=false;
+  const enviar=opId=>{
+    if(!syncProgramada){
+      syncProgramada=true;
+      programarEnvioFotos().catch(error=>console.warn('Envío en segundo plano no disponible:',error.message));
+    }
+    return enviarSalidaConWorker(opId);
+  };
+  reanudacionFotos=ColaFotosSalida.procesar(actualizarSalidaDesdeCola,fila=>fila.payload.idChofer===idChofer,enviar)
+    .catch(error=>console.warn('Fotos de salida pendientes:',error.message))
+    .finally(()=>{reanudacionFotos=null;});
+  return reanudacionFotos;
+}
+
+window.addEventListener('load',reanudarEnviosFotos);
+window.addEventListener('online',reanudarEnviosFotos);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)reanudarEnviosFotos();});
+navigator.serviceWorker?.addEventListener('message',evento=>{
+  if(evento.data?.type==='FOTOS_SALIDA_GUARDADAS')actualizarSalidaDesdeCola(evento.data.salida);
+});
 
 async function consultarInicioRegistrado(payload){
   const coincide=(viaje)=>viaje?.ID_VIAJE &&
@@ -2865,11 +3010,24 @@ async function iniciarViaje(){
     }
   };
 
+  return procesarSalidaEnPantalla(servicio,async()=>{
+    try{return await ColaFotosSalida.guardar(payload);}
+    catch(error){
+      console.warn('No se pudo guardar el envío para después:',error.message);
+      return {payload};
+    }
+  });
+}
+
+async function procesarSalidaEnPantalla(servicio,preparar){
+  if(window.__iniciandoViajeDiaVerde || servicioEnInspeccion!==servicio)return;
   const operacion={};
   const sigueVigente=()=>window.__iniciandoViajeDiaVerde===operacion && servicioEnInspeccion===servicio;
   window.__iniciandoViajeDiaVerde=operacion;
   consultaInspeccionActual++;
+  const btn=$('finishInspectionBtn'),a=$('inspectionAlert');
   btn.disabled=true;
+  a.style.display='none';
   const pantalla=$('inspectionScreen');
   const titulo=pantalla.querySelector('.inspection-head h2');
   const tituloAnterior=titulo.textContent;
@@ -2877,44 +3035,57 @@ async function iniciarViaje(){
   pantalla.classList.add('inicio-en-progreso');
   titulo.textContent='Viaje en curso';
   estado.className='status-banner travel';
-  estado.textContent='Confirmando el inicio y las fotos con el servidor…';
+  estado.textContent='Preparando el envío de las fotos…';
 
   let fotosPendientes=false;
+  let fila;
   try{
+    fila=await preparar();
+    if(!sigueVigente())return;
+    const {payload,opId}=fila;
+    const enviar=()=>opId?enviarSalidaConWorker(opId):guardarInicioLocal(payload,servicio);
+    estado.textContent=opId?'Fotos guardadas para enviar · Confirmando el inicio…':'Mantené la app abierta mientras se envían las fotos.';
+    if(opId)programarEnvioFotos().catch(error=>console.warn('Envío en segundo plano no disponible:',error.message));
     let inicio;
     try{
-      inicio=await guardarInicioLocal(payload,servicio);
+      inicio=await enviar();
+      if(!inicio)fila={payload};
+      if(!inicio || inicio.ocupada)throw Error('La confirmación del inicio está pendiente.');
     }catch(error){
       if(!sigueVigente())return;
-      const viaje=await consultarInicioRegistrado(payload).catch(e=>{
+      const viaje=operacion.confirmacion?null:await consultarInicioRegistrado(payload).catch(e=>{
         console.warn('No se pudo recuperar el inicio:',e.message);
       });
       if(!sigueVigente())return;
-      if(!viaje)throw error;
-      inicio={idViaje:viaje.ID_VIAJE,kmInicial:viaje.KM_INICIAL};
-      fotosPendientes=viaje.fotosViajeCompletas!==true;
-      if(viaje.fotosViajeCompletas===false && error.message.startsWith('El servidor no confirmó las 4 fotos')){
-        estado.textContent='Inicio confirmado. Reintentando el envío de las fotos…';
-        try{
-          inicio=await guardarInicioLocal(payload,servicio);
-          fotosPendientes=false;
-        }catch(e){console.warn('Fotos de salida pendientes:',e.message);}
+      if(operacion.confirmacion)inicio=operacion.confirmacion;
+      else{
+        if(!viaje)throw error;
+        inicio={idViaje:viaje.ID_VIAJE,kmInicial:viaje.KM_INICIAL};
+        fotosPendientes=viaje.fotosViajeCompletas!==true;
+        if(viaje.fotosViajeCompletas===false && error.message.startsWith('El servidor no confirmó las 4 fotos')){
+          estado.textContent='Inicio confirmado. Reintentando el envío de las fotos…';
+          try{
+            const reintento=await enviar();
+            if(reintento && !reintento.ocupada){inicio=reintento;fotosPendientes=false;}
+          }catch(e){console.warn('Fotos de salida pendientes:',e.message);}
+        }
       }
     }
     if(!sigueVigente())return;
+    if(operacion.confirmacion){inicio=operacion.confirmacion;fotosPendientes=false;}
     limpiarCacheAPI('listarViajes','listarAsignaciones','listarServicios','listarVehiculos');
-    servicioEnInspeccion={...servicio,idViaje:inicio.idViaje,estado:'EN VIAJE',
-      kmInicial:parsearKilometraje(inicio.kmInicial)??km,completandoInspeccion:false,localKey:''};
-    mostrarModoViajeActivo();
-    renderService(servicioEnInspeccion);
-    if(fotosPendientes){
-      a.textContent='El viaje está iniciado. Quedaron fotos de salida sin confirmar.';
-      a.style.display='block';
+    if(salidaTerminada(inicio)){
+      window.__iniciandoViajeDiaVerde=null;
+      pantalla.classList.remove('inicio-en-progreso','salida-en-cola');
+      volverInicioSinEsperar();
+      return;
     }
+    aplicarInicioConfirmado(servicio,inicio,payload.kmInicial,fotosPendientes);
   }catch(err){
     if(!sigueVigente())return;
     window.__iniciandoViajeDiaVerde=null;
     pantalla.classList.remove('inicio-en-progreso');
+    if(fila?.opId){mostrarSalidaEnCola(fila,servicio);return;}
     titulo.textContent=tituloAnterior;
     actualizarEstadoInicio();
     a.textContent=mensajeErrorOperacion(err,'salida');a.style.display='block';
@@ -3306,6 +3477,7 @@ $('loginForm').addEventListener('submit',async e=>{
     if(session.tokenOrdenes && typeof window.ordenesSecretariaActualizarCola==='function'){
       try{await window.ordenesSecretariaActualizarCola();}catch(err){console.warn('Reautenticación de órdenes pendientes:',err);}
     }
+    reanudarEnviosFotos();
     registrarServiceWorkerWeb().catch(()=>{});
     sessionStorage.setItem('diaVerdeChofer',JSON.stringify(session));guardarSesionLocal();
     $('driverName').textContent=session.nombre;$('topUserName').textContent=session.nombre;$('avatar').textContent=initials(session.nombre);

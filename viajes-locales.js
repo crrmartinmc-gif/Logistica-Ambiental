@@ -9,19 +9,11 @@ async function fetchConTiempo(url,options={}){
 // se conserva únicamente para recuperar operaciones ya pendientes.
 async function guardarInicioLocal(payload,servicio=servicioEnInspeccion){
   const data=await enviarOperacionViaje(payload);
-  const resultado=resultadoOperacionViaje(data);
-  const viaje=resultado?.viaje||resultado;
-  const id=viaje?.ID_VIAJE||viaje?.idViaje||payload.idViaje;
-  if(!id)throw Error('El servidor no devolvió el ID del viaje. Consultá el estado antes de reintentar.');
-  const fotos=resultado?.FOTOS_SALIDA||viaje?.FOTOS_SALIDA||data?.FOTOS_SALIDA;
-  if(payload.fotosPorViaje===true && (fotos?.reutilizadas===true ||
-      (fotos?.ID_VIAJE_ORIGEN && String(fotos.ID_VIAJE_ORIGEN)!==String(id)))){
-    throw Error('El servidor confirmó fotos de otro viaje.');
-  }
-  servicio.idViaje=id;
+  const inicio=confirmacionInicioViaje(data,payload);
+  servicio.idViaje=inicio.idViaje;
   servicio.localKey='';
   limpiarCacheAPI('listarViajes','listarAsignaciones','listarServicios','listarVehiculos');
-  return {idViaje:id,kmInicial:viaje?.KM_INICIAL??viaje?.kmInicial};
+  return inicio;
 }
 function actualizarIdViajeLocal(r){
   if(String(r.payload.idChofer)!==String(session?.idChofer))return;

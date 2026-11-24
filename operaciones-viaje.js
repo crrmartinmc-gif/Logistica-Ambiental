@@ -2,6 +2,18 @@
 function resultadoOperacionViaje(data){
   return data?.resultado||data?.data?.resultado||data?.datos?.resultado||data?.datos||data?.data||data;
 }
+function confirmacionInicioViaje(data,payload){
+  const resultado=resultadoOperacionViaje(data);
+  const viaje=resultado?.viaje||resultado;
+  const idViaje=viaje?.ID_VIAJE||viaje?.idViaje||payload.idViaje;
+  if(!idViaje)throw Error('El servidor no devolvió el ID del viaje.');
+  const fotos=resultado?.FOTOS_SALIDA||viaje?.FOTOS_SALIDA||data?.FOTOS_SALIDA;
+  if(payload.fotosPorViaje===true && (fotos?.reutilizadas===true ||
+      (fotos?.ID_VIAJE_ORIGEN && String(fotos.ID_VIAJE_ORIGEN)!==String(idViaje)))){
+    throw Error('El servidor confirmó fotos de otro viaje.');
+  }
+  return {idViaje,kmInicial:viaje?.KM_INICIAL??viaje?.kmInicial,estado:viaje?.ESTADO,activo:viaje?.VIAJE_ACTIVO};
+}
 function validarRespuestaViaje(data,esInicio){
   const resultado=resultadoOperacionViaje(data);
   const capas=[data,data?.resultado,data?.datos,data?.data,data?.data?.resultado,data?.datos?.resultado];

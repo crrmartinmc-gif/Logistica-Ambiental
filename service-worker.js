@@ -1,4 +1,4 @@
-importScripts('./operaciones-viaje.js','./cola-viajes.js');
+importScripts('./operaciones-viaje.js?v=3','./cola-viajes.js','./cola-fotos-salida.js?v=1');
 /* ============================================================
    DIA VERDE - APP CHOFERES
    SERVICE WORKER WEB V32
@@ -13,7 +13,14 @@ const STORE = 'salidas';
 let procesoEnCurso = null;
 
 self.addEventListener('install', event => { event.waitUntil(self.skipWaiting()); });
-self.addEventListener('activate', event => { event.waitUntil(self.clients.claim()); });
+self.addEventListener('activate',event=>{
+  event.waitUntil((async()=>{
+    await self.clients.claim();
+    if(self.registration.sync && (await ColaFotosSalida.pendientes()).length){
+      await self.registration.sync.register('chofer-fotos-salida');
+    }
+  })().catch(error=>console.warn('No se pudo reanudar el envío de fotos:',error.message)));
+});
 
 function abrirDB(){
   return new Promise((resolve,reject)=>{
@@ -80,9 +87,28 @@ self.addEventListener('message',event=>{
 
 self.addEventListener('sync',event=>{if(event.tag==='chofer-viajes-v33')event.waitUntil(ColaViajes.procesar(registro=>avisarClientes({type:'VIAJE_LOCAL_ACTUALIZADO',registro})));});
 
+function enviarFotosPendientes(){
+  return ColaFotosSalida.procesar(salida=>avisarClientes({type:'FOTOS_SALIDA_GUARDADAS',salida}));
+}
+self.addEventListener('sync',event=>{
+  if(event.tag==='chofer-fotos-salida')event.waitUntil(enviarFotosPendientes());
+});
+self.addEventListener('message',event=>{
+  if(event.data?.type!=='ENVIAR_FOTOS_SALIDA' || !event.ports[0])return;
+  const puerto=event.ports[0];
+  puerto.postMessage({recibido:true});
+  event.waitUntil((async()=>{
+    try{
+      const salida=await ColaFotosSalida.enviar(event.data.opId);
+      puerto.postMessage({salida});
+      if(salida && !salida.ocupada)await avisarClientes({type:'FOTOS_SALIDA_GUARDADAS',salida});
+    }catch(error){puerto.postMessage({error:error.message});}
+  })());
+});
+
 // Solo recursos de la interfaz; nunca respuestas del backend ni documentos de Drive.
-const APP_CACHE='chofer-interfaz-v43';
-const APP_FILES=['./','./index.html','./operaciones-viaje.js?v=2','./cola-viajes.js?v=33','./viajes-locales.js?v=20261124-fotos','./recorridos-chofer.js?v=20261124-fotos','./documentos-unidad.js?v=2','./documentos-unidad.css?v=4','./manifest.webmanifest','./ordenes-secretaria.js?v=5','./ordenes-secretaria.css?v=2'];
+const APP_CACHE='chofer-interfaz-v44';
+const APP_FILES=['./','./index.html','./operaciones-viaje.js?v=3','./cola-viajes.js?v=33','./cola-fotos-salida.js?v=1','./viajes-locales.js?v=20261124-bg','./recorridos-chofer.js?v=20261124-fotos','./documentos-unidad.js?v=2','./documentos-unidad.css?v=4','./manifest.webmanifest','./ordenes-secretaria.js?v=5','./ordenes-secretaria.css?v=2'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(APP_CACHE).then(c=>c.addAll(APP_FILES))));
 self.addEventListener('fetch',event=>{
   const u=new URL(event.request.url);
