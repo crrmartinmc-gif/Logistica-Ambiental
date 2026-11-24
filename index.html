@@ -1279,7 +1279,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
    ============================================================ */
 </script>
 <script src="./documentos-unidad.js?v=2"></script>
-<script src="./recorridos-chofer.js?v=20261124-fotos"></script>
+<script src="./recorridos-chofer.js?v=20261124-recuperar"></script>
 <script src="./operaciones-viaje.js?v=3"></script>
 <script src="./cola-viajes.js?v=33"></script>
 <script src="./cola-fotos-salida.js?v=1"></script>
@@ -2193,6 +2193,9 @@ async function verServicio(id){
     return;
   }
 
+  const anterior=servicioEnInspeccion;
+  const conservarPreparacion=!!s.idAsignacion && anterior?.idAsignacion===s.idAsignacion &&
+    anterior.idServicio===s.idServicio && anterior.idUnidad===s.idUnidad && anterior.fecha===s.fecha && !anterior.idViaje;
   // V24 TURBO: mostrar la pantalla inmediatamente usando los datos ya cargados.
   servicioEnInspeccion=s;
   ultimaInspeccionCargada=null;
@@ -2224,14 +2227,14 @@ async function verServicio(id){
   }
 
   restablecerPreparacionRecorrido();
-  window.__salidaFotos={frente:null,trasera:null,lateral_derecho:null,lateral_izquierdo:null};
+  if(!conservarPreparacion)window.__salidaFotos={frente:null,trasera:null,lateral_derecho:null,lateral_izquierdo:null};
   $('inspectionStatus').className='status-banner pending'; $('inspectionStatus').innerHTML='📸 <strong>Preparando salida</strong> · 4 fotos + kilometraje requeridos';
   $('finishInspectionBtn').disabled=true;
   $('finishInspectionBtn').textContent='▶ INICIAR VIAJE';
   $('finishInspectionBtn').onclick=iniciarViaje;
-  $('currentKm').value='';
+  if(!conservarPreparacion)$('currentKm').value='';
   $('currentKm').disabled=false;
-  $('inspectionObs').value='';
+  if(!conservarPreparacion)$('inspectionObs').value='';
   $('inspectionObs').disabled=false;
   const finalBox=document.getElementById('finalKmBox'); if(finalBox) finalBox.remove();
   construirFotosSalida();
@@ -2256,7 +2259,10 @@ async function refrescarServicioEnSegundoPlano(id){
       getJson('rutas')
     ]);
     const servicio=(sRes.servicios||[]).find(x=>String(x.ID_SERVICIO||'')===String(id));
-    const viaje=(vRes.viajes||[]).find(v=>String(v.ID_VIAJE||'')===String(servicioEnInspeccion?.idViaje||'')&&String(v.ID_CHOFER||'')===String(session.idChofer)&&['EN CURSO','ACTIVO','INICIADO'].includes(String(v.ESTADO||'').toUpperCase()));
+    const candidatos=(vRes.viajes||[]).filter(v=>inspeccion?.idViaje
+      ? String(v.ID_VIAJE||'')===String(inspeccion.idViaje)
+      : recViajeCoincideConServicio(v,inspeccion));
+    const viaje=recSeleccionarViajeActivo(candidatos,sRes.servicios||[],session?.idChofer);
     const asignacion=viaje?{...(aRes.asignaciones||[]).find(a=>String(a.ID_ASIGNACION)===String(viaje.ID_ASIGNACION)),ID_ASIGNACION:viaje.ID_ASIGNACION,ID_VEHICULO:viaje.ID_VEHICULO}:servicioEnInspeccion?.idViaje?{ID_ASIGNACION:servicioEnInspeccion.idAsignacion,ID_VEHICULO:servicioEnInspeccion.idUnidad}: (aRes.asignaciones||[]).find(x=>String(x.ID_SERVICIO||'')===String(id)&&String(x.ID_CHOFER||'')===String(session.idChofer)&&String(x.ESTADO||'').toUpperCase()==='ACTIVA');
     const vehiculos=(await getJson('listarVehiculos')).vehiculos||[];
     const rutas=rRes.rutas||[];
@@ -2494,13 +2500,7 @@ function capturarFotoEnVivo(){
       capturedAt,
       source:'LIVE_CAMERA'
     };
-    const img=$('photoPreview_'+key);
-    if(img) img.src=dataUrl;
-    const ok=$('photoOk_'+key);
-    if(ok){
-      ok.style.display='block';
-      ok.textContent='✓ Foto tomada ahora';
-    }
+    mostrarFotoSalida(key,dataUrl);
   }
 
   cerrarCamara();
@@ -2509,6 +2509,13 @@ function capturarFotoEnVivo(){
     return;
   }
   actualizarEstadoInicio();
+}
+
+function mostrarFotoSalida(key,dataUrl){
+  const img=$('photoPreview_'+key);
+  if(img)img.src=dataUrl;
+  const ok=$('photoOk_'+key);
+  if(ok)ok.style.display='block';
 }
 
 function construirFotosSalida(){
@@ -2529,6 +2536,10 @@ function construirFotosSalida(){
       <span id="photoOk_${key}" class="vehicle-photo-ok" style="display:none">✓ Foto tomada ahora</span>
     </div>
   `).join('');
+  for(const [key] of fotos){
+    const dataUrl=window.__salidaFotos?.[key]?.dataUrl;
+    if(dataUrl)mostrarFotoSalida(key,dataUrl);
+  }
 }
 
 function contarFotosSalida(){

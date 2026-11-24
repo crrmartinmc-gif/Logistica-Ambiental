@@ -37,6 +37,12 @@ function restablecerPreparacionRecorrido(){
   const h=document.querySelector('#inspectionScreen .inspection-head h2');if(h)h.textContent='Preparar salida';
   document.querySelector('#inspectionScreen .vehicle-control-section')?.classList.remove('hidden');
 }
+function recViajeCoincideConServicio(viaje,servicio){
+  const mismo=(a,b)=>String(a||'').trim()===String(b||'').trim();
+  return !!viaje?.ID_VIAJE && !!servicio?.idAsignacion &&
+    mismo(viaje.ID_SERVICIO,servicio.idServicio) && mismo(viaje.ID_ASIGNACION,servicio.idAsignacion) &&
+    mismo(viaje.ID_VEHICULO,servicio.idUnidad);
+}
 async function verificarInspeccionRecorrido(){
   const consulta=++consultaInspeccionActual,idVehiculo=servicioEnInspeccion?.idUnidad,idServicio=servicioEnInspeccion?.idServicio||'',sesion=recSesionActual();
   inspeccionReutilizable=null;bloqueoOtroServicio=false;
@@ -50,6 +56,13 @@ async function verificarInspeccionRecorrido(){
   try{
     const r=await consultarRecorridoActual(idVehiculo);
     if(!r||consulta!==consultaInspeccionActual||sesion!==recSesionActual()||String(servicioEnInspeccion?.idUnidad)!==String(idVehiculo))return;
+    const viaje=r.viajeActivo;
+    if(!secretaria && !servicioEnInspeccion?.idViaje && recViajeCoincideConServicio(viaje,servicioEnInspeccion)){
+      if(!$('inspectionScreen').classList.contains('hidden')){
+        aplicarInicioConfirmado(servicioEnInspeccion,{idViaje:viaje.ID_VIAJE,kmInicial:viaje.KM_INICIAL},servicioEnInspeccion.kmInicial);
+      }
+      return;
+    }
     if(['EN VIAJE','EN CURSO','ACTIVO','INICIADO'].includes(String(servicioEnInspeccion?.estado||'').toUpperCase()))return;
     bloqueoOtroServicio=!!r.viajeActivo && (String(r.viajeActivo.ID_SERVICIO||'')!==String(idServicio)||!idServicio);
     if(bloqueoOtroServicio && !secretaria){

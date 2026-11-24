@@ -107,8 +107,8 @@ self.addEventListener('message',event=>{
 });
 
 // Solo recursos de la interfaz; nunca respuestas del backend ni documentos de Drive.
-const APP_CACHE='chofer-interfaz-v44';
-const APP_FILES=['./','./index.html','./operaciones-viaje.js?v=3','./cola-viajes.js?v=33','./cola-fotos-salida.js?v=1','./viajes-locales.js?v=20261124-bg','./recorridos-chofer.js?v=20261124-fotos','./documentos-unidad.js?v=2','./documentos-unidad.css?v=4','./manifest.webmanifest','./ordenes-secretaria.js?v=5','./ordenes-secretaria.css?v=2'];
+const APP_CACHE='chofer-interfaz-v45';
+const APP_FILES=['./','./index.html','./operaciones-viaje.js?v=3','./cola-viajes.js?v=33','./cola-fotos-salida.js?v=1','./viajes-locales.js?v=20261124-bg','./recorridos-chofer.js?v=20261124-recuperar','./documentos-unidad.js?v=2','./documentos-unidad.css?v=4','./manifest.webmanifest','./ordenes-secretaria.js?v=5','./ordenes-secretaria.css?v=2'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(APP_CACHE).then(c=>c.addAll(APP_FILES))));
 self.addEventListener('fetch',event=>{
   const u=new URL(event.request.url);
