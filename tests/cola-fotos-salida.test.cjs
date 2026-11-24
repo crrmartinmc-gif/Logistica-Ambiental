@@ -22,7 +22,7 @@ function contexto(rows,enviar,{now=()=>Date.now()}={}){
    return fila;
  } async function pendientes(){return structuredClone([...rows.values()]);}\n`;
  const c=vm.createContext({rows,structuredClone,crypto:{randomUUID},Date:class extends Date{static now(){return now();}},enviar});
- vm.runInContext(contrato+'\nenviarOperacionViaje=async payload=>validarRespuestaViaje(await enviar(payload),true);\n'+
+ vm.runInContext(contrato+'\nenviarOperacionViaje=async payload=>validarRespuestaViaje(await enviar(payload),payload.etapaSalida!=="INICIO");\n'+
   source.slice(0,inicio)+memoria+source.slice(fin)+'\nglobalThis.cola=ColaFotosSalida;',c);
  return c;
 }
@@ -81,4 +81,64 @@ test('las fotos de otro viaje nunca vacían la cola',async()=>{
  const {opId}=await c.cola.guardar(datos);
  await assert.rejects(c.cola.enviar(opId),/fotos de otro viaje/);
  assert.equal((await c.cola.pendientes()).length,1);
+});
+
+test('el inicio se confirma y queda persistido antes de cualquier envío de fotos',async()=>{
+ const rows=new Map(),solicitudes=[];
+ const c=contexto(rows,async payload=>{
+  solicitudes.push(payload);
+  return payload.etapaSalida==='INICIO'
+   ?{ok:true,resultado:{ID_VIAJE:'V1',INICIO_CONFIRMADO:true,ESTADO:'EN CURSO',KM_INICIAL:100}}
+   :respuesta;
+ });
+ const fila=await c.cola.guardar({...datos,usuario:'chofer'});
+ const inicio=await c.cola.enviar(fila.opId,{soloInicio:true});
+ assert.equal(inicio.idViaje,'V1');
+ assert.equal(inicio.fotosPendientes,true);
+ assert.equal(solicitudes.length,1);
+ assert.equal(solicitudes[0].fotos,undefined);
+ assert.equal((await c.cola.pendientes())[0].inicio.idViaje,'V1');
+ const fotos=await c.cola.enviar(fila.opId);
+ assert.equal(solicitudes.length,2);
+ assert.equal(solicitudes[1].etapaSalida,'FOTOS');
+ assert.equal(solicitudes[1].idViaje,'V1');
+ assert.equal(solicitudes[1].fotos.frente,'FRENTE');
+ assert.equal(fotos.fotosPendientes,false);
+ assert.equal(rows.size,0);
+});
+
+test('un fallo al subir fotos conserva el ID y el reintento repite solo las fotos',async()=>{
+ const rows=new Map(),etapas=[];
+ let fallarFotos=true;
+ const c=contexto(rows,async payload=>{
+  etapas.push(payload.etapaSalida);
+  if(payload.etapaSalida==='INICIO')return {ok:true,resultado:{ID_VIAJE:'V1',INICIO_CONFIRMADO:true}};
+  if(fallarFotos)throw Error('Sin conexión');
+  return respuesta;
+ });
+ const {opId}=await c.cola.guardar({...datos,usuario:'chofer'});
+ let notificado;
+ await assert.rejects(c.cola.enviar(opId,{alConfirmarInicio:salida=>{notificado=salida.idViaje;}}),/Sin conexión/);
+ assert.equal(notificado,'V1');
+ assert.equal((await c.cola.pendientes())[0].inicio.idViaje,'V1');
+ fallarFotos=false;
+ await c.cola.enviar(opId);
+ assert.deepEqual(etapas,['INICIO','FOTOS','FOTOS']);
+ assert.equal(rows.size,0);
+});
+
+test('una salida guardada antes de actualizar adopta el inicio separado al volver el mismo chofer',async()=>{
+ const rows=new Map(),solicitudes=[];
+ const c=contexto(rows,async payload=>{
+  solicitudes.push(payload);
+  return {ok:true,resultado:{ID_VIAJE:'V1',INICIO_CONFIRMADO:true}};
+ });
+ const {opId}=await c.cola.guardar(datos);
+ await c.cola.completarUsuario(opId,'OTRO','otro');
+ assert.equal((await c.cola.pendientes())[0].payload.usuario,undefined);
+ await c.cola.completarUsuario(opId,'C1','chofer');
+ await c.cola.enviar(opId,{soloInicio:true});
+ assert.equal(solicitudes[0].etapaSalida,'INICIO');
+ assert.equal(solicitudes[0].fotos,undefined);
+ assert.equal((await c.cola.pendientes())[0].payload.fotos.frente,'FRENTE');
 });

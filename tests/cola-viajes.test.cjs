@@ -31,7 +31,7 @@ function interfazInicio({enviar,recorrido=null,viajes=[],persistir=true}){
   ColaFotosSalida:{guardar:async payload=>{
    if(!persistir)throw Error('Sin almacenamiento');
    fila={opId:'PENDIENTE1',payload};return fila;
-  },enviar:async()=>enviar(fila.payload)},
+  },enviar:async(id,opciones)=>enviar(fila.payload,opciones),procesar:async()=>{}},
   servicioEnInspeccion:{idAsignacion:'A1',idServicio:'S1',idUnidad:'U1',estado:'PENDIENTE'},
   session:{idChofer:'C1'},esChoferSecretaria:()=>false,parsearKilometraje:Number,
   recPuedeReutilizar:()=>false,contarFotosSalida:()=>4,guardarInicioLocal:enviar,
@@ -58,7 +58,7 @@ test('muestra la pantalla del viaje durante el envío y un doble toque no duplic
  const inicio=contexto.iniciarViaje();
  await contexto.iniciarViaje();
  await new Promise(setImmediate);
- assert.equal(titulo.textContent,'Viaje en curso');
+ assert.equal(titulo.textContent,'Iniciando viaje…');
  assert.ok(clases.has('inicio-en-progreso'));
  assert.equal($('finishInspectionBtn').disabled,true);
  assert.equal(solicitudes,1);
@@ -68,6 +68,17 @@ test('muestra la pantalla del viaje durante el envío y un doble toque no duplic
  assert.equal(contexto.servicioEnInspeccion.kmInicial,99);
  assert.equal($('finishInspectionBtn').textContent,'FINALIZAR SERVICIO');
  assert.ok(!clases.has('inicio-en-progreso'));
+});
+
+test('la pantalla habilita el cierre al confirmar el inicio mientras las fotos siguen pendientes',async()=>{
+ const {contexto,$}=interfazInicio({enviar:async (datos,opciones)=>{
+  assert.equal(opciones.soloInicio,true);
+  return {idViaje:'V1',kmInicial:100,fotosPendientes:true};
+ }});
+ await contexto.iniciarViaje();
+ assert.equal(contexto.servicioEnInspeccion.estado,'EN VIAJE');
+ assert.equal($('finishInspectionBtn').textContent,'FINALIZAR SERVICIO');
+ assert.match($('inspectionAlert').textContent,/fotos de salida pendientes de envío/);
 });
 
 test('recupera el mismo viaje si se pierde la respuesta del inicio',async()=>{

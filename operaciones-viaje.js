@@ -7,6 +7,10 @@ function confirmacionInicioViaje(data,payload){
   const viaje=resultado?.viaje||resultado;
   const idViaje=viaje?.ID_VIAJE||viaje?.idViaje||payload.idViaje;
   if(!idViaje)throw Error('El servidor no devolvió el ID del viaje.');
+  if(payload.etapaSalida==='INICIO' && viaje.INICIO_CONFIRMADO!==true){
+    throw Error('El servidor todavía no confirmó el inicio separado de las fotos.');
+  }
+  if(payload.etapaSalida==='FOTOS' && idViaje!==payload.idViaje)throw Error('El servidor confirmó otro viaje.');
   const fotos=resultado?.FOTOS_SALIDA||viaje?.FOTOS_SALIDA||data?.FOTOS_SALIDA;
   if(payload.fotosPorViaje===true && (fotos?.reutilizadas===true ||
       (fotos?.ID_VIAJE_ORIGEN && String(fotos.ID_VIAJE_ORIGEN)!==String(idViaje)))){
@@ -38,7 +42,7 @@ async function enviarOperacionViaje(payload){
     const text=await response.text();
     if(!response.ok)throw new Error('Servidor HTTP '+response.status);
     let data;try{data=JSON.parse(text);}catch(e){throw new Error('El servidor no devolvió una confirmación válida.');}
-    return validarRespuestaViaje(data,!String(payload.accion||'').startsWith('finalizarViaje'));
+    return validarRespuestaViaje(data,payload.etapaSalida!=='INICIO' && !String(payload.accion||'').startsWith('finalizarViaje'));
   }catch(e){
     if(e?.name==='AbortError')throw new Error('El servidor está demorando. La operación sigue pendiente de confirmación.');
     throw e;

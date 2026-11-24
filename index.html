@@ -1280,9 +1280,9 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
 </script>
 <script src="./documentos-unidad.js?v=2"></script>
 <script src="./recorridos-chofer.js?v=20261124-recuperar"></script>
-<script src="./operaciones-viaje.js?v=3"></script>
+<script src="./operaciones-viaje.js?v=4"></script>
 <script src="./cola-viajes.js?v=33"></script>
-<script src="./cola-fotos-salida.js?v=1"></script>
+<script src="./cola-fotos-salida.js?v=2"></script>
 <script src="./viajes-locales.js?v=20261124-bg"></script>
 <script>
 const BACKEND_URL = "https://script.google.com/macros/s/AKfycbz0n4ZlW2p--nP2Wx0SnytyCRt_pL6RFxliEan0j1vUdSSrBrVNCbsTI7VC0JQWl5k9/exec";
@@ -2858,7 +2858,8 @@ async function programarEnvioFotos(){
 
 async function enviarSalidaConWorker(opId){
   const worker=appServiceWorkerRegistration?.active;
-  if(!worker || typeof MessageChannel==='undefined')return ColaFotosSalida.enviar(opId);
+  const enviarAqui=()=>ColaFotosSalida.enviar(opId,{alConfirmarInicio:actualizarSalidaDesdeCola});
+  if(!worker || typeof MessageChannel==='undefined')return enviarAqui();
   const resultado=await new Promise((resolve,reject)=>{
     const canal=new MessageChannel();
     let espera=setTimeout(()=>terminar(),1000);
@@ -2877,7 +2878,7 @@ async function enviarSalidaConWorker(opId){
     try{worker.postMessage({type:'ENVIAR_FOTOS_SALIDA',opId},[canal.port2]);}
     catch(error){terminar();}
   });
-  return resultado?resultado.salida:ColaFotosSalida.enviar(opId);
+  return resultado?resultado.salida:enviarAqui();
 }
 
 function mostrarFotosDeSalidaPendientes(){
@@ -2932,8 +2933,8 @@ function actualizarSalidaDesdeCola(salida){
     volverInicioSinEsperar();
     return;
   }
-  if(!servicio.idViaje)aplicarInicioConfirmado(servicio,salida,servicio.kmInicial);
-  else if(servicio.fotosSalidaPendientes){
+  if(!servicio.idViaje)aplicarInicioConfirmado(servicio,salida,servicio.kmInicial,salida.fotosPendientes===true);
+  else if(salida.fotosPendientes!==true && servicio.fotosSalidaPendientes){
     servicio.fotosSalidaPendientes=false;
     const aviso=$('inspectionAlert');
     if(aviso.textContent.endsWith('Quedaron fotos de salida pendientes de envío.'))aviso.style.display='none';
@@ -2943,9 +2944,11 @@ function actualizarSalidaDesdeCola(salida){
 let reanudacionFotos=null;
 function reanudarEnviosFotos(){
   const idChofer=session?.idChofer;
+  const usuario=session?.usuario;
   if(!idChofer||reanudacionFotos)return;
   let syncProgramada=false;
-  const enviar=opId=>{
+  const enviar=async opId=>{
+    await ColaFotosSalida.completarUsuario(opId,idChofer,usuario);
     if(!syncProgramada){
       syncProgramada=true;
       programarEnvioFotos().catch(error=>console.warn('Envío en segundo plano no disponible:',error.message));
@@ -2962,7 +2965,9 @@ window.addEventListener('load',reanudarEnviosFotos);
 window.addEventListener('online',reanudarEnviosFotos);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)reanudarEnviosFotos();});
 navigator.serviceWorker?.addEventListener('message',evento=>{
-  if(evento.data?.type==='FOTOS_SALIDA_GUARDADAS')actualizarSalidaDesdeCola(evento.data.salida);
+  if(['INICIO_SALIDA_CONFIRMADO','FOTOS_SALIDA_GUARDADAS'].includes(evento.data?.type)){
+    actualizarSalidaDesdeCola(evento.data.salida);
+  }
 });
 
 async function consultarInicioRegistrado(payload){
@@ -3002,6 +3007,7 @@ async function iniciarViaje(){
     idServicio:servicio.idServicio,
     idAsignacion:servicio.idAsignacion,
     idChofer:session.idChofer,
+    usuario:session.usuario,
     idVehiculo:servicio.idUnidad||'',
     idUnidad:servicio.idUnidad||'',
     dominio:servicio.dominio||'',
@@ -3044,7 +3050,7 @@ async function procesarSalidaEnPantalla(servicio,preparar){
   const tituloAnterior=titulo.textContent;
   const estado=$('inspectionStatus');
   pantalla.classList.add('inicio-en-progreso');
-  titulo.textContent='Viaje en curso';
+  titulo.textContent='Iniciando viaje…';
   estado.className='status-banner travel';
   estado.textContent='Preparando el envío de las fotos…';
 
@@ -3053,15 +3059,21 @@ async function procesarSalidaEnPantalla(servicio,preparar){
   try{
     fila=await preparar();
     if(!sigueVigente())return;
+    if(fila.opId && !fila.payload.usuario && session?.usuario){
+      fila=await ColaFotosSalida.completarUsuario(fila.opId,session.idChofer,session.usuario)||fila;
+      if(!sigueVigente())return;
+    }
     const {payload,opId}=fila;
-    const enviar=()=>opId?enviarSalidaConWorker(opId):guardarInicioLocal(payload,servicio);
+    const enviar=()=>opId?ColaFotosSalida.enviar(opId,{soloInicio:true}):guardarInicioLocal(payload,servicio);
     estado.textContent=opId?'Fotos guardadas para enviar · Confirmando el inicio…':'Mantené la app abierta mientras se envían las fotos.';
-    if(opId)programarEnvioFotos().catch(error=>console.warn('Envío en segundo plano no disponible:',error.message));
     let inicio;
     try{
-      inicio=await enviar();
+      const intento=enviar();
+      if(opId)programarEnvioFotos().catch(error=>console.warn('Envío en segundo plano no disponible:',error.message));
+      inicio=await intento;
       if(!inicio)fila={payload};
       if(!inicio || inicio.ocupada)throw Error('La confirmación del inicio está pendiente.');
+      fotosPendientes=inicio.fotosPendientes===true;
     }catch(error){
       if(!sigueVigente())return;
       const viaje=operacion.confirmacion?null:await consultarInicioRegistrado(payload).catch(e=>{
@@ -3083,7 +3095,10 @@ async function procesarSalidaEnPantalla(servicio,preparar){
       }
     }
     if(!sigueVigente())return;
-    if(operacion.confirmacion){inicio=operacion.confirmacion;fotosPendientes=false;}
+    if(operacion.confirmacion){
+      inicio=operacion.confirmacion;
+      fotosPendientes=inicio.fotosPendientes===true;
+    }
     limpiarCacheAPI('listarViajes','listarAsignaciones','listarServicios','listarVehiculos');
     if(salidaTerminada(inicio)){
       window.__iniciandoViajeDiaVerde=null;
@@ -3105,6 +3120,7 @@ async function procesarSalidaEnPantalla(servicio,preparar){
       window.__iniciandoViajeDiaVerde=null;
       pantalla.classList.remove('inicio-en-progreso');
     }
+    if(fila?.opId && fotosPendientes)reanudarEnviosFotos();
   }
 }
 

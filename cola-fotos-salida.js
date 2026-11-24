@@ -48,24 +48,49 @@ const ColaFotosSalida=(()=>{
     return editar(opId,anterior=>anterior||{opId,payload,creada:Date.now()});
   }
 
-  async function enviar(opId){
+  function completarUsuario(opId,idChofer,usuario){
+    return editar(opId,actual=>{
+      if(!actual||actual.payload.usuario||actual.payload.idChofer!==idChofer||!usuario)return actual;
+      return {...actual,payload:{...actual.payload,usuario}};
+    });
+  }
+
+  function resultadoSalida(fila,inicio,fotosPendientes){
+    const {idChofer,idServicio,idAsignacion,idVehiculo,horaInicio}=fila.payload;
+    return {opId:fila.opId,idChofer,idServicio,idAsignacion,idVehiculo,horaInicio,...inicio,fotosPendientes};
+  }
+
+  async function enviar(opId,{soloInicio=false,alConfirmarInicio=()=>{}}={}){
     const token=crypto.randomUUID();
     const fila=await editar(opId,actual=>{
-      if(!actual||actual.enviandoHasta>Date.now())return actual;
+      if(!actual || (soloInicio && actual.inicio) || actual.enviandoHasta>Date.now())return actual;
       // La reserva sobrevive a la página y caduca si el navegador termina el envío.
       return {...actual,token,enviandoHasta:Date.now()+120000};
     });
     if(!fila)return null;
+    if(soloInicio && fila.inicio)return resultadoSalida(fila,fila.inicio,true);
     if(fila.token!==token)return {ocupada:true};
     try{
-      const data=await enviarOperacionViaje(fila.payload);
-      const inicio=confirmacionInicioViaje(data,fila.payload);
+      const separada=!!fila.payload.usuario && fila.payload.fotosPorViaje===true;
+      let inicio=fila.inicio;
+      if(separada && !inicio){
+        const {fotos,...datos}=fila.payload;
+        const payload={...datos,etapaSalida:'INICIO'};
+        inicio=confirmacionInicioViaje(await enviarOperacionViaje(payload),payload);
+        const guardada=await editar(opId,actual=>actual?.token===token?{...actual,inicio,enviandoHasta:Date.now()+120000}:actual);
+        if(guardada?.token!==token)return {ocupada:true};
+      }
+      if(separada){
+        const salida=resultadoSalida(fila,inicio,true);
+        if(soloInicio)return salida;
+        await alConfirmarInicio(salida);
+      }
+      const payload=separada?{...fila.payload,idViaje:inicio.idViaje,etapaSalida:'FOTOS'}:fila.payload;
+      const confirmacion=confirmacionInicioViaje(await enviarOperacionViaje(payload),payload);
       await editar(opId,actual=>actual?.token===token?undefined:actual);
-      const {idChofer,idServicio,idAsignacion,idVehiculo,horaInicio}=fila.payload;
-      return {opId,idChofer,idServicio,idAsignacion,idVehiculo,horaInicio,...inicio};
-    }catch(error){
+      return resultadoSalida(fila,{...confirmacion,kmInicial:confirmacion.kmInicial??inicio?.kmInicial},false);
+    }finally{
       await editar(opId,actual=>actual?.token===token?{...actual,token:null,enviandoHasta:0}:actual);
-      throw error;
     }
   }
 
@@ -82,5 +107,5 @@ const ColaFotosSalida=(()=>{
     if(pendiente)throw pendiente;
   }
 
-  return {guardar,pendientes,enviar,procesar};
+  return {guardar,completarUsuario,pendientes,enviar,procesar};
 })();
