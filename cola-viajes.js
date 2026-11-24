@@ -4,7 +4,7 @@ const ColaViajes = (() => {
   async function todos(){const d=await db();return new Promise((ok,no)=>{const t=d.transaction('viajes'),r=t.objectStore('viajes').getAll();r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error);t.oncomplete=()=>d.close();});}
   async function editar(key,fn){const d=await db();return new Promise((ok,no)=>{const t=d.transaction('viajes','readwrite'),s=t.objectStore('viajes'),r=s.get(key);let result;r.onsuccess=()=>{try{result=fn(r.result);if(result)s.put(result);else s.delete(key);}catch(e){t.abort();no(e);}};t.oncomplete=()=>{d.close();ok(result);};t.onerror=t.onabort=()=>{d.close();no(t.error||new Error('No se pudo guardar en este celular.'));};});}
   async function iniciar(payload,servicio,unidad){
-    const key=payload.accion==='iniciarViajeSecretaria'?'SEC-'+payload.idViaje:'ASIG-'+payload.idAsignacion;
+    const key='ASIG-'+payload.idAsignacion;
     return editar(key,old=>old||{key,payload,servicio,unidad,createdAt:Date.now(),inicioConfirmado:false,cierre:null,cierreConfirmado:false,error:''});
   }
   async function cerrar(key,payload){return editar(key,r=>{if(!r)throw Error('No se encontró el viaje guardado.');return {...r,cierre:r.cierre||payload,error:''};});}
@@ -12,7 +12,7 @@ const ColaViajes = (() => {
     return conBloqueoColaViajes(async()=>{
       let fallo=null;
       for(const initial of (await todos()).sort((a,b)=>a.createdAt-b.createdAt)){
-        if(initial.cierreConfirmado)continue;
+        if(initial.cierreConfirmado || initial.payload?.accion!=='iniciarViaje')continue;
         let r=initial;
         try{
           if(!r.inicioConfirmado){
@@ -24,7 +24,7 @@ const ColaViajes = (() => {
           }
           // Volver a leer: el chofer puede haber cerrado mientras se enviaba el inicio.
           r=(await todos()).find(x=>x.key===r.key);
-          if(r?.cierre && !r.cierreConfirmado){
+          if(r?.cierre?.accion==='finalizarViaje' && !r.cierreConfirmado){
             await enviarOperacionViaje({...r.cierre,idViaje:r.idViaje});
             r=await editar(r.key,actual=>({...actual,cierreConfirmado:true,error:''}));
             await notificar(r);

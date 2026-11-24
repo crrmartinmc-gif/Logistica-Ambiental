@@ -1,0 +1,25 @@
+name: Validar App Choferes
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verificar sintaxis
+        run: |
+          for file in *.js; do node --check "$file"; done
+          node -e 'const vm=require("node:vm");for(const [,js] of require("node:fs").readFileSync("index.html","utf8").matchAll(/<script>([\s\S]*?)<\/script>/g))new vm.Script(js)'
+      - name: Ejecutar pruebas
+        run: node --test tests/*.test.cjs
+      - name: Probar inicio y cierre en Chromium
+        run: |
+          npm install --no-save --no-package-lock playwright
+          npx playwright install --with-deps chromium
+          node tests/inicio-local.browser.cjs

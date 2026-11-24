@@ -135,8 +135,6 @@ button{cursor:pointer}
 .logout-btn:hover{background:rgba(255,255,255,.10)}
 }
 .inspection-wrap{max-width:980px;margin:28px auto;padding:0 18px 40px}.inspection-card{background:#ffffff;border:1px solid #dce9e3;border-radius:18px;box-shadow:0 10px 28px rgba(0,70,45,.08);overflow:hidden}.inspection-head{background:linear-gradient(135deg,#004b35,#087a52);color:#ffffff;padding:24px}.inspection-head h2{margin:4px 0 6px;font-size:24px}.inspection-head p{margin:0;opacity:.88}.check-section{padding:20px 22px;border-bottom:1px solid #e7efeb}.check-section h3{margin:0 0 14px;font-size:17px}
-#inspectionScreen.inicio-en-progreso :is(.check-section,.vehicle-control-section,.inspection-actions){display:none}
-#inspectionScreen.salida-en-cola :is(.check-section,.vehicle-control-section){display:none}
 /* V12 — fotos obligatorias de salida */
 .vehicle-photo-card{background:#f7fbf9;border:1px solid #d5e6de;border-radius:14px;padding:9px;text-align:center}
 .vehicle-photo-preview{width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:10px;background:#e9f1ed;display:block}
@@ -792,92 +790,6 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
 </style>
 
 
-<style id="secretaria-selector-layout">
-/* Ajustes exclusivos del selector de unidades para CHOFER_SECRETARIA */
-#dashboardScreen.secretaria-mode .welcome{align-items:center;margin-bottom:20px}
-#dashboardScreen.secretaria-mode .welcome h1{font-size:clamp(25px,3vw,32px)}
-#dashboardScreen.secretaria-mode .grid{
-  display:grid;grid-template-columns:minmax(0,1fr);gap:0;max-width:850px;margin:0 auto;
-}
-#dashboardScreen.secretaria-mode .grid>.card:first-child{display:none!important}
-#dashboardScreen.secretaria-mode .grid>.card:last-child{
-  width:100%;padding:clamp(16px,2.5vw,26px);border-radius:20px;
-}
-#dashboardScreen.secretaria-mode .grid>.card:last-child .card-title{margin-bottom:14px}
-#dashboardScreen.secretaria-mode .grid>.card:last-child .card-title h2{font-size:17px}
-#serviceBox.secretaria-content{
-  display:block;width:100%;padding:0;background:transparent;border:0;
-  color:var(--text);text-align:left;
-}
-.secretaria-selector-head{
-  display:flex;align-items:center;justify-content:space-between;gap:14px;
-  padding:5px 2px 17px;
-}
-.secretaria-kicker{display:block;color:#54cd86;font-size:9px;font-weight:900;letter-spacing:1.5px;margin-bottom:6px}
-.secretaria-selector-head h3{margin:0;color:#eaf9f0;font-size:20px;line-height:1.2}
-.secretaria-selector-head p{margin:6px 0 0;color:#91b4a0;font-size:12px}
-.secretaria-count{
-  flex:0 0 auto;padding:8px 11px;border:1px solid #246640;border-radius:999px;
-  background:#123c24;color:#7edaa4;font-size:9px;font-weight:900;letter-spacing:.6px;
-}
-.secretaria-vehicles{
-  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;
-}
-.secretaria-vehicle-btn{
-  width:100%;min-width:0;min-height:86px;display:flex;flex-wrap:wrap;align-items:center;gap:11px;
-  padding:13px;text-align:left;border:1px solid #295d3f;border-radius:14px;
-  background:linear-gradient(145deg,#113a22,#0c2b19);color:#e7f5ed;
-  cursor:pointer;transition:border-color .16s,transform .16s,background .16s;
-}
-.secretaria-vehicle-btn:hover{border-color:#36bb6d;background:linear-gradient(145deg,#15472a,#103720);transform:translateY(-1px)}
-.secretaria-vehicle-btn:active{transform:scale(.99)}
-.secretaria-vehicle-symbol{
-  width:38px;height:38px;flex:0 0 38px;display:grid;place-items:center;
-  border-radius:11px;background:#134327;border:1px solid #206d40;
-  color:#7cd9a3;font-size:18px;
-}
-.secretaria-vehicle-photo{
-  display:flex;align-items:center;justify-content:center;flex:0 0 100%;height:190px;
-  border-radius:10px;background:radial-gradient(ellipse at center,#ffffff 0%,rgba(255,255,255,.92) 22%,rgba(255,255,255,.45) 45%,transparent 75%);
-  overflow:hidden;
-}
-.secretaria-vehicle-photo img{display:block;width:100%;height:100%;object-fit:contain;transform:scale(1.4)}
-.secretaria-vehicle-photo img.secretaria-photo-cronos{transform:scale(1.08)}
-.secretaria-vehicle-photo img.secretaria-photo-recortada{transform:scale(1)}
-.secretaria-vehicle-photo-fallback{display:flex;align-items:center;gap:8px;color:#91b4a0;font-size:11px}
-.secretaria-vehicle-photo-fallback[hidden]{display:none}
-.secretaria-vehicle-data{display:flex;flex:1;min-width:0;flex-direction:column;gap:3px}
-.secretaria-vehicle-data>strong{color:#e8f8ef;font-size:14px;line-height:1.15;letter-spacing:.3px;overflow-wrap:anywhere}
-.secretaria-vehicle-internal{color:#6bd497;font-size:9px;font-weight:900;letter-spacing:.55px}
-.secretaria-vehicle-data>small{color:#9abba8;font-size:10px;line-height:1.25;overflow-wrap:anywhere}
-.secretaria-vehicle-km{display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex:0 0 auto}
-.secretaria-vehicle-km small{font-size:8px;color:#78a38a;font-weight:800;letter-spacing:.4px}
-.secretaria-vehicle-km strong{font-size:10px;color:#c4e1d0;white-space:nowrap}
-.secretaria-vehicle-arrow{color:#55ce87;font-size:24px;font-weight:500;line-height:1}
-.secretaria-loading{padding:24px;text-align:center;color:#9abba8;border:1px dashed #295d3f;border-radius:14px;background:#0b2717;font-size:12px}
-#serviceBox.secretaria-content>.empty{
-  padding:24px;text-align:center;color:#a9cab7;background:#0b2717;border:1px dashed #295d3f;border-radius:14px;
-}
-#serviceBox.secretaria-content h3{color:#eaf9f0}
-#serviceBox.secretaria-content p{color:#91b4a0}
-@media(max-width:650px){
-  #dashboardScreen.secretaria-mode .welcome{display:flex;align-items:flex-start;gap:10px}
-  #dashboardScreen.secretaria-mode .welcome h1{font-size:23px}
-  #dashboardScreen.secretaria-mode .welcome p{max-width:330px}
-  #dashboardScreen.secretaria-mode .grid>.card:last-child{padding:15px;border-radius:17px}
-  .secretaria-vehicles{grid-template-columns:1fr;gap:8px}
-  .secretaria-vehicle-btn{min-height:78px;padding:11px}
-  .secretaria-selector-head h3{font-size:18px}
-  .secretaria-count{font-size:8px;padding:7px 9px}
-}
-@media(max-width:380px){
-  .secretaria-vehicle-btn{gap:8px;padding:9px}
-  .secretaria-vehicle-symbol{width:33px;height:33px;flex-basis:33px}
-  .secretaria-vehicle-data>strong{font-size:12px}
-  .secretaria-vehicle-km strong{font-size:9px}
-}
-</style>
-
 <style>
 .brand .municipal-brand span{white-space:normal;overflow:visible;text-overflow:clip;max-width:none;font-size:clamp(10px,2.5vw,13px);line-height:1.35}
 .brand .municipal-brand small{font-size:clamp(9px,2.2vw,11px);line-height:1.35}
@@ -897,7 +809,6 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
  background:linear-gradient(115deg,#338f59,#63c68c);color:#06150c;
  box-shadow:0 8px 24px rgba(51,143,89,.24);
 }
-.secretaria-vehicle-btn:hover{box-shadow:0 0 24px rgba(51,143,89,.15)}
 </style>
 <style id="ambiente-fresh-gradient">
 html,body{background:linear-gradient(135deg,#154c34 0%,#102d23 40%,#071b15 75%,#05120e 100%);background-attachment:fixed}
@@ -906,8 +817,6 @@ html,body{background:linear-gradient(135deg,#154c34 0%,#102d23 40%,#071b15 75%,#
 .brand .municipal-brand span{color:#123c28}
 .brand .municipal-brand small{color:#245b3b}
 .card,.login-card,.inspection-card,.admin-botonera-card,.admin-card{background:linear-gradient(135deg,rgba(29,78,53,.96),rgba(10,32,24,.98));border-color:#2b6248}
-.secretaria-vehicle-btn{background:linear-gradient(135deg,#205039,#102f23);border-color:#356c50}
-.secretaria-vehicle-btn:hover{background:linear-gradient(135deg,#286747,#143d2b);border-color:#62d593}
 .primary,.modal-save,.admin-report-save,.admin-km-line button,.admin-picker-item .pick,.camera-capture{background:linear-gradient(135deg,#32b76d,#8be4ae);color:#062416}
 </style>
 <style>@media(max-width:600px){.topbar{background:linear-gradient(135deg,#f4fff7 0%,#b5e8cc 70%,#65b78b 100%)}}</style>
@@ -922,8 +831,8 @@ html,body{color-scheme:light;color:var(--text);background:linear-gradient(135deg
 .login-body{background:#fff}
 .welcome h1,.card-title h2,.vehicle h3,.vehicle-km strong,.info-row strong,.service-head h2,.route-point strong,.meta strong,.admin-botonera-head h1,.admin-botonera-title h2,.admin-panel h3,.admin-card h2,.admin-vehicle-selected strong,.admin-picker-item strong,.check-section h3,.vehicle-control-head h3,.control-text strong,.admin-action-text strong,.wheel-position strong{color:#163b2a}
 .welcome p,.info-row span:first-child,.route-point small,.vehicle-control-help,.admin-botonera-head p,.admin-botonera-help,.admin-vehicle-selected span,.admin-picker-item small,.login-head p,.inspection-head p,.control-text span,.admin-action-text span{color:#5c7768}
-.eyebrow,.secretaria-kicker,.vehicle-km span,.meta span,.control-chevron,.admin-action-arrow{color:#208750}
-.status-pill,.optional-badge,.admin-badge,.secretaria-count{background:#e5f6ec;color:#237c49;border:1px solid #badeca}
+.eyebrow,.vehicle-km span,.meta span,.control-chevron,.admin-action-arrow{color:#208750}
+.status-pill,.optional-badge,.admin-badge{background:#e5f6ec;color:#237c49;border:1px solid #badeca}
 .field label,.modal-label,.admin-field label,.admin-report-fields label{color:#385f49}
 .field input,.admin-field input,.admin-field select,.admin-field textarea,.admin-report-fields select,.admin-report-fields textarea,.modal-field input,.modal-field textarea,.admin-picker-search,.admin-km-line input,#currentKm,#inspectionObs{background:#fff!important;color:#163b2a!important;border:1px solid #bfdcc9!important}
 .field input::placeholder,input::placeholder,textarea::placeholder{color:#7d9286}
@@ -950,21 +859,10 @@ html,body{color-scheme:light;color:var(--text);background:linear-gradient(135deg
 .admin-list{scrollbar-color:#a9d6bb #f3faf6}
 .error{background:#fff0f2;color:#a72f45;border:1px solid #efc1ca}
 .loading,.footer-note,.camera-hint{color:#698474}
-.secretaria-selector-head h3,#serviceBox.secretaria-content h3{color:#163b2a}
-.secretaria-selector-head p,#serviceBox.secretaria-content p{color:#5c7768}
-.secretaria-vehicle-btn{background:linear-gradient(135deg,#fff 0%,#f5fcf8 55%,#e7f6ee 100%);border-color:#c4e1d0;color:#163b2a}
-.secretaria-vehicle-btn:hover{background:linear-gradient(135deg,#fff,#e0f4e8);border-color:#56af7b;box-shadow:0 5px 20px rgba(37,131,79,.1)}
-.secretaria-vehicle-photo{background:radial-gradient(ellipse at center,#fff 0%,#fff 25%,rgba(255,255,255,.6) 50%,transparent 80%)}
-.secretaria-vehicle-data>strong{color:#163b2a}
-.secretaria-vehicle-internal,.secretaria-vehicle-arrow{color:#25834f}
-.secretaria-vehicle-data>small,.secretaria-vehicle-photo-fallback{color:#607f6b}
-.secretaria-vehicle-km small{color:#64836e}.secretaria-vehicle-km strong{color:#315e43}
-.secretaria-loading,#serviceBox.secretaria-content>.empty{background:#f3faf6;border-color:#c4e1d0;color:#5c7768}
 button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline-color:#25834f}
 </style>
 
-<link rel="stylesheet" href="./documentos-unidad.css?v=4">
-<link rel="stylesheet" href="./ordenes-secretaria.css?v=2">
+<link rel="stylesheet" href="./documentos-unidad.css?v=5">
 </head>
 <body>
 <div class="app">
@@ -1152,7 +1050,6 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
     </div>
   </div>
 
-  <div class="card hidden" id="recorridoActualBox" style="margin-top:16px" aria-live="polite"></div>
 
   <section id="inspectionScreen" class="inspection-wrap hidden">
     <div class="inspection-card">
@@ -1279,11 +1176,8 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
    ============================================================ */
 </script>
 <script src="./documentos-unidad.js?v=2"></script>
-<script src="./recorridos-chofer.js?v=20261124-recuperar"></script>
-<script src="./operaciones-viaje.js?v=4"></script>
-<script src="./cola-viajes.js?v=33"></script>
-<script src="./cola-fotos-salida.js?v=2"></script>
-<script src="./viajes-locales.js?v=20261124-bg"></script>
+<script src="./operaciones-viaje.js?v=5"></script>
+<script src="./salidas-pendientes.js?v=1"></script>
 <script>
 const BACKEND_URL = "https://script.google.com/macros/s/AKfycbz0n4ZlW2p--nP2Wx0SnytyCRt_pL6RFxliEan0j1vUdSSrBrVNCbsTI7VC0JQWl5k9/exec";
 
@@ -1303,6 +1197,8 @@ async function registrarServiceWorkerWeb(){
   if(!('serviceWorker' in navigator)) return null;
   try{
     appServiceWorkerRegistration = await navigator.serviceWorker.register('./service-worker.js',{scope:'./',updateViaCache:'none'});
+    const registro=await navigator.serviceWorker.ready;
+    registro.active?.postMessage({type:'REANUDAR_ENVIOS_CHOFERES'});
     return appServiceWorkerRegistration;
   }catch(err){
     console.warn('Service Worker WEB no disponible:',err);
@@ -1337,6 +1233,8 @@ function escapeHtml(v){
 function fechaArgentinaISO(v){
   if(v==null || String(v).trim()==='') return '';
   const s=String(v).trim();
+  const local=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:$|[ T])/);
+  if(local)return local[3]+'-'+local[2].padStart(2,'0')+'-'+local[1].padStart(2,'0');
   const m=s.match(/^(\d{4})-(\d{2})-(\d{2})(?:$|T)/);
   if(m && !s.includes('T')) return `${m[1]}-${m[2]}-${m[3]}`;
   const d=new Date(v);
@@ -1406,7 +1304,7 @@ function formatearFechaHoraAR(v){
 }
 
 async function postJson(payload){
-  const r = await fetchConTiempo(BACKEND_URL,{
+  const r = await fetch(BACKEND_URL,{
     method:'POST',
     headers:{'Content-Type':'text/plain;charset=utf-8'},
     body:JSON.stringify(payload),
@@ -1421,7 +1319,7 @@ async function postJson(payload){
 
   // Una escritura invalida solamente las lecturas que pueden haber cambiado.
   const accion=String(payload?.accion||'');
-  if(['iniciarViaje','finalizarViaje','iniciarViajeSecretaria','finalizarViajeSecretaria'].includes(accion)) limpiarCacheAPI('listarViajes','listarAsignaciones','listarServicios','listarVehiculos','listarVehiculosSecretaria','listarViajesSecretaria');
+  if(['iniciarViaje','finalizarViaje'].includes(accion)) limpiarCacheAPI('listarViajes','listarAsignaciones','listarServicios','listarVehiculos');
   if(accion==='actualizarKmAdmin') limpiarCacheAPI('listarVehiculos');
   if(['registrarReporteAdmin','registrarReporteVehiculo'].includes(accion)) limpiarCacheAPI('listarReportes','listarInspecciones');
   return data;
@@ -1431,66 +1329,64 @@ async function postJson(payload){
    La salida se guarda primero en IndexedDB y el Service Worker la envía.
    Así la pantalla no queda bloqueada en "GUARDANDO SALIDA…" y el usuario
    puede volver al inicio o cerrar la app. */
-const BG_DB_NAME='DiaVerdeChoferBG';
-const BG_DB_VERSION=1;
-const BG_STORE='salidas';
-
-function abrirDBSegundoPlano(){
-  return new Promise((resolve,reject)=>{
-    if(!('indexedDB' in window)){ reject(new Error('IndexedDB no disponible')); return; }
-    const req=indexedDB.open(BG_DB_NAME,BG_DB_VERSION);
-    req.onupgradeneeded=()=>{
-      const db=req.result;
-      if(!db.objectStoreNames.contains(BG_STORE)) db.createObjectStore(BG_STORE,{keyPath:'opId'});
-    };
-    req.onsuccess=()=>resolve(req.result);
-    req.onerror=()=>reject(req.error||new Error('No se pudo abrir la cola local.'));
-  });
-}
-
 async function encolarSalidaSegundoPlano(payload){
-  // Esta función SOLO persiste la operación. No envía ni registra Sync aquí:
-  // iniciarViaje realiza el único envío inmediato y programa el reintento
-  // únicamente si ese envío falla. Así evitamos dos POST simultáneos.
-  const opId='SALIDA-'+String(payload.idServicio||'')+'-'+String(payload.idAsignacion||'');
-  const item={opId,payload,createdAt:Date.now(),estado:'PENDIENTE'};
+  const opId=JSON.stringify(['SALIDA',fechaArgentinaISO(payload.horaInicio),payload.idChofer,payload.idAsignacion]);
   const db=await abrirDBSegundoPlano();
-  await new Promise((resolve,reject)=>{
-    const tx=db.transaction(BG_STORE,'readwrite');
-    tx.objectStore(BG_STORE).put(item);
-    tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error||new Error('No se pudo guardar la salida localmente.'));
-  });
-  return {ok:true,opId,pendiente:true};
-}
-
-async function programarReintentoSalida(opId){return programarProcesamientoCola(opId);}
-
-// V32 — COLA DE FINALIZACIONES. Usa el mismo store para no migrar IndexedDB.
-async function encolarFinalizacionSegundoPlano(payload){
-  const id=String(payload?.idViaje||'').trim();
-  if(!id) throw new Error('No se puede guardar el cierre sin ID de viaje.');
-  const accion=String(payload.accion||'finalizarViaje');
-  const opId='FINALIZACION-'+accion+'-'+id;
-  const item={opId,tipo:'FINALIZACION',payload,createdAt:Date.now(),estado:'PENDIENTE'};
-  const db=await abrirDBSegundoPlano();
-  await new Promise((resolve,reject)=>{
-    const tx=db.transaction(BG_STORE,'readwrite');
-    tx.objectStore(BG_STORE).put(item);
-    tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error||new Error('No se pudo guardar el cierre localmente.'));
-  });
-  return {ok:true,opId,pendiente:true};
-}
-
-async function programarProcesamientoCola(opId){
   try{
-    const reg=appServiceWorkerRegistration;
-    if(reg?.sync && typeof reg.sync.register==='function'){
-      await reg.sync.register('dia-verde-salidas');return;
-    }
-    if(reg?.active){reg.active.postMessage({type:'PROCESAR_SALIDAS_AHORA'});return;}
-  }catch(e){console.warn('Reintento en segundo plano no disponible:',e);}
-  if(opId) return intentarEnviarOperacionDirecta(opId);
+    return await new Promise((resolve,reject)=>{
+      const tx=db.transaction(BG_STORE,'readwrite');
+      const store=tx.objectStore(BG_STORE);
+      const anterior=store.get(opId);
+      anterior.onsuccess=()=>{
+        if(anterior.result)payload=anterior.result.payload;
+        else store.add({opId,payload,createdAt:Date.now()});
+      };
+      tx.oncomplete=()=>resolve({opId,payload});
+      tx.onabort=()=>reject(tx.error||new Error('No se pudo guardar la salida localmente.'));
+    });
+  }finally{db.close();}
 }
+
+function confirmarSalidaEnPantalla(servicio,idViaje,kmInicial){
+  if(servicio!==servicioEnInspeccion || !idViaje)return;
+  servicio.idViaje=idViaje;
+  servicio.kmInicial=kmInicial??servicio.kmInicial;
+  const yaActivo=servicio.estado==='EN VIAJE' && $('finalKm');
+  servicio.estado='EN VIAJE';
+  window.__servicioActual=servicio;
+  if($('inspectionScreen').classList.contains('hidden') || servicio.cerrando)return;
+  if(!yaActivo)mostrarModoViajeActivo();
+  $('finishInspectionBtn').disabled=false;
+  $('inspectionAlert').style.display='none';
+}
+
+function reanudarEnviosChoferes(){
+  const registro=appServiceWorkerRegistration;
+  registro?.active?.postMessage({type:'REANUDAR_ENVIOS_CHOFERES'});
+  registro?.sync?.register('dia-verde-salidas').catch(()=>{});
+}
+
+window.addEventListener('load',()=>{registrarServiceWorkerWeb().catch(()=>{});});
+window.addEventListener('online',reanudarEnviosChoferes);
+navigator.serviceWorker?.addEventListener('message',ev=>{
+  if(ev.data?.type!=='SALIDA_GUARDADA'||!session)return;
+  const {payload,idViaje,kmInicial,activo,estado}=ev.data;
+  if(String(payload?.idChofer)!==String(session.idChofer))return;
+  limpiarCacheAPI('listarViajes','listarAsignaciones','listarServicios','listarVehiculos');
+  const servicio=servicioEnInspeccion;
+  if(servicio && String(payload?.idVehiculo)===String(servicio.idUnidad) &&
+     (!servicio.idViaje || String(servicio.idViaje)===String(idViaje)) &&
+     String(payload.idServicio)===String(servicio.idServicio) &&
+     String(payload.idAsignacion)===String(servicio.idAsignacion) &&
+     fechaArgentinaISO(payload.horaInicio)===fechaArgentinaISO(servicio.fecha)){
+    if(servicio.estado==='FINALIZADO')return;
+    if(!servicio.cerrando && (activo===false || estado==='FINALIZADO')){
+      volverInicio().catch(()=>{});
+    }else confirmarSalidaEnPantalla(servicio,idViaje,kmInicial);
+  }else if(!$('dashboardScreen').classList.contains('hidden') && $('inspectionScreen').classList.contains('hidden')){
+    cargarDashboard({force:true}).catch(()=>{});
+  }
+});
 
 function puedeVerDiagnosticosOperacion(){
   return ['ADMIN','ADMINISTRADOR','SUPERADMIN'].includes(String(session?.rol||'').trim().toUpperCase());
@@ -1507,97 +1403,6 @@ function mensajeErrorOperacion(error,operacion){
     ? 'No se pudo confirmar el reporte. Volvé a intentar con conexión.'
     : 'La salida todavía no está confirmada. Volvé a intentar con conexión.';
 }
-function mostrarAvisoOperacion(mensaje,pendiente=false){
-  // Los reintentos y sus detalles técnicos no generan alertas al chofer.
-  // La cola conserva los archivos y solo se muestra éxito tras confirmación real.
-  if(pendiente&&!puedeVerDiagnosticosOperacion()){
-    $('operationNotice')?.remove();
-    return;
-  }
-  let aviso=$('operationNotice');
-  if(!aviso){
-    aviso=document.createElement('div');aviso.id='operationNotice';
-    aviso.setAttribute('role','status');aviso.setAttribute('aria-live','polite');
-    aviso.style.cssText='max-width:1064px;margin:16px auto;padding:14px 18px;border-radius:12px;border:1px solid #a8d8bb;background:#e5f6ec;color:#185739;';
-    document.querySelector('.topbar').after(aviso);
-  }
-  aviso.textContent=mensaje;
-  aviso.dataset.pendiente=String(pendiente);
-}
-
-async function intentarEnviarOperacionDirecta(opId){
-  return conBloqueoColaViajes(async()=>{
-    const db=await abrirDBSegundoPlano();
-    const item=await new Promise((resolve,reject)=>{
-      const req=db.transaction(BG_STORE,'readonly').objectStore(BG_STORE).get(opId);
-      req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);
-    });
-    if(!item)return;
-    const data=await enviarOperacionViaje(item.payload);
-    await new Promise((resolve,reject)=>{const tx=db.transaction(BG_STORE,'readwrite');tx.objectStore(BG_STORE).delete(opId);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);});
-    limpiarCacheAPI('listarViajes','listarAsignaciones','listarServicios','listarVehiculos');
-    confirmarOperacionEnPantalla(item.payload,data);
-    return data;
-  });
-}
-
-function confirmarOperacionEnPantalla(payload,data){
-  const finalizacion=String(payload.accion||'').startsWith('finalizarViaje');
-  if(!finalizacion){
-    const resultado=resultadoOperacionViaje(data),viaje=resultado?.viaje||resultado;
-    if(servicioEnInspeccion && String(servicioEnInspeccion.idServicio||'')===String(payload.idServicio||'')){
-      servicioEnInspeccion.idViaje=viaje?.ID_VIAJE||viaje?.idViaje||servicioEnInspeccion.idViaje||'';
-    }
-  }
-}
-
-function validarConfirmacionFotosSalida(data){return validarRespuestaViaje(data,true);}
-
-async function intentarEnviarPayloadDirecto(payload,opId=''){
-  if(opId)return intentarEnviarOperacionDirecta(opId);
-  const data=await enviarOperacionViaje(payload);
-  limpiarCacheAPI('listarViajes','listarAsignaciones','listarServicios','listarVehiculos');
-  confirmarOperacionEnPantalla(payload,data);
-  return data;
-}
-
-async function intentarEnviarSalidaDirecta(opId){return intentarEnviarOperacionDirecta(opId);}
-
-async function reintentarOperacionesPendientes(){
-  if(!session || window.__iniciandoViajeDiaVerde) return;
-  try{
-    const db=await abrirDBSegundoPlano();
-    const items=await new Promise((resolve,reject)=>{
-      const req=db.transaction(BG_STORE,'readonly').objectStore(BG_STORE).getAll();
-      req.onsuccess=()=>resolve(req.result||[]);req.onerror=()=>reject(req.error);
-    });
-    for(const item of items.sort((a,b)=>a.createdAt-b.createdAt)){
-      if(item.payload?.idChofer && String(item.payload.idChofer)!==String(session.idChofer))continue;
-      try{await intentarEnviarOperacionDirecta(item.opId);}catch(e){console.warn('Envío pendiente:',e.message);break;}
-    }
-  }catch(e){console.warn('No se pudo revisar la cola local:',e);}
-}
-window.addEventListener('online',reintentarOperacionesPendientes);
-window.addEventListener('load',reintentarOperacionesPendientes);
-
-window.addEventListener('load',()=>{
-  if('serviceWorker' in navigator){
-    navigator.serviceWorker.addEventListener('message',ev=>{
-      if(ev.data?.type==='SALIDA_GUARDADA'){
-        limpiarCacheAPI('listarViajes','listarAsignaciones','listarServicios');
-        console.info('Salida guardada en segundo plano:',ev.data.opId);
-        try{if(typeof cargarDashboard==='function') cargarDashboard().catch(()=>{});}catch(e){}
-      }
-      if(ev.data?.type==='FINALIZACION_GUARDADA'){
-        limpiarCacheAPI('listarViajes','listarAsignaciones','listarServicios','listarVehiculos');
-        console.info('Finalización confirmada por el backend:',ev.data.opId);
-        try{if(typeof cargarDashboard==='function') cargarDashboard().catch(()=>{});}catch(e){}
-      }
-      if(['SALIDA_PENDIENTE','FINALIZACION_PENDIENTE'].includes(ev.data?.type)) console.warn('Envío pendiente:',ev.data.error);
-    });
-  }
-});
-
 async function getJson(action, params={}, options={}){
   const key=cacheKeyAPI(action,params);
   const now=Date.now();
@@ -1610,7 +1415,7 @@ async function getJson(action, params={}, options={}){
 
   const promise=(async()=>{
     const qs = new URLSearchParams({accion:action,...params,_:Date.now()});
-    const r = await fetchConTiempo(BACKEND_URL+'?'+qs.toString(),{cache:'no-store'});
+    const r = await fetch(BACKEND_URL+'?'+qs.toString(),{cache:'no-store'});
     const text=await r.text();
     if(!r.ok) throw new Error('Backend HTTP '+r.status);
     let data;
@@ -1618,7 +1423,6 @@ async function getJson(action, params={}, options={}){
     if(data && data.ok===false) throw new Error(data.error||'El backend rechazó la consulta.');
 
     // El Backend Maestro devuelve las lecturas dentro de "datos".
-    // Para endpoints que devuelven objetos (p.ej. Secretaría), exponemos también sus propiedades.
     const datos = data?.datos;
     if(datos && typeof datos === 'object' && !Array.isArray(datos)){
       data = {...data, ...datos};
@@ -1635,7 +1439,7 @@ async function getJson(action, params={}, options={}){
       else if(action==='listarReportes') data={ok:true,reportes:datos};
       else if(action==='listarEvidencias') data={ok:true,evidencias:datos};
     }
-    if(['listarVehiculos','listarVehiculosSecretaria'].includes(action) && Array.isArray(data.vehiculos)){
+    if(action==='listarVehiculos' && Array.isArray(data.vehiculos)){
       data.vehiculos=data.vehiculos.map(v=>({...v,DOMINIO:dominioUnidad(v.DOMINIO||v.dominio||'')}));
     }
     apiCache.set(key,{time:Date.now(),data});
@@ -1685,7 +1489,6 @@ function cerrarSesion(){
   }
 
   limpiarSesionLocal();
-  estadoRecorridoServidor=null;inspeccionReutilizable=null;consultaInspeccionActual++;$('recorridoActualBox')?.classList.add('hidden');
   session=null;
   servicioEnInspeccion=null;
   window.__iniciandoViajeDiaVerde=null;
@@ -1698,7 +1501,6 @@ function cerrarSesion(){
   $('topUser').classList.add('hidden');
   $('dashboardScreen').classList.add('hidden');
   $('adminScreen').classList.add('hidden');
-  $('inspectionScreen').classList.remove('inicio-en-progreso','salida-en-cola');
   $('inspectionScreen').classList.add('hidden');
   $('loginScreen').classList.remove('hidden');
   $('usuario').value='';
@@ -1707,169 +1509,22 @@ function cerrarSesion(){
   window.scrollTo({top:0,behavior:'smooth'});
 }
 
-function esChoferSecretaria(){ return String(session?.rol||'').trim().toUpperCase()==='CHOFER_SECRETARIA'; }
-let vehiculoSecretariaSeleccionado=null;
-let viajeSecretariaActivo=null;
-
-async function cargarDashboardSecretaria(){
-  if(typeof recuperarViajeLocal==='function' && await recuperarViajeLocal())return;
-  consultarRecorridoActual().catch(e=>console.warn("Recorrido:",e.message));
-  $('dashboardScreen').classList.add('secretaria-mode');
-  $('dashboardScreen').classList.remove('hidden');
-  $('inspectionScreen').classList.add('hidden');
-  $('vehicleBox').classList.add('hidden');
-  const box=$('serviceBox');
-  box.classList.add('secretaria-content');
-  box.classList.remove('hidden');
-  box.innerHTML='<div class="secretaria-loading">Consultando viajes de Secretaría…</div>';
-  try{
-    if(!session?.usuario || !session?.idChofer) throw new Error('La sesión no contiene usuario e ID de chofer. Cerrá sesión e ingresá nuevamente.');
-    const paramsSecretaria={usuario:String(session.usuario).trim(),idChofer:String(session.idChofer).trim()};
-    const tr=await getJson('listarViajesSecretaria',paramsSecretaria,{force:true});
-    if(await recuperarViajeLocal())return;
-    const viajes=Array.isArray(tr.viajes)?tr.viajes:[];
-    viajeSecretariaActivo=viajes.find(v=>String(v.ID_CHOFER||'')===String(session.idChofer||'') && ['EN CURSO','ACTIVO','INICIADO'].includes(String(v.ESTADO||'').toUpperCase()))||null;
-    if(viajeSecretariaActivo){
-      let unidad;
-      // La unidad en uso puede dejar de aparecer entre los vehículos disponibles.
-      if(!unidad){
-        try{
-          const ficha=await getJson('listarVehiculos',paramsSecretaria,{force:true});
-          unidad=(Array.isArray(ficha.vehiculos)?ficha.vehiculos:[]).find(v=>String(v.ID_VEHICULO)===String(viajeSecretariaActivo.ID_VEHICULO));
-        }catch(e){console.warn('No se pudo consultar la ficha de la unidad en viaje:',e);}
-      }
-      vehiculoSecretariaSeleccionado=unidad||{ID_VEHICULO:viajeSecretariaActivo.ID_VEHICULO,DOMINIO:viajeSecretariaActivo.DOMINIO||viajeSecretariaActivo.dominio||''};
-      const dominio=dominioUnidad(vehiculoSecretariaSeleccionado.DOMINIO||vehiculoSecretariaSeleccionado.dominio||'');
-      vehiculoSecretariaSeleccionado={...vehiculoSecretariaSeleccionado,DOMINIO:dominio};
-      box.innerHTML=`<h3>Tenés un viaje en curso</h3>
-        <div class="secretaria-active-unit">
-          <div class="secretaria-vehicle-photo secretaria-active-photo" id="secretariaActivePhoto"></div>
-          <div class="secretaria-active-details">
-            <span class="secretaria-kicker">UNIDAD SELECCIONADA</span>
-            <strong class="secretaria-active-plate">${escapeHtml(dominio||'Unidad en viaje')}</strong>
-            <span class="secretaria-active-model">${escapeHtml([vehiculoSecretariaSeleccionado.MARCA,vehiculoSecretariaSeleccionado.MODELO].filter(Boolean).join(' '))}</span>
-            <button type="button" class="unit-documents-button" data-unit-documents="${escapeHtml(dominio)}" aria-label="Documentos de la unidad ${escapeHtml(dominio)}" ${dominio?'':'hidden'}>Documentos de la unidad</button>
-          </div>
-        </div>
-        <button class="primary" type="button" onclick="continuarViajeSecretaria()">CONTINUAR / FINALIZAR VIAJE</button>`;
-      mostrarFotoSecretaria($('secretariaActivePhoto'),vehiculoSecretariaSeleccionado);
-      return;
-    }
-    box.replaceChildren();
-    box.classList.add('hidden');
-  }catch(err){if(await recuperarViajeLocal(true))return;console.warn('Carga de viajes:',err);box.innerHTML='<div class="empty">No se pudieron consultar los viajes en curso. Actualizá la pantalla.</div>';}
-  finally{if(typeof window.ordenesSecretariaRender==='function')window.ordenesSecretariaRender();}
-}
-
-function mostrarFotoSecretaria(photoBox,vehiculo){
-  const dominio=vehiculo.DOMINIO||'';
-  const fotoLocal=fotoUnidadPorDominio(dominio);
-  const fotoRegistrada=convertirFotoDrive(vehiculo.FOTO_URL||vehiculo.fotoUrl);
-  const placeholder=document.createElement('span');
-  placeholder.className='secretaria-vehicle-photo-fallback';
-  placeholder.textContent='▰ Foto no disponible';
-  photoBox.appendChild(placeholder);
-  if(!fotoLocal && !fotoRegistrada) return;
-  const img=document.createElement('img');
-  if(dominioUnidad(dominio).replace(/[^A-Z0-9]/g,'')==='AE807UI')img.classList.add('secretaria-photo-cronos');
-  if(['AD614FO','AD614FN','AI583WW','MIR051'].includes(dominioUnidad(dominio).replace(/[^A-Z0-9]/g,'')))img.classList.add('secretaria-photo-recortada');
-  img.alt='Foto de la unidad '+(dominio||vehiculo.INTERNO||'sin dominio');
-  img.loading='lazy';
-  img.decoding='async';
-  placeholder.hidden=true;
-  img.onload=()=>quitarFondoBlancoVehiculo(img);
-  img.onerror=()=>{
-    if(fotoRegistrada && img.getAttribute('src')!==fotoRegistrada){
-      img.src=fotoRegistrada;
-      return;
-    }
-    img.remove();
-    placeholder.hidden=false;
-  };
-  img.src=fotoLocal||fotoRegistrada;
-  photoBox.appendChild(img);
-}
-
-function seleccionarVehiculoSecretaria(id){
-  // Nuevas salidas exclusivamente desde la orden aceptada y preasignada.
-  const orden=window.__ordenSecretariaEnPreparacion;
-  if(!esChoferSecretaria() || !session?.tokenOrdenes || !orden ||
-    String(orden.idChofer)!==String(session?.idChofer) ||
-    String(orden.idVehiculo)!==String(id) ||
-    String(orden.estado||'').toUpperCase()!=='ACEPTADA'){
-    mostrarAvisoOperacion('Para iniciar un viaje, Secretaría debe asignarte y confirmar un traslado. Abrí «Mis traslados asignados».');
-    return;
-  }
-  restablecerPreparacionRecorrido();
-  if(dashboardTimer){clearInterval(dashboardTimer);dashboardTimer=null;}
-  const v={ID_VEHICULO:orden.idVehiculo,DOMINIO:dominioUnidad(orden.dominio),INTERNO:orden.interno};
-  vehiculoSecretariaSeleccionado=v; servicioEnInspeccion={idServicio:'',idAsignacion:'',idUnidad:v.ID_VEHICULO,dominio:v.DOMINIO||'',estado:'PENDIENTE',idViaje:''};
-  $('serviceBox').classList.add('hidden'); $('inspectionScreen').classList.remove('hidden');
-  $('inspectionServiceLabel').textContent=(v.DOMINIO||v.INTERNO||'Vehículo')+' · '+[v.MARCA,v.MODELO].filter(Boolean).join(' ');
-  $('inspectionAlert').style.display='none'; window.__salidaFotos={frente:null,trasera:null,lateral_derecho:null,lateral_izquierdo:null};
-  $('inspectionStatus').className='status-banner pending'; $('inspectionStatus').innerHTML='📸 <strong>Preparando salida</strong> · 4 fotos + KM inicial obligatorios';
-  $('finishInspectionBtn').disabled=true; $('finishInspectionBtn').textContent='▶ INICIAR VIAJE'; $('finishInspectionBtn').onclick=iniciarViaje;
-  $('currentKm').value=''; $('currentKm').disabled=false; $('inspectionObs').value='';
-  const finalBox=document.getElementById('finalKmBox');if(finalBox)finalBox.remove(); construirFotosSalida();
-  $('lastKmHint').textContent='';
-  verificarInspeccionRecorrido();
-}
-
-async function continuarViajeSecretaria(){
-  if(!viajeSecretariaActivo)return;
-  let orden=typeof window.ordenesSecretariaPorViaje==='function' ?
-    window.ordenesSecretariaPorViaje(viajeSecretariaActivo.ID_VIAJE):null;
-  // Al cambiar de celular, recuperar el vínculo del viaje desde Secretaría.
-  if(!orden&&session?.tokenOrdenes){
-    try{
-      const res=await postJson({accion:'listarOrdenesSecretaria',tokenOrdenes:session.tokenOrdenes});
-      const data=res?.resultado||res;
-      orden=(Array.isArray(data.items)?data.items:[])
-        .find(o=>String(o.idViaje||'')===String(viajeSecretariaActivo.ID_VIAJE))||null;
-    }catch(err){console.warn('No se pudo recuperar la vinculación del traslado:',err);}
-  }
-  servicioEnInspeccion={idServicio:'',idAsignacion:'',idUnidad:viajeSecretariaActivo.ID_VEHICULO,
-    idViaje:viajeSecretariaActivo.ID_VIAJE,estado:'EN VIAJE',
-    ...(orden?{idSolicitud:orden.id,idAsignacionLocal:orden.idAsignacion}:{})};
-  $('serviceBox').classList.add('hidden');$('inspectionScreen').classList.remove('hidden');
-  $('inspectionServiceLabel').textContent='Viaje en curso · '+(vehiculoSecretariaSeleccionado?.DOMINIO||'Unidad');
-  mostrarModoViajeActivo(); $('finishInspectionBtn').onclick=finalizarViaje; $('finishInspectionBtn').textContent='FINALIZAR VIAJE';
-}
-
 async function cargarDashboard(opciones={}){
-  if(dashboardActualizacionPendiente){
-    await dashboardActualizacionPendiente;
-    if(opciones.force)return cargarDashboard(opciones);
-    return;
-  }
-  const pendiente=cargarDashboardInterno(opciones);dashboardActualizacionPendiente=pendiente;
-  try{return await pendiente;}finally{if(dashboardActualizacionPendiente===pendiente)dashboardActualizacionPendiente=null;}
-}
-async function cargarDashboardInterno(opciones={}){
-  if(window.__iniciandoViajeDiaVerde)return;
-  if(typeof recuperarViajeLocal==='function' && await recuperarViajeLocal())return;
-  if(esChoferSecretaria()){ await cargarDashboardSecretaria(); return; }
-  $('dashboardScreen').classList.remove('secretaria-mode');
-  $('serviceBox').classList.remove('secretaria-content');
-  if(dashboardCargando) return;
+  if(dashboardCargando || !session) return;
   dashboardCargando=true;
-  const idChofer=String(session?.idChofer||'').trim(),sesionDashboard=recSesionActual();
-  const viajeInicial=servicioEnInspeccion?.idViaje;
+  const sesion=session;
+  const idChofer=String(sesion.idChofer||'').trim();
   const lectura={force:opciones.force===true};
   try{
-    const [aRes,vRes,sRes,viRes,rRes,estadoVigente] = await Promise.all([
+    const [aRes,vRes,sRes,viRes,rRes] = await Promise.all([
       getJson('listarAsignaciones',{},lectura),
       getJson('listarVehiculos',{},lectura),
       getJson('listarServicios',{},lectura),
       getJson('listarViajes',{},lectura),
-      getJson('rutas',{},lectura),
-      consultarRecorridoActual().catch(e=>{console.warn('Recorrido:',e.message);return null;})
+      getJson('rutas',{},lectura)
     ]);
 
-    if(sesionDashboard!==recSesionActual() || window.__iniciandoViajeDiaVerde)return;
-    if(servicioEnInspeccion?.idViaje && servicioEnInspeccion.idViaje!==viajeInicial &&
-       !$('inspectionScreen').classList.contains('hidden'))return;
-    if(typeof recuperarViajeLocal==='function' && await recuperarViajeLocal())return;
+    if(session!==sesion)return;
     const asignaciones=Array.isArray(aRes.asignaciones)?aRes.asignaciones:[];
     const vehiculos=Array.isArray(vRes.vehiculos)?vRes.vehiculos:[];
     const servicios=Array.isArray(sRes.servicios)?sRes.servicios:[];
@@ -1880,9 +1535,7 @@ async function cargarDashboardInterno(opciones={}){
     const fechaManana=mananaArgentinaISO();
     const normalizarFecha=v=>fechaArgentinaISO(v);
 
-    const cierresLocales=typeof cierresLocalesPendientesChofer==='function' ? await cierresLocalesPendientesChofer() : {asignaciones:new Set(),viajes:new Set()};
     const propias=asignaciones.filter(a=>{
-      if(cierresLocales.asignaciones.has(String(a.ID_ASIGNACION||'')))return false;
       const f=normalizarFecha(a.FECHA);
       const servicio=servicios.find(s =>
         String(s.ID_SERVICIO||'').trim()===String(a.ID_SERVICIO||'').trim()
@@ -1954,21 +1607,17 @@ async function cargarDashboardInterno(opciones={}){
       return String(a.HORA_ASIGNACION||'').localeCompare(String(b.HORA_ASIGNACION||''));
     });
 
-    // El viaje real manda sobre la agenda, incluso si su asignación ya cambió de estado.
-    const cerradoLocalmente=v=>cierresLocales.viajes.has(String(v.ID_VIAJE||'')) ||
-      cierresLocales.asignaciones.has(String(v.ID_ASIGNACION||''));
-    const viajesVigentes=viajes.filter(v=>!cerradoLocalmente(v));
-    const recorridoVigente=estadoVigente?.viajeActivo && cerradoLocalmente(estadoVigente.viajeActivo)
-      ? {...estadoVigente,viajeActivo:null}
-      : estadoVigente;
-    const viajePrioritario=recSeleccionarViajeActivo(viajesVigentes,servicios,idChofer,recorridoVigente);
-    const asignacion=viajePrioritario?{
-      ...(asignaciones.find(a=>String(a.ID_ASIGNACION)===String(viajePrioritario.ID_ASIGNACION))||{}),
-      ID_ASIGNACION:viajePrioritario.ID_ASIGNACION||'',ID_SERVICIO:viajePrioritario.ID_SERVICIO||'',
-      ID_CHOFER:viajePrioritario.ID_CHOFER||idChofer,ID_VEHICULO:viajePrioritario.ID_VEHICULO
-    }:propias[0]||null;
+    // Un viaje existente puede seguir abierto aunque el Panel haya cerrado su asignación.
+    const viajeAbierto=viajes.filter(v=>String(v.ID_CHOFER||'').trim()===idChofer &&
+      v.ID_SERVICIO && v.ID_ASIGNACION && esViajeActivo(v.ESTADO) &&
+      servicios.some(s=>String(s.ID_SERVICIO)===String(v.ID_SERVICIO) &&
+        !['FINALIZADO','CANCELADO','CANCELADA'].includes(String(s.ESTADO||'').trim().toUpperCase()) &&
+        (!v.HORA_INICIO || !s.FECHA || normalizarFecha(v.HORA_INICIO)===normalizarFecha(s.FECHA))))
+      .sort((a,b)=>(Date.parse(b.HORA_INICIO)||0)-(Date.parse(a.HORA_INICIO)||0))[0];
+    const asignacion=viajeAbierto?{ID_SERVICIO:viajeAbierto.ID_SERVICIO,ID_ASIGNACION:viajeAbierto.ID_ASIGNACION,
+      ID_CHOFER:viajeAbierto.ID_CHOFER,ID_VEHICULO:viajeAbierto.ID_VEHICULO}:propias[0]||null;
     const servicioBase=asignacion
-      ? servicios.find(s=>String(s.ID_SERVICIO||'').trim()===String(asignacion.ID_SERVICIO||'').trim()) || (viajePrioritario?{ID_SERVICIO:viajePrioritario.ID_SERVICIO||'',NOMBRE_SERVICIO:'Servicio en curso',ESTADO:'EN CURSO',FECHA:viajePrioritario.FECHA}:null)
+      ? servicios.find(s=>String(s.ID_SERVICIO||'').trim()===String(asignacion.ID_SERVICIO||'').trim())
       : null;
 
     let servicioActual=servicioBase?{
@@ -1993,11 +1642,10 @@ async function cargarDashboardInterno(opciones={}){
       servicioActual.marca=vehiculoServicio?.MARCA||'';
       servicioActual.modelo=vehiculoServicio?.MODELO||'';
 
-      const viajeActivo=viajePrioritario;
-      if(viajeActivo){
+      if(viajeAbierto){
         servicioActual.estado='EN VIAJE';
-        servicioActual.idViaje=viajeActivo.ID_VIAJE;
-        servicioActual.kmInicial=viajeActivo.KM_INICIAL;
+        servicioActual.idViaje=viajeAbierto.ID_VIAJE;
+        servicioActual.kmInicial=viajeAbierto.KM_INICIAL;
       }
       servicioActual.cantidadRuedas=Number(vehiculoServicio?.CANTIDAD_RUEDAS||vehiculoServicio?.cantidadRuedas||0);
     }
@@ -2009,7 +1657,7 @@ async function cargarDashboardInterno(opciones={}){
     renderVehicle(asignacion?{dominio:vehiculo?.DOMINIO,idUnidad:asignacion.ID_VEHICULO}:null,vehiculo,null);
     renderService(servicioActual);
   }catch(err){
-    if(typeof recuperarViajeLocal==='function' && await recuperarViajeLocal(true))return;
+    if(session!==sesion)return;
     $('serviceBox').innerHTML='<div class="empty">No se pudieron consultar los datos operativos.<br>Intentá actualizar en unos segundos.</div>';
     console.error(err);
   }finally{
@@ -2017,23 +1665,10 @@ async function cargarDashboardInterno(opciones={}){
   }
 }
 
-let dashboardActualizacionPendiente=null;
-
 function iniciarActualizacionAutomatica(){
   if(dashboardTimer) clearInterval(dashboardTimer);
   dashboardTimer=setInterval(()=>{
-    if(!session || $('dashboardScreen').classList.contains('hidden')) return;
-    // En CHOFER_SECRETARIA no refrescar mientras el chofer está dentro
-    // de la inspección/salida: volver a consultar el dashboard ocultaba
-    // inspectionScreen y borraba la selección de la unidad.
-    if(esChoferSecretaria()){
-      // Secretaría no necesita repintar el selector cada 15 segundos:
-      // eso reiniciaba visualmente la lista mientras el chofer la consultaba.
-      // La consulta inicial y el flujo de inicio/finalización siguen intactos.
-      return;
-    }
-    if(!$('inspectionScreen').classList.contains('hidden'))return;
-    cargarDashboard();
+    if(session && !$('dashboardScreen').classList.contains('hidden') && $('inspectionScreen').classList.contains('hidden')) cargarDashboard();
   },15000);
 }
 
@@ -2185,62 +1820,66 @@ function formatearHora(v){
   return r==='-'?'—':r;
 }
 
+function esViajeActivo(estado){
+  return ['EN VIAJE','EN CURSO','ACTIVO','INICIADO'].includes(String(estado||'').trim().toUpperCase());
+}
+
 async function verServicio(id){
-  if(window.__iniciandoViajeDiaVerde)return;
-  let s=window.__servicioActual;
+  const s=window.__servicioActual;
   if(!s || String(s.idServicio)!==String(id)){
     alert('No se pudo cargar el servicio seleccionado.');
     return;
   }
 
-  const anterior=servicioEnInspeccion;
-  const conservarPreparacion=!!s.idAsignacion && anterior?.idAsignacion===s.idAsignacion &&
-    anterior.idServicio===s.idServicio && anterior.idUnidad===s.idUnidad && anterior.fecha===s.fecha && !anterior.idViaje;
   // V24 TURBO: mostrar la pantalla inmediatamente usando los datos ya cargados.
   servicioEnInspeccion=s;
   ultimaInspeccionCargada=null;
-  $('serviceBox').classList.remove('hidden');
+  $('serviceBox').classList.add('hidden');
   $('inspectionScreen').classList.remove('hidden');
-  $('inspectionScreen').classList.remove('salida-en-cola');
   $('inspectionServiceLabel').textContent=(s.nombreServicio||'Servicio')+' · '+formatearHora(s.horaProgramada);
   $('inspectionAlert').style.display='none';
 
-  if(['EN VIAJE','EN CURSO','ACTIVO','INICIADO'].includes(String(s.estado||'').toUpperCase())){
+  if(!s.idViaje && s.estado!=='FINALIZADO'){
+    const pendientes=await leerSalidasGuardadas().catch(()=>[]);
+    if(servicioEnInspeccion!==s || $('inspectionScreen').classList.contains('hidden'))return;
+    const pendiente=pendientes.find(({payload})=>payload?.accion==='iniciarViaje' &&
+      String(payload.idServicio)===String(s.idServicio) && String(payload.idAsignacion)===String(s.idAsignacion) &&
+      String(payload.idChofer)===String(session?.idChofer) && String(payload.idVehiculo)===String(s.idUnidad) &&
+      fechaArgentinaISO(payload.horaInicio)===fechaArgentinaISO(s.fecha));
+    if(pendiente && !s.idViaje){
+      s.estado='EN VIAJE';
+      s.kmInicial=pendiente.payload.kmInicial;
+      reanudarEnviosChoferes();
+    }
+  }
+
+  if(esViajeActivo(s.estado)){
     try{ localStorage.setItem('diaVerdeServicioActivo',JSON.stringify({idServicio:s.idServicio,idViaje:s.idViaje||''})); }catch(e){}
     mostrarModoViajeActivo();
-    buscarSalidaEnCola(s).then(fila=>{
-      if(fila && servicioEnInspeccion?.idViaje===s.idViaje &&
-         salidaCorrespondeAlServicio(fila.payload,servicioEnInspeccion))mostrarFotosDeSalidaPendientes();
-    }).catch(()=>{});
+    if(!s.idViaje)$('finishInspectionBtn').disabled=true;
     // Refresco silencioso: no bloquea la apertura de la pantalla.
     refrescarServicioEnSegundoPlano(id).catch(e=>console.warn('Refresco servicio:',e));
     return;
   }
 
-  const pendiente=await buscarSalidaEnCola(s).catch(()=>null);
-  if(servicioEnInspeccion!==s || $('inspectionScreen').classList.contains('hidden'))return;
-  if(pendiente){
-    restablecerPreparacionRecorrido();
-    mostrarSalidaEnCola(pendiente,s);
-    reanudarEnviosFotos();
-    return;
-  }
-
-  restablecerPreparacionRecorrido();
-  if(!conservarPreparacion)window.__salidaFotos={frente:null,trasera:null,lateral_derecho:null,lateral_izquierdo:null};
+  document.querySelectorAll('#inspectionScreen .check-section').forEach(seccion=>seccion.classList.remove('hidden'));
+  document.querySelector('#inspectionScreen .inspection-head h2').textContent='Preparar salida';
+  document.querySelector('#inspectionScreen .vehicle-control-section')?.classList.remove('hidden');
+  document.querySelector('#inspectionScreen .inspection-actions').innerHTML=
+    '<button class="secondary" type="button" onclick="volverServicio()">VOLVER</button><button class="primary" type="button" id="finishInspectionBtn" onclick="iniciarViaje()" disabled>▶ INICIAR VIAJE</button>';
+  window.__salidaFotos={frente:null,trasera:null,lateral_derecho:null,lateral_izquierdo:null};
   $('inspectionStatus').className='status-banner pending'; $('inspectionStatus').innerHTML='📸 <strong>Preparando salida</strong> · 4 fotos + kilometraje requeridos';
   $('finishInspectionBtn').disabled=true;
   $('finishInspectionBtn').textContent='▶ INICIAR VIAJE';
   $('finishInspectionBtn').onclick=iniciarViaje;
-  if(!conservarPreparacion)$('currentKm').value='';
+  $('currentKm').value='';
   $('currentKm').disabled=false;
-  if(!conservarPreparacion)$('inspectionObs').value='';
+  $('inspectionObs').value='';
   $('inspectionObs').disabled=false;
   const finalBox=document.getElementById('finalKmBox'); if(finalBox) finalBox.remove();
   construirFotosSalida();
   actualizarEstadoInicio();
-  $('lastKmHint').textContent='';
-  verificarInspeccionRecorrido();
+  $('lastKmHint').textContent='El kilometraje se registrará como KM inicial del viaje.';
   $('inspectionScreen').scrollIntoView({behavior:'smooth',block:'start'});
 
   // El backend se consulta después de pintar la interfaz.
@@ -2248,38 +1887,16 @@ async function verServicio(id){
 }
 
 async function refrescarServicioEnSegundoPlano(id){
-  const inspeccion=servicioEnInspeccion;
-  const sesion=recSesionActual();
-  const estadoInicial=inspeccion?.estado;
-  try{
-    const [sRes,aRes,vRes,rRes]=await Promise.all([
-      getJson('listarServicios'),
-      getJson('listarAsignaciones'),
-      getJson('listarViajes'),
-      getJson('rutas')
-    ]);
-    const servicio=(sRes.servicios||[]).find(x=>String(x.ID_SERVICIO||'')===String(id));
-    const candidatos=(vRes.viajes||[]).filter(v=>inspeccion?.idViaje
-      ? String(v.ID_VIAJE||'')===String(inspeccion.idViaje)
-      : recViajeCoincideConServicio(v,inspeccion));
-    const viaje=recSeleccionarViajeActivo(candidatos,sRes.servicios||[],session?.idChofer);
-    const asignacion=viaje?{...(aRes.asignaciones||[]).find(a=>String(a.ID_ASIGNACION)===String(viaje.ID_ASIGNACION)),ID_ASIGNACION:viaje.ID_ASIGNACION,ID_VEHICULO:viaje.ID_VEHICULO}:servicioEnInspeccion?.idViaje?{ID_ASIGNACION:servicioEnInspeccion.idAsignacion,ID_VEHICULO:servicioEnInspeccion.idUnidad}: (aRes.asignaciones||[]).find(x=>String(x.ID_SERVICIO||'')===String(id)&&String(x.ID_CHOFER||'')===String(session.idChofer)&&String(x.ESTADO||'').toUpperCase()==='ACTIVA');
-    const vehiculos=(await getJson('listarVehiculos')).vehiculos||[];
-    const rutas=rRes.rutas||[];
-    const vehiculo=asignacion?vehiculos.find(x=>String(x.ID_VEHICULO||'')===String(asignacion.ID_VEHICULO||'')):null;
-
-    if(!servicio || !inspeccion || inspeccion!==servicioEnInspeccion || inspeccion.estado!==estadoInicial ||
-       sesion!==recSesionActual() || window.__iniciandoViajeDiaVerde || String(inspeccion.idServicio)!==String(id))return;
-    const servicioTerminado=['FINALIZADO','CANCELADO','CANCELADA'].includes(String(servicio.ESTADO||'').trim().toUpperCase());
-    const inicioConfirmado=inspeccion.idViaje && estadoInicial==='EN VIAJE';
-    servicioEnInspeccion={...servicioEnInspeccion,fecha:servicio.FECHA,horaProgramada:servicio.HORA_PROGRAMADA,tipo:servicio.TIPO_SERVICIO,nombreServicio:servicio.NOMBRE_SERVICIO,rutaNombre:(rutas.find(x=>String(x.ID_RUTA||'')===String(servicio.ID_RUTA||''))?.NOMBRE_RUTA)||servicio.ID_RUTA||'',estado:viaje || (inicioConfirmado && !servicioTerminado)?'EN VIAJE':servicio.ESTADO,idAsignacion:asignacion?.ID_ASIGNACION||servicioEnInspeccion.idAsignacion,idUnidad:asignacion?.ID_VEHICULO||servicioEnInspeccion.idUnidad,dominio:vehiculo?.DOMINIO||servicioEnInspeccion.dominio,idViaje:viaje?.ID_VIAJE||servicioEnInspeccion.idViaje,kmInicial:viaje?.KM_INICIAL||servicioEnInspeccion.kmInicial};
-    renderService(servicioEnInspeccion);
-
-    // Si el estado cambió mientras cargábamos, adaptamos la pantalla sin recargarla.
-    if(['EN VIAJE','EN CURSO','ACTIVO','INICIADO'].includes(String(servicioEnInspeccion.estado||'').toUpperCase())) mostrarModoViajeActivo();
-  }catch(e){
-    console.warn('No se pudo actualizar el servicio en segundo plano:',e);
-  }
+  const servicio=servicioEnInspeccion;
+  const sesion=session;
+  if(!servicio || servicio.idViaje)return;
+  const {viajes=[]}=await getJson('listarViajes',{}, {force:true});
+  if(session!==sesion || servicioEnInspeccion!==servicio || String(servicio?.idServicio)!==String(id) ||
+     $('inspectionScreen').classList.contains('hidden') || servicio.idViaje || window.__iniciandoViajeDiaVerde)return;
+  const viaje=viajes.find(v=>String(v.ID_SERVICIO)===String(id) && String(v.ID_CHOFER)===String(sesion?.idChofer) &&
+    String(v.ID_ASIGNACION)===String(servicio.idAsignacion) && String(v.ID_VEHICULO)===String(servicio.idUnidad) &&
+    (!v.HORA_INICIO || fechaArgentinaISO(v.HORA_INICIO)===fechaArgentinaISO(servicio.fecha)) && esViajeActivo(v.ESTADO));
+  if(viaje)confirmarSalidaEnPantalla(servicio,viaje.ID_VIAJE,viaje.KM_INICIAL);
 }
 
 let camaraStream=null;
@@ -2549,42 +2166,18 @@ function contarFotosSalida(){
 }
 
 function actualizarEstadoInicio(){
-  if(globalThis.__iniciandoViajeDiaVerde || typeof document!=='undefined' &&
-     document.getElementById?.('inspectionScreen')?.classList.contains('salida-en-cola'))return;
   const fotos=contarFotosSalida();
   const km=parsearKilometraje($('currentKm')?.value);
 
   if($('photoProgress')) $('photoProgress').textContent=fotos+' de 4 fotos cargadas';
 
-  const reutiliza=recPuedeReutilizar();
-  if(esChoferSecretaria() && inspeccionSecretariaPendiente){
-    $('finishInspectionBtn').disabled=true;
-    $('inspectionStatus').className='status-banner pending';
-    $('inspectionStatus').textContent='Verificando las fotos de la unidad asignada…';
-    return;
-  }
-  const reintento=$('reintentarInspeccionSecretaria');
-  if(esChoferSecretaria() && errorVerificacionSecretaria){
-    $('finishInspectionBtn').disabled=true;
-    $('inspectionStatus').className='status-banner warning';
-    $('inspectionStatus').innerHTML='No pudimos verificar las fotos de esta unidad. <button type="button" id="reintentarInspeccionSecretaria" onclick="verificarInspeccionRecorrido()">Reintentar verificación</button>';
-    return;
-  }
-  reintento?.remove();
-  const listo=(fotos===4 || reutiliza) && km!==null && !bloqueoOtroServicio;
+  const listo=fotos===4 && km!==null;
 
   $('finishInspectionBtn').disabled=!listo;
 
-  if(bloqueoOtroServicio){
-    $('inspectionStatus').className='status-banner warning';$('inspectionStatus').textContent='Tenés otro servicio en curso. Finalizalo antes de iniciar este.';return;
-  }
-  if(reutiliza){
-    if($('photoProgress'))$('photoProgress').textContent='4 fotos confirmadas en la inspección del recorrido';
-    $('inspectionStatus').className='status-banner '+(listo?'ready':'pending');$('inspectionStatus').textContent='✓ Fotos ya registradas.'+(km===null?' Ingresá el kilometraje.':'');return;
-  }
   if(listo){
     $('inspectionStatus').className='status-banner ready';
-    $('inspectionStatus').innerHTML=servicioEnInspeccion?.completandoInspeccion?'🟢 <strong>Listo para guardar la inspección</strong> · se conserva el servicio en curso':'🟢 <strong>Listo para iniciar</strong> · fotos y kilometraje completos';
+    $('inspectionStatus').innerHTML='🟢 <strong>Listo para iniciar</strong> · fotos y kilometraje completos';
   }else if(fotos<4 && km===null){
     $('inspectionStatus').className='status-banner pending';
     $('inspectionStatus').innerHTML='📸 <strong>Preparando salida</strong> · faltan 4 fotos y el kilometraje';
@@ -2775,14 +2368,12 @@ function mostrarResumenControl(categoria,estado){
 }
 
 function mostrarModoViajeActivo(){
-  if(servicioEnInspeccion)servicioEnInspeccion.completandoInspeccion=false;
   const nombre=escapeHtml(session?.nombre||'Chofer');
   $('inspectionServiceLabel').textContent='Servicio activo · '+(servicioEnInspeccion?.nombreServicio||'En viaje');
   $('inspectionStatus').className='status-banner travel';
   $('inspectionStatus').innerHTML='🟢 <strong>EN VIAJE</strong> · servicio activo';
   document.querySelectorAll('#inspectionScreen .check-section').forEach(sec=>sec.classList.add('hidden'));
   $('inspectionAlert').style.display='none';
-  if(servicioEnInspeccion?.fotosSalidaPendientes)mostrarFotosDeSalidaPendientes();
   $('vehiclePhotosGrid').innerHTML='';$('currentKm').value='';$('inspectionObs').value='';
   const controlSection=document.querySelector('#inspectionScreen .vehicle-control-section');
   if(controlSection) controlSection.classList.remove('hidden');
@@ -2790,7 +2381,7 @@ function mostrarModoViajeActivo(){
   if(head){head.querySelector('h3').textContent='¿Necesitás reportar un problema?';head.querySelector('.vehicle-control-help').textContent='Si durante el recorrido detectás una falla o novedad, podés informarla desde acá.';}
   asegurarCampoKmFinal();
   const actions=document.querySelector('.inspection-actions');
-  if(actions) actions.innerHTML=`<button class="primary" type="button" id="finishInspectionBtn" onclick="finalizarViaje()">FINALIZAR SERVICIO</button><button class="secondary" type="button" onclick="finalizarViaje(true)">FINALIZAR SERVICIO Y RECORRIDO</button>`;
+  if(actions) actions.innerHTML=`<button class="primary" type="button" id="finishInspectionBtn" onclick="finalizarViaje()">FINALIZAR SERVICIO</button>`;
   $('inspectionScreen').querySelector('.inspection-head h2').textContent='Servicio en curso';
   const info=$('inspectionScreen').querySelector('.inspection-head p'); if(info) info.innerHTML='Buen viaje, <strong>'+nombre+'</strong> 👋';
   const nota=$('inspectionScreen').querySelector('.inspection-card > div:last-child'); if(nota && nota.textContent.includes('Las 4 fotos')) nota.classList.add('hidden');
@@ -2838,179 +2429,34 @@ function asegurarCampoKmFinal(){
   return box;
 }
 
-function salidaCorrespondeAlServicio(salida,servicio){
-  return !!servicio && salida.idChofer===session?.idChofer &&
-    salida.idServicio===servicio.idServicio && salida.idAsignacion===servicio.idAsignacion &&
-    salida.idVehiculo===servicio.idUnidad;
-}
-
-async function buscarSalidaEnCola(servicio){
-  return (await ColaFotosSalida.pendientes()).find(({payload})=>salidaCorrespondeAlServicio(payload,servicio) &&
-    fechaArgentinaISO(payload.horaInicio)===hoyArgentinaISO());
-}
-
-async function programarEnvioFotos(){
-  const reg=appServiceWorkerRegistration||await registrarServiceWorkerWeb();
-  if(!reg)return;
-  try{await reg.sync?.register('chofer-fotos-salida');}
-  catch(error){console.warn('Sincronización de fotos no disponible:',error.message);}
-}
-
-async function enviarSalidaConWorker(opId){
-  const worker=appServiceWorkerRegistration?.active;
-  const enviarAqui=()=>ColaFotosSalida.enviar(opId,{alConfirmarInicio:actualizarSalidaDesdeCola});
-  if(!worker || typeof MessageChannel==='undefined')return enviarAqui();
-  const resultado=await new Promise((resolve,reject)=>{
-    const canal=new MessageChannel();
-    let espera=setTimeout(()=>terminar(),1000);
-    function terminar(respuesta){
-      clearTimeout(espera);
-      canal.port1.close();
-      if(respuesta?.error)reject(Error(respuesta.error));
-      else resolve(respuesta);
-    }
-    canal.port1.onmessage=evento=>{
-      if(evento.data.recibido){
-        clearTimeout(espera);
-        espera=setTimeout(()=>terminar(),100000);
-      }else terminar(evento.data);
-    };
-    try{worker.postMessage({type:'ENVIAR_FOTOS_SALIDA',opId},[canal.port2]);}
-    catch(error){terminar();}
-  });
-  return resultado?resultado.salida:enviarAqui();
-}
-
-function mostrarFotosDeSalidaPendientes(){
-  servicioEnInspeccion.fotosSalidaPendientes=true;
-  const aviso=$('inspectionAlert');
-  aviso.textContent='El viaje está iniciado. Quedaron fotos de salida pendientes de envío.';
-  aviso.style.display='block';
-}
-
-function mostrarSalidaEnCola(fila,servicio){
-  const pantalla=$('inspectionScreen');
-  pantalla.classList.add('salida-en-cola');
-  pantalla.querySelector('.inspection-head h2').textContent='Salida pendiente';
-  const estado=$('inspectionStatus');
-  estado.className='status-banner pending';
-  estado.textContent='Las fotos están guardadas para enviar. El inicio está pendiente de confirmación.';
-  const btn=$('finishInspectionBtn');
-  btn.textContent='REINTENTAR ENVÍO';
-  btn.disabled=false;
-  btn.onclick=()=>procesarSalidaEnPantalla(servicio,()=>fila);
-}
-
-function salidaTerminada(inicio){
-  return inicio.activo===false || ['FINALIZADO','CANCELADO','CANCELADA'].includes(String(inicio.estado||'').trim().toUpperCase());
-}
-
-function aplicarInicioConfirmado(servicio,inicio,km,fotosSalidaPendientes=false){
-  $('inspectionScreen').classList.remove('salida-en-cola');
-  servicioEnInspeccion={...servicio,idViaje:inicio.idViaje,estado:'EN VIAJE',
-    kmInicial:parsearKilometraje(inicio.kmInicial)??km,completandoInspeccion:false,localKey:'',fotosSalidaPendientes};
-  mostrarModoViajeActivo();
-  renderService(servicioEnInspeccion);
-}
-
-function actualizarSalidaDesdeCola(salida){
-  if(salida.idChofer!==session?.idChofer)return;
-  limpiarCacheAPI('listarViajes','listarAsignaciones','listarServicios','listarVehiculos');
-  const servicio=servicioEnInspeccion;
-  const coincide=salidaCorrespondeAlServicio(salida,servicio) &&
-    (servicio.idViaje?servicio.idViaje===salida.idViaje:fechaArgentinaISO(salida.horaInicio)===hoyArgentinaISO());
-  if(window.__iniciandoViajeDiaVerde){
-    if(coincide)window.__iniciandoViajeDiaVerde.confirmacion=salida;
-    return;
-  }
-  if($('inspectionScreen').classList.contains('hidden')){
-    cargarDashboard({force:true}).catch(()=>{});
-    return;
-  }
-  if(!coincide)return;
-  if(salidaTerminada(salida)){
-    $('inspectionScreen').classList.remove('salida-en-cola');
-    volverInicioSinEsperar();
-    return;
-  }
-  if(!servicio.idViaje)aplicarInicioConfirmado(servicio,salida,servicio.kmInicial,salida.fotosPendientes===true);
-  else if(salida.fotosPendientes!==true && servicio.fotosSalidaPendientes){
-    servicio.fotosSalidaPendientes=false;
-    const aviso=$('inspectionAlert');
-    if(aviso.textContent.endsWith('Quedaron fotos de salida pendientes de envío.'))aviso.style.display='none';
-  }
-}
-
-let reanudacionFotos=null;
-function reanudarEnviosFotos(){
-  const idChofer=session?.idChofer;
-  const usuario=session?.usuario;
-  if(!idChofer||reanudacionFotos)return;
-  let syncProgramada=false;
-  const enviar=async opId=>{
-    await ColaFotosSalida.completarUsuario(opId,idChofer,usuario);
-    if(!syncProgramada){
-      syncProgramada=true;
-      programarEnvioFotos().catch(error=>console.warn('Envío en segundo plano no disponible:',error.message));
-    }
-    return enviarSalidaConWorker(opId);
-  };
-  reanudacionFotos=ColaFotosSalida.procesar(actualizarSalidaDesdeCola,fila=>fila.payload.idChofer===idChofer,enviar)
-    .catch(error=>console.warn('Fotos de salida pendientes:',error.message))
-    .finally(()=>{reanudacionFotos=null;});
-  return reanudacionFotos;
-}
-
-window.addEventListener('load',reanudarEnviosFotos);
-window.addEventListener('online',reanudarEnviosFotos);
-document.addEventListener('visibilitychange',()=>{if(!document.hidden)reanudarEnviosFotos();});
-navigator.serviceWorker?.addEventListener('message',evento=>{
-  if(['INICIO_SALIDA_CONFIRMADO','FOTOS_SALIDA_GUARDADAS'].includes(evento.data?.type)){
-    actualizarSalidaDesdeCola(evento.data.salida);
-  }
-});
-
-async function consultarInicioRegistrado(payload){
-  const coincide=(viaje)=>viaje?.ID_VIAJE &&
-    String(viaje.ID_SERVICIO||'').trim()===String(payload.idServicio).trim() &&
-    String(viaje.ID_ASIGNACION||'').trim()===String(payload.idAsignacion).trim() &&
-    String(viaje.ID_VEHICULO||'').trim()===String(payload.idVehiculo).trim();
-  try{
-    const estado=await consultarRecorridoActual(payload.idVehiculo);
-    if(coincide(estado?.viajeActivo))return estado.viajeActivo;
-  }catch(error){console.warn('No se pudo consultar el recorrido:',error.message);}
-
-  const respuesta=await getJson('listarViajes',{}, {force:true});
-  const viajes=Array.isArray(respuesta.viajes)?respuesta.viajes:[];
-  return viajes.find(v=>coincide(v) &&
-    String(v.ID_CHOFER||'').trim()===String(payload.idChofer).trim() &&
-    ['EN CURSO','EN VIAJE','ACTIVO','INICIADO'].includes(String(v.ESTADO||'').trim().toUpperCase()));
-}
-
 async function iniciarViaje(){
-  if(esChoferSecretaria()) return iniciarViajeSecretaria();
-  if(window.__iniciandoViajeDiaVerde)return;
+  // Evita doble toque / doble evento mientras se persiste la salida.
+  if(window.__iniciandoViajeDiaVerde || servicioEnInspeccion?.idViaje || !session)return;
   const servicio=servicioEnInspeccion;
-  if(servicio?.idViaje)return;
+  const sesion=session;
+  const operacion={};
+  window.__iniciandoViajeDiaVerde=operacion;
   const btn=$('finishInspectionBtn'),a=$('inspectionAlert');
   const km=parsearKilometraje($('currentKm').value);
   const fotos=window.__salidaFotos||{};
   const observacion=$('inspectionObs').value.trim();
   a.style.display='none';
-  if(contarFotosSalida()!==4){a.textContent='Sacá las cuatro fotos de la unidad para iniciar el viaje.';a.style.display='block';return;}
-  if(km===null){a.textContent='Ingresá el kilometraje actual para poder iniciar el viaje.';a.style.display='block';$('currentKm').focus();return;}
-  if(!servicio?.idAsignacion){a.textContent='La asignación del servicio no está disponible. Actualizá la aplicación e intentá nuevamente.';a.style.display='block';return;}
+  if(contarFotosSalida()!==4){a.textContent='Tenés que cargar las 4 fotos obligatorias antes de iniciar el viaje.';a.style.display='block';window.__iniciandoViajeDiaVerde=false;return;}
+  if(km===null){a.textContent='Ingresá el kilometraje actual para poder iniciar el viaje.';a.style.display='block';$('currentKm').focus();window.__iniciandoViajeDiaVerde=false;return;}
+  if(!servicioEnInspeccion?.idAsignacion){a.textContent='La asignación del servicio no está disponible. Actualizá la aplicación e intentá nuevamente.';a.style.display='block';window.__iniciandoViajeDiaVerde=false;return;}
+
+  btn.disabled=true;btn.textContent='GUARDANDO…';
 
   const payload={
     accion:'iniciarViaje',
     fotosPorViaje:true,
-    idServicio:servicio.idServicio,
-    idAsignacion:servicio.idAsignacion,
+    usuario:sesion.usuario,
+    idServicio:servicioEnInspeccion.idServicio,
+    idAsignacion:servicioEnInspeccion.idAsignacion,
     idChofer:session.idChofer,
-    usuario:session.usuario,
-    idVehiculo:servicio.idUnidad||'',
-    idUnidad:servicio.idUnidad||'',
-    dominio:servicio.dominio||'',
+    idVehiculo:servicioEnInspeccion.idUnidad||'',
+    idUnidad:servicioEnInspeccion.idUnidad||'',
+    dominio:servicioEnInspeccion.dominio||'',
     kmInicial:km,
     kilometraje:km,
     horaInicio:new Date().toISOString(),
@@ -3027,216 +2473,98 @@ async function iniciarViaje(){
     }
   };
 
-  return procesarSalidaEnPantalla(servicio,async()=>{
-    try{return await ColaFotosSalida.guardar(payload);}
-    catch(error){
-      console.warn('No se pudo guardar el envío para después:',error.message);
-      return {payload};
-    }
-  });
-}
-
-async function procesarSalidaEnPantalla(servicio,preparar){
-  if(window.__iniciandoViajeDiaVerde || servicioEnInspeccion!==servicio)return;
-  const operacion={};
-  const sigueVigente=()=>window.__iniciandoViajeDiaVerde===operacion && servicioEnInspeccion===servicio;
-  window.__iniciandoViajeDiaVerde=operacion;
-  consultaInspeccionActual++;
-  const btn=$('finishInspectionBtn'),a=$('inspectionAlert');
-  btn.disabled=true;
-  a.style.display='none';
-  const pantalla=$('inspectionScreen');
-  const titulo=pantalla.querySelector('.inspection-head h2');
-  const tituloAnterior=titulo.textContent;
-  const estado=$('inspectionStatus');
-  pantalla.classList.add('inicio-en-progreso');
-  titulo.textContent='Iniciando viaje…';
-  estado.className='status-banner travel';
-  estado.textContent='Preparando el envío de las fotos…';
-
-  let fotosPendientes=false;
-  let fila;
+  let opId;
   try{
-    fila=await preparar();
-    if(!sigueVigente())return;
-    if(fila.opId && !fila.payload.usuario && session?.usuario){
-      fila=await ColaFotosSalida.completarUsuario(fila.opId,session.idChofer,session.usuario)||fila;
-      if(!sigueVigente())return;
+    const inicio=await conBloqueoColaViajes(async()=>{
+      let envio=payload;
+      try{({opId,payload:envio}=await encolarSalidaSegundoPlano(payload));}
+      catch(error){console.warn('No se pudo guardar la salida para reintentar:',error.message);}
+
+      if(session===sesion && servicioEnInspeccion===servicio){
+        servicio.estado='EN VIAJE';
+        servicio.kmInicial=km;
+        mostrarModoViajeActivo();
+        $('finishInspectionBtn').disabled=true;
+      }
+      const confirmacion=confirmacionInicioViaje(await enviarOperacionViaje(envio),envio);
+      if(opId)await borrarSalidaGuardada(opId).catch(e=>console.warn('No se pudo limpiar la salida confirmada:',e.message));
+      return confirmacion;
+    });
+    limpiarCacheAPI('listarViajes','listarAsignaciones','listarServicios','listarVehiculos');
+    if(session===sesion && inicio.activo!==false && inicio.estado!=='FINALIZADO'){
+      confirmarSalidaEnPantalla(servicio,inicio.idViaje,inicio.kmInicial);
+    }else if(session===sesion && servicioEnInspeccion===servicio){
+      await volverInicio();
     }
-    const {payload,opId}=fila;
-    const enviar=()=>opId?ColaFotosSalida.enviar(opId,{soloInicio:true}):guardarInicioLocal(payload,servicio);
-    estado.textContent=opId?'Fotos guardadas para enviar · Confirmando el inicio…':'Mantené la app abierta mientras se envían las fotos.';
-    let inicio;
-    try{
-      const intento=enviar();
-      if(opId)programarEnvioFotos().catch(error=>console.warn('Envío en segundo plano no disponible:',error.message));
-      inicio=await intento;
-      if(!inicio)fila={payload};
-      if(!inicio || inicio.ocupada)throw Error('La confirmación del inicio está pendiente.');
-      fotosPendientes=inicio.fotosPendientes===true;
-    }catch(error){
-      if(!sigueVigente())return;
-      const viaje=operacion.confirmacion?null:await consultarInicioRegistrado(payload).catch(e=>{
-        console.warn('No se pudo recuperar el inicio:',e.message);
-      });
-      if(!sigueVigente())return;
-      if(operacion.confirmacion)inicio=operacion.confirmacion;
-      else{
-        if(!viaje)throw error;
-        inicio={idViaje:viaje.ID_VIAJE,kmInicial:viaje.KM_INICIAL};
-        fotosPendientes=viaje.fotosViajeCompletas!==true;
-        if(viaje.fotosViajeCompletas===false && error.message.startsWith('El servidor no confirmó las 4 fotos')){
-          estado.textContent='Inicio confirmado. Reintentando el envío de las fotos…';
-          try{
-            const reintento=await enviar();
-            if(reintento && !reintento.ocupada){inicio=reintento;fotosPendientes=false;}
-          }catch(e){console.warn('Fotos de salida pendientes:',e.message);}
+  }catch(error){
+    console.warn('Salida pendiente:',error.message);
+    if(session===sesion && servicioEnInspeccion===servicio && !servicio.idViaje){
+      if(opId){
+        // Si el servidor creó el viaje antes de fallar al subir la foto, ya puede cerrarse.
+        window.__iniciandoViajeDiaVerde=null;
+        await refrescarServicioEnSegundoPlano(servicio.idServicio).catch(()=>{});
+        if(!servicio.idViaje && servicioEnInspeccion===servicio){
+          a.textContent='Enviando la salida al Panel. El cierre se habilita cuando se confirma el viaje.';
+          a.style.display='block';
         }
+        reanudarEnviosChoferes();
+      }else{
+        servicio.estado='PENDIENTE';
+        await verServicio(servicio.idServicio);
+        window.__salidaFotos=fotos;
+        $('currentKm').value=String(km);
+        $('inspectionObs').value=observacion;
+        construirFotosSalida();
+        actualizarEstadoInicio();
+        a.textContent=mensajeErrorOperacion(error,'salida');
+        a.style.display='block';
       }
     }
-    if(!sigueVigente())return;
-    if(operacion.confirmacion){
-      inicio=operacion.confirmacion;
-      fotosPendientes=inicio.fotosPendientes===true;
-    }
-    limpiarCacheAPI('listarViajes','listarAsignaciones','listarServicios','listarVehiculos');
-    if(salidaTerminada(inicio)){
-      window.__iniciandoViajeDiaVerde=null;
-      pantalla.classList.remove('inicio-en-progreso','salida-en-cola');
-      volverInicioSinEsperar();
-      return;
-    }
-    aplicarInicioConfirmado(servicio,inicio,payload.kmInicial,fotosPendientes);
-  }catch(err){
-    if(!sigueVigente())return;
-    window.__iniciandoViajeDiaVerde=null;
-    pantalla.classList.remove('inicio-en-progreso');
-    if(fila?.opId){mostrarSalidaEnCola(fila,servicio);return;}
-    titulo.textContent=tituloAnterior;
-    actualizarEstadoInicio();
-    a.textContent=mensajeErrorOperacion(err,'salida');a.style.display='block';
   }finally{
-    if(window.__iniciandoViajeDiaVerde===operacion){
-      window.__iniciandoViajeDiaVerde=null;
-      pantalla.classList.remove('inicio-en-progreso');
-    }
-    if(fila?.opId && fotosPendientes)reanudarEnviosFotos();
+    if(window.__iniciandoViajeDiaVerde===operacion)window.__iniciandoViajeDiaVerde=null;
   }
 }
 
-async function iniciarViajeSecretaria(){
-  const btn=$('finishInspectionBtn'),a=$('inspectionAlert'),km=parsearKilometraje($('currentKm').value),f=window.__salidaFotos||{};
-  if(inspeccionSecretariaPendiente||errorVerificacionSecretaria)return;
-  if(!vehiculoSecretariaSeleccionado?.ID_VEHICULO){a.textContent='Seleccioná un vehículo.';a.style.display='block';return;}
-  if(!recPuedeReutilizar() && contarFotosSalida()!==4){a.textContent='Tenés que cargar las 4 fotos obligatorias.';a.style.display='block';return;}
-  if(km===null){a.textContent='Ingresá el kilometraje inicial.';a.style.display='block';return;}
-  btn.disabled=true;btn.textContent='GUARDANDO…';a.style.display='none';
-  try{
-    const orden=typeof window.ordenesSecretariaOrdenActiva==='function'?window.ordenesSecretariaOrdenActiva():null;
-    if(!orden || !orden.id || !orden.idAsignacion || !session?.tokenOrdenes ||
-      String(orden.idVehiculo)!==String(vehiculoSecretariaSeleccionado.ID_VEHICULO) ||
-      (orden.idChofer && String(orden.idChofer)!==String(session.idChofer)) ||
-      (orden.estado && String(orden.estado).toUpperCase()!=='ACEPTADA'))
-      throw new Error('No podés iniciar un viaje sin una orden aceptada, con chofer y vehículo asignados por Secretaría.');
-    servicioEnInspeccion.salidaId=servicioEnInspeccion.salidaId||('VIA-APP-'+Date.now()+'-'+Math.random().toString(36).slice(2,10));
-    await guardarInicioLocal({accion:'iniciarViajeSecretaria',idViaje:servicioEnInspeccion.salidaId,idRecorrido:recPuedeReutilizar()?inspeccionReutilizable.ID_RECORRIDO:'',usuario:session.usuario,idChofer:session.idChofer,idVehiculo:vehiculoSecretariaSeleccionado.ID_VEHICULO,kmInicial:km,horaInicio:new Date().toISOString(),observaciones:$('inspectionObs').value.trim(),
-      idSolicitud:orden.id,idAsignacionLocal:orden.idAsignacion,tokenOrdenes:session.tokenOrdenes,
-      fotos:{frente:f.frente?.dataUrl||'',trasera:f.trasera?.dataUrl||'',lateral_derecho:f.lateral_derecho?.dataUrl||'',lateral_izquierdo:f.lateral_izquierdo?.dataUrl||'',source:'LIVE_CAMERA'}});
-    viajeSecretariaActivo={ID_VIAJE:servicioEnInspeccion.salidaId,ID_VEHICULO:vehiculoSecretariaSeleccionado.ID_VEHICULO,ID_CHOFER:session.idChofer,ESTADO:'EN CURSO'};
-    servicioEnInspeccion.idViaje=viajeSecretariaActivo.ID_VIAJE;servicioEnInspeccion.estado='EN VIAJE';servicioEnInspeccion.completandoInspeccion=false;
-    mostrarModoViajeActivo();$('finishInspectionBtn').onclick=finalizarViaje;$('finishInspectionBtn').textContent='FINALIZAR VIAJE';
-  }catch(err){invalidarInspeccionReutilizada(err);a.textContent=mensajeErrorOperacion(err,'salida');a.style.display='block';btn.disabled=false;btn.textContent='▶ INICIAR VIAJE';}
-}
-
-async function finalizarViajeSecretaria(cerrarRecorrido=false){
-  const btn=$('finishInspectionBtn'),a=$('inspectionAlert'),kmFinal=parsearKilometraje($('finalKm')?.value);
-  if(kmFinal===null){a.textContent='Ingresá el kilometraje final.';a.style.display='block';$('finalKm')?.focus();return;}
-  const idViaje=servicioEnInspeccion?.idViaje||viajeSecretariaActivo?.ID_VIAJE;
-  if(!idViaje){a.textContent='No se encontró el viaje activo. No se cerró el servicio.';a.style.display='block';return;}
-  const orden=typeof window.ordenesSecretariaOrdenActiva==='function'?window.ordenesSecretariaOrdenActiva():null;
-  const payload={accion:'finalizarViajeSecretaria',finalizarRecorrido:cerrarRecorrido===true,horaFin:new Date().toISOString(),usuario:session.usuario,idViaje,kmFinal,idChofer:session.idChofer,
-    idVehiculo:vehiculoSecretariaSeleccionado?.ID_VEHICULO||servicioEnInspeccion?.idUnidad,
-    ...(orden?{idSolicitud:orden.id,idAsignacionLocal:orden.idAsignacion,tokenOrdenes:session.tokenOrdenes}:{})};
-  btn.disabled=true;btn.textContent='GUARDANDO CIERRE…';a.style.display='none';
-  try{
-    // Cierre directo: nunca mostrar finalizado antes de la confirmación del servidor.
-    const confirmacion=await enviarOperacionViaje(payload);
-    confirmarOperacionEnPantalla(payload,confirmacion);
-    limpiarCacheAPI('listarViajes','listarAsignaciones','listarServicios','listarVehiculos');
-    viajeSecretariaActivo=null;
-    if(servicioEnInspeccion){servicioEnInspeccion.estado='FINALIZADO';servicioEnInspeccion.idViaje=idViaje;}
-    try{localStorage.removeItem('diaVerdeServicioActivo');}catch(e){}
-    $('inspectionStatus').className='status-banner ready';$('inspectionStatus').innerHTML='✅ <strong>Viaje finalizado</strong>';
-    volverInicioSinEsperar();
-
-  }catch(err){a.textContent=mensajeErrorOperacion(err,'cierre');a.style.display='block';btn.disabled=false;btn.textContent='FINALIZAR VIAJE';}
-}
-
-async function finalizarViajeInterno(cerrarRecorrido=false){
-  if(window.__iniciandoViajeDiaVerde)return;
-  if(typeof cerrarViajeLocal==='function' && await cerrarViajeLocal(cerrarRecorrido))return;
-  const horaFinCapturada=new Date().toISOString();
-  if(esChoferSecretaria()) return finalizarViajeSecretaria(cerrarRecorrido===true);
+async function finalizarViaje(){
   const btn=$('finishInspectionBtn'),a=$('inspectionAlert');
   const kmFinal=parsearKilometraje($('finalKm')?.value);
   if(kmFinal===null){a.textContent='Ingresá el kilometraje final para poder cerrar el servicio.';a.style.display='block';$('finalKm')?.focus();return;}
-  btn.disabled=true;btn.textContent='GUARDANDO CIERRE…';a.style.display='none';
+  const servicio=servicioEnInspeccion;
+  const sesion=session;
+  if(!servicio || !sesion || servicio.cerrando)return;
+  servicio.cerrando=true;
+  const horaFin=new Date().toISOString();
+  btn.disabled=true;btn.textContent='FINALIZANDO…';a.style.display='none';
   try{
-    let idViaje=servicioEnInspeccion?.idViaje||'';
-    // Antes de cerrar, reconciliar el identificador local con el viaje real.
-    // Una sesión restaurada puede conservar un ID antiguo; nunca cerrar otro chofer.
-    try{
+    let idViaje=servicio?.idViaje||'';
+    if(!idViaje){
       const r=await getJson('listarViajes',{}, {force:true});
       const viajes=Array.isArray(r.viajes)?r.viajes:[];
-      const propios=viajes.filter(v=>
-        String(v.ID_CHOFER||'')===String(session.idChofer||'') &&
-        ['EN CURSO','ACTIVO','INICIADO'].includes(String(v.ESTADO||'').trim().toUpperCase())
-      );
-      const idServicio=String(servicioEnInspeccion?.idServicio||'');
-      const coincidentes=idServicio
-        ? propios.filter(v=>String(v.ID_SERVICIO||'')===idServicio)
-        : propios;
-      const confirmado=coincidentes.find(v=>String(v.ID_VIAJE||'')===String(idViaje)) ||
-        (coincidentes.length===1 ? coincidentes[0] : null);
-      if(confirmado?.ID_VIAJE){
-        idViaje=confirmado.ID_VIAJE;
-        servicioEnInspeccion.idViaje=idViaje;
-      }else if(propios.length && !coincidentes.length){
-        throw new Error('El viaje activo no coincide con el servicio seleccionado. No se cerró otro viaje.');
-      }else if(coincidentes.length>1 && !confirmado){
-        throw new Error('Hay varios viajes activos para este servicio. Se requiere identificar el correcto.');
-      }
-    }catch(error){
-      if(/no coincide|varios viajes activos/.test(String(error.message||'')))throw error;
-      console.warn('No se pudo verificar el ID del viaje; se conserva el identificador local:',error);
+      const viaje=viajes.find(v=>String(v.ID_SERVICIO||'')===String(servicioEnInspeccion.idServicio||'')&&String(v.ID_CHOFER||'')===String(sesion.idChofer||'') &&
+        String(v.ID_ASIGNACION)===String(servicio.idAsignacion) && String(v.ID_VEHICULO)===String(servicio.idUnidad) &&
+        (!v.HORA_INICIO || fechaArgentinaISO(v.HORA_INICIO)===fechaArgentinaISO(servicio.fecha)) && esViajeActivo(v.ESTADO));
+      idViaje=viaje?.ID_VIAJE||'';
     }
-    if(!idViaje) throw new Error('No se encontró el viaje activo para finalizar. No se guardó el cierre.');
-    const payload={accion:'finalizarViaje',finalizarRecorrido:cerrarRecorrido===true,horaFin:horaFinCapturada,idViaje,kmFinal,idServicio:servicioEnInspeccion.idServicio,idChofer:session.idChofer,idVehiculo:servicioEnInspeccion.idUnidad||'',observaciones:''};
-    // Cierre directo: nunca mostrar finalizado antes de la confirmación del servidor.
-    const confirmacion=await enviarOperacionViaje(payload);
-    confirmarOperacionEnPantalla(payload,confirmacion);
+    if(!idViaje) throw new Error('No se encontró el viaje activo para finalizar.');
+    if(session!==sesion || servicioEnInspeccion!==servicio)return;
+    await enviarOperacionViaje({accion:'finalizarViaje',idViaje,kmFinal,horaFin,
+      idServicio:servicio.idServicio,idChofer:sesion.idChofer,idVehiculo:servicio.idUnidad||'',observaciones:''});
     limpiarCacheAPI('listarViajes','listarAsignaciones','listarServicios','listarVehiculos');
+    if(session!==sesion || servicioEnInspeccion!==servicio)return;
     servicioEnInspeccion.estado='FINALIZADO';servicioEnInspeccion.idViaje=idViaje;window.__servicioActual=servicioEnInspeccion;
     try{localStorage.removeItem('diaVerdeServicioActivo');}catch(e){}
-    $('inspectionStatus').className='status-banner ready';$('inspectionStatus').innerHTML='✅ <strong>Cierre guardado</strong>';
+    $('inspectionStatus').className='status-banner ready';$('inspectionStatus').innerHTML='✅ <strong>Servicio finalizado</strong>';
+    a.style.display='none';
+    btn.textContent='VOLVER AL INICIO';btn.disabled=false;btn.onclick=async()=>{ btn.disabled=true; btn.textContent='ACTUALIZANDO…'; await volverInicio(); };
     const controlSection=document.querySelector('#inspectionScreen .vehicle-control-section');if(controlSection)controlSection.classList.add('hidden');
-    volverInicioSinEsperar();
-
   }catch(err){a.textContent=mensajeErrorOperacion(err,'cierre');a.style.display='block';btn.disabled=false;btn.textContent='FINALIZAR SERVICIO';}
-}
-
-function volverInicioSinEsperar(){
-  $('inspectionScreen').classList.add('hidden');
-  $('serviceBox').classList.remove('hidden');
-  window.scrollTo({top:0,behavior:'smooth'});
-  // La actualización visual no bloquea el regreso a la pantalla principal.
-  try{cargarDashboard().catch(err=>console.warn('Dashboard pendiente de actualizar:',err));}catch(e){}
+  finally{servicio.cerrando=false;}
 }
 
 async function volverInicio(){
   $('inspectionScreen').classList.add('hidden');
   $('serviceBox').classList.remove('hidden');
-  await cargarDashboard();
+  await cargarDashboard({force:true});
   window.scrollTo({top:0,behavior:'smooth'});
 }
 
@@ -3494,26 +2822,14 @@ $('loginForm').addEventListener('submit',async e=>{
     const data=res?.resultado||res;
     const u=data?.usuario;
     if(!res?.ok || !data?.ok || !u?.ID_CHOFER) throw new Error(res?.error||data?.error||'Usuario o contraseña incorrectos.');
+    if(String(u.ROL||'').trim().toUpperCase()==='CHOFER_SECRETARIA')throw new Error('El acceso de Choferes de Secretaría está deshabilitado.');
     limpiarCacheAPI();
     session={idChofer:u.ID_CHOFER,nombre:u.NOMBRE,usuario:u.USUARIO,estado:u.ESTADO,rol:u.ROL,aplicacion:u.APLICACION};
-    // Sesión independiente solo para consultar y aceptar órdenes de Secretaría.
-    if(String(u.ROL||'').toUpperCase()==='CHOFER_SECRETARIA' && typeof window.ordenesSecretariaLogin==='function'){
-      const credenciales=await window.ordenesSecretariaLogin($('usuario').value,$('contrasena').value);
-      session={...session,...credenciales};
-    }
-    if(session.tokenOrdenes && typeof window.ordenesSecretariaActualizarCola==='function'){
-      try{await window.ordenesSecretariaActualizarCola();}catch(err){console.warn('Reautenticación de órdenes pendientes:',err);}
-    }
-    reanudarEnviosFotos();
-    registrarServiceWorkerWeb().catch(()=>{});
     sessionStorage.setItem('diaVerdeChofer',JSON.stringify(session));guardarSesionLocal();
     $('driverName').textContent=session.nombre;$('topUserName').textContent=session.nombre;$('avatar').textContent=initials(session.nombre);
     $('topUser').classList.remove('hidden');$('loginScreen').classList.add('hidden');
     if(esAdminKmReportes()){
       await entrarInterfazAdmin();
-    }else if(esChoferSecretaria()){
-      await cargarDashboardSecretaria();
-      iniciarActualizacionAutomatica();
     }else{
       $('dashboardScreen').classList.remove('hidden');
       await cargarDashboard();
@@ -3529,6 +2845,11 @@ $('loginForm').addEventListener('submit',async e=>{
     if(!raw) return;
     session=JSON.parse(raw);
     if(!session?.idChofer) return;
+    if(String(session.rol||'').trim().toUpperCase()==='CHOFER_SECRETARIA'){
+      session=null;
+      limpiarSesionLocal();
+      return;
+    }
     $('driverName').textContent=session.nombre||'Chofer';
     $('topUserName').textContent=session.nombre||'Chofer';
     $('avatar').textContent=initials(session.nombre);
@@ -3536,14 +2857,9 @@ $('loginForm').addEventListener('submit',async e=>{
     $('loginScreen').classList.add('hidden');
     if(esAdminKmReportes()){
       entrarInterfazAdmin();
-    }else if(esChoferSecretaria()){
-      cargarDashboardSecretaria();
-      registrarServiceWorkerWeb().catch(()=>{});
-      iniciarActualizacionAutomatica();
     }else{
       $('dashboardScreen').classList.remove('hidden');
       cargarDashboard();
-      registrarServiceWorkerWeb().catch(()=>{});
       iniciarActualizacionAutomatica();
     }
   }catch(e){}
@@ -3551,8 +2867,5 @@ $('loginForm').addEventListener('submit',async e=>{
 
 window.addEventListener('pagehide',()=>{ try{ detenerCamara(); }catch(e){} });
 </script>
-<script src="./ordenes-secretaria.js?v=5"></script>
 </body>
 </html>
-
-
