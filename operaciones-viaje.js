@@ -5,7 +5,7 @@ function resultadoOperacionViaje(data){
 function confirmacionInicioViaje(data,payload){
   const resultado=resultadoOperacionViaje(data);
   const viaje=resultado?.viaje||resultado;
-  const idViaje=viaje?.ID_VIAJE||viaje?.idViaje||payload.idViaje;
+  const idViaje=viaje?.ID_VIAJE||viaje?.idViaje;
   if(!idViaje)throw Error('El servidor no devolvió el ID del viaje.');
   if(payload.etapaSalida==='INICIO' && viaje.INICIO_CONFIRMADO!==true){
     throw Error('El servidor todavía no confirmó el inicio separado de las fotos.');
