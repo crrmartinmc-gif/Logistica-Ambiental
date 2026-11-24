@@ -131,7 +131,7 @@ async function probarFlujo() {
     await page.getByRole('button',{name:'VOLVER AL INICIO'}).click();
     await page.getByRole('button',{name:'VER SERVICIO'}).click();
     assert.equal(guardados[1].kmFinal,125);
-    assert.equal(await page.locator('#vehiclePhotosGrid').isVisible(),true);
+    await page.locator('#vehiclePhotosGrid').waitFor({state:'visible'});
     assert.equal(await page.locator('#finishInspectionBtn').isDisabled(),true);
 
     // El segundo envío conserva sus fotos durante una caída y se recupera en segundo plano.

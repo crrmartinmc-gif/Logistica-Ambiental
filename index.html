@@ -1368,6 +1368,7 @@ function reanudarEnviosChoferes(){
 
 window.addEventListener('load',()=>{registrarServiceWorkerWeb().catch(()=>{});});
 window.addEventListener('online',reanudarEnviosChoferes);
+navigator.serviceWorker?.addEventListener('controllerchange',()=>{navigator.serviceWorker.controller?.postMessage({type:'REANUDAR_ENVIOS_CHOFERES'});});
 navigator.serviceWorker?.addEventListener('message',ev=>{
   if(ev.data?.type!=='SALIDA_GUARDADA'||!session)return;
   const {payload,idViaje,kmInicial,activo,estado}=ev.data;
